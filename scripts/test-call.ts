@@ -16,7 +16,7 @@ import * as schema from "../src/lib/db/schema";
 import { initiateTwilioCall } from "../src/lib/twilio/call";
 
 async function main() {
-  const phoneNumber = process.argv[2] || "+15005550006";
+  const phoneNumber = process.argv[2] || "+19083363673"; // Google Voice number
   const recipientName = process.argv[3] || "Test User";
   const recipientContext = process.argv[4] || "This is a test call to verify dual-channel recording works.";
 
