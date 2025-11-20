@@ -1,7 +1,8 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Suspense, useState } from "react";
 import { AuthModal } from "~/components/auth-modal";
+import { CallsTable } from "~/components/calls-table";
 import { Header } from "~/components/header";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -19,7 +20,7 @@ function HomePage() {
   return (
     <div className="flex min-h-svh flex-col">
       <Header />
-      <div className="container mx-auto max-w-2xl p-6">
+      <div className="container mx-auto max-w-4xl p-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Request a Call</h1>
           <p className="text-muted-foreground mt-2">
@@ -28,15 +29,39 @@ function HomePage() {
         </div>
 
         <Suspense fallback={<div className="py-6">Loading...</div>}>
-          <CallRequestForm />
+          <PageContent />
         </Suspense>
       </div>
     </div>
   );
 }
 
+function PageContent() {
+  const { data: user } = useSuspenseQuery(authQueryOptions());
+
+  if (user) {
+    return (
+      <div className="grid gap-8 lg:grid-cols-2">
+        <div>
+          <CallRequestForm />
+        </div>
+
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Your Calls</h2>
+          <Suspense fallback={<div className="py-6">Loading calls...</div>}>
+            <CallsTable />
+          </Suspense>
+        </div>
+      </div>
+    );
+  }
+
+  return <CallRequestForm />;
+}
+
 function CallRequestForm() {
   const { data: user } = useSuspenseQuery(authQueryOptions());
+  const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -90,6 +115,9 @@ function CallRequestForm() {
 
       toast.success("Payment processed! Call request submitted for processing.");
       
+      // Invalidate calls query to refresh the table
+      queryClient.invalidateQueries({ queryKey: ["calls"] });
+      
       // Reset form
       setFormData({
         recipientName: "",
@@ -120,6 +148,9 @@ function CallRequestForm() {
         });
 
         toast.success("Payment processed! Call request submitted for processing.");
+        
+        // Invalidate calls query to refresh the table
+        queryClient.invalidateQueries({ queryKey: ["calls"] });
         
         // Reset form
         setFormData({
