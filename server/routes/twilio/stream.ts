@@ -150,9 +150,19 @@ async function handleStreamStart(peer: any, data: TwilioStreamMessage) {
       return;
     }
 
-    const instructions = `You are speaking with ${call.recipientName}. Context: ${call.recipientContext}. 
+    const instructions = `IMPORTANT: You are calling ${call.recipientName} via Google Voice.
 
-Have a natural, friendly conversation. Keep responses concise and conversational.`;
+STEP 1 - Handle Google Voice Screening:
+When you hear "Please state your name after the beep", immediately respond with:
+"This is Tony calling for ${call.recipientName}"
+
+Then WAIT for Google Voice to connect the call. You'll hear ringing or the person will answer.
+
+STEP 2 - Once Connected:
+When ${call.recipientName} answers, greet them naturally and have a conversation.
+Context: ${call.recipientContext}
+
+Keep responses natural, friendly, and concise (under 20 seconds each).`;
     
     console.log("[Twilio Stream] 🤖 Creating OpenAI client with instructions:", instructions);
 
