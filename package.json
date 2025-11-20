@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 3000",
+    "dev:ws": "bun run server-ws.ts",
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "lint": "eslint .",

@@ -14,8 +14,11 @@ export const Route = createFileRoute("/api/twilio/voice")({
     console.log("[TwiML Voice] VITE_BASE_URL:", env.VITE_BASE_URL);
     
     // WebSocket URL for receiving Media Stream
-    // Nitro WebSocket handlers go in server/routes/
-    const streamUrl = `${env.VITE_BASE_URL.replace("http", "ws")}/twilio/stream`;
+    // WebSocket server runs on port 3001 (separate from main app)
+    const wsUrl = env.VITE_BASE_URL.includes("ngrok")
+      ? env.VITE_BASE_URL.replace("https://", "wss://")
+      : "ws://localhost:3001";
+    const streamUrl = `${wsUrl}/twilio/stream`;
     console.log("[TwiML Voice] 🔌 Stream URL:", streamUrl);
 
     // TwiML response for bidirectional Media Stream

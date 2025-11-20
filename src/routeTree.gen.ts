@@ -19,6 +19,7 @@ import { Route as authPagesLoginRouteImport } from './routes/(auth-pages)/login'
 import { Route as authenticatedDashboardRouteRouteImport } from './routes/(authenticated)/dashboard/route'
 import { Route as authenticatedDashboardIndexRouteImport } from './routes/(authenticated)/dashboard/index'
 import { Route as ApiTwilioVoiceRouteImport } from './routes/api/twilio/voice'
+import { Route as ApiTwilioStreamRouteImport } from './routes/api/twilio/stream'
 import { Route as ApiTestCallSimpleRouteImport } from './routes/api/test/call-simple'
 import { Route as ApiTestCallRouteImport } from './routes/api/test/call'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -75,6 +76,11 @@ const ApiTwilioVoiceRoute = ApiTwilioVoiceRouteImport.update({
   path: '/api/twilio/voice',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTwilioStreamRoute = ApiTwilioStreamRouteImport.update({
+  id: '/api/twilio/stream',
+  path: '/api/twilio/stream',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTestCallSimpleRoute = ApiTestCallSimpleRouteImport.update({
   id: '/api/test/call-simple',
   path: '/api/test/call-simple',
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/test/call': typeof ApiTestCallRoute
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
+  '/api/twilio/stream': typeof ApiTwilioStreamRoute
   '/api/twilio/voice': typeof ApiTwilioVoiceRoute
   '/dashboard/': typeof authenticatedDashboardIndexRoute
   '/api/webhooks/twilio/call-status': typeof ApiWebhooksTwilioCallStatusRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/test/call': typeof ApiTestCallRoute
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
+  '/api/twilio/stream': typeof ApiTwilioStreamRoute
   '/api/twilio/voice': typeof ApiTwilioVoiceRoute
   '/dashboard': typeof authenticatedDashboardIndexRoute
   '/api/webhooks/twilio/call-status': typeof ApiWebhooksTwilioCallStatusRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/test/call': typeof ApiTestCallRoute
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
+  '/api/twilio/stream': typeof ApiTwilioStreamRoute
   '/api/twilio/voice': typeof ApiTwilioVoiceRoute
   '/(authenticated)/dashboard/': typeof authenticatedDashboardIndexRoute
   '/api/webhooks/twilio/call-status': typeof ApiWebhooksTwilioCallStatusRoute
@@ -162,6 +171,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/test/call'
     | '/api/test/call-simple'
+    | '/api/twilio/stream'
     | '/api/twilio/voice'
     | '/dashboard/'
     | '/api/webhooks/twilio/call-status'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/test/call'
     | '/api/test/call-simple'
+    | '/api/twilio/stream'
     | '/api/twilio/voice'
     | '/dashboard'
     | '/api/webhooks/twilio/call-status'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/api/test/call'
     | '/api/test/call-simple'
+    | '/api/twilio/stream'
     | '/api/twilio/voice'
     | '/(authenticated)/dashboard/'
     | '/api/webhooks/twilio/call-status'
@@ -208,6 +220,7 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiTestCallRoute: typeof ApiTestCallRoute
   ApiTestCallSimpleRoute: typeof ApiTestCallSimpleRoute
+  ApiTwilioStreamRoute: typeof ApiTwilioStreamRoute
   ApiTwilioVoiceRoute: typeof ApiTwilioVoiceRoute
   ApiWebhooksTwilioCallStatusRoute: typeof ApiWebhooksTwilioCallStatusRoute
   ApiWebhooksTwilioRecordingStatusRoute: typeof ApiWebhooksTwilioRecordingStatusRoute
@@ -283,6 +296,13 @@ declare module '@tanstack/react-router' {
       path: '/api/twilio/voice'
       fullPath: '/api/twilio/voice'
       preLoaderRoute: typeof ApiTwilioVoiceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/twilio/stream': {
+      id: '/api/twilio/stream'
+      path: '/api/twilio/stream'
+      fullPath: '/api/twilio/stream'
+      preLoaderRoute: typeof ApiTwilioStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/test/call-simple': {
@@ -372,6 +392,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiTestCallRoute: ApiTestCallRoute,
   ApiTestCallSimpleRoute: ApiTestCallSimpleRoute,
+  ApiTwilioStreamRoute: ApiTwilioStreamRoute,
   ApiTwilioVoiceRoute: ApiTwilioVoiceRoute,
   ApiWebhooksTwilioCallStatusRoute: ApiWebhooksTwilioCallStatusRoute,
   ApiWebhooksTwilioRecordingStatusRoute: ApiWebhooksTwilioRecordingStatusRoute,
