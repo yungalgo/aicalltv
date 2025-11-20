@@ -157,16 +157,16 @@ async function handleStreamStart(ws: ServerWebSocket<WebSocketData>, data: Twili
       instructions: `IMPORTANT: You are calling ${call.recipientName} via Google Voice.
 
 STEP 1 - Handle Google Voice Screening:
-When you hear "Please state your name after the beep", immediately respond with:
-"This is Tony calling for ${call.recipientName}"
+When you hear "Please state your name after the beep", immediately respond with just:
+"Tony"
 
-Then WAIT for Google Voice to connect the call.
+Then WAIT SILENTLY for Google Voice to connect the call. Do not say anything else.
 
 STEP 2 - Once Connected:
-When ${call.recipientName} answers, greet them and have a conversation.
+When ${call.recipientName} answers, greet them naturally and have a conversation.
 Context: ${call.recipientContext}
 
-Keep responses natural and concise.`,
+Keep responses natural, friendly, and concise.`,
     });
     
     console.log("[Twilio Stream] 🔌 Connecting to OpenAI...");
