@@ -6,6 +6,15 @@ import { DefaultCatchBoundary } from "~/components/default-catch-boundary";
 import { DefaultNotFound } from "~/components/default-not-found";
 import { routeTree } from "./routeTree.gen";
 
+// Initialize workers on server startup (only once, non-blocking)
+if (typeof window === "undefined") {
+  import("~/lib/workers").then(({ initializeWorkers }) => {
+    initializeWorkers().catch((error) => {
+      console.error("[Router] Failed to initialize workers:", error);
+    });
+  });
+}
+
 export function getRouter() {
   const queryClient = new QueryClient({
     defaultOptions: {
