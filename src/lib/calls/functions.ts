@@ -77,6 +77,37 @@ export const createCall = createServerFn({ method: "POST" }).handler(
     // Close database connection
     await driver.end();
 
+    // Enqueue job for async processing by pg-boss worker
+    const { getBoss, JOB_TYPES } = await import("~/lib/queue/boss");
+    const boss = await getBoss();
+    
+    // Check if we should call immediately or schedule for later
+    const { isWithinCallingHours } = await import("~/lib/calls/retry-logic");
+    const canCallNow = isWithinCallingHours(encryptedHandle);
+    
+    if (canCallNow) {
+      // Within calling hours - process immediately
+      await boss.send(JOB_TYPES.PROCESS_CALL, {
+        callId: newCall.id,
+      });
+      console.log(`[Create Call] Enqueued call ${newCall.id} for immediate processing`);
+    } else {
+      // Outside calling hours - schedule for next available time slot
+      const { calculateNextRetryTime } = await import("~/lib/calls/retry-logic");
+      const nextRetryAt = calculateNextRetryTime(encryptedHandle, 0);
+      
+      if (nextRetryAt) {
+        await boss.send(
+          JOB_TYPES.PROCESS_CALL,
+          { callId: newCall.id },
+          { startAfter: nextRetryAt }
+        );
+        console.log(`[Create Call] Scheduled call ${newCall.id} for ${nextRetryAt}`);
+      } else {
+        console.error(`[Create Call] Could not schedule call ${newCall.id} - no valid time slot`);
+      }
+    }
+
     return {
       success: true,
       callId: newCall.id,
