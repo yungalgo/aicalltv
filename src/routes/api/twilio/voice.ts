@@ -8,7 +8,7 @@ import { env } from "~/env/server";
 export const Route = createFileRoute("/api/twilio/voice")({
   server: {
     handlers: {
-      GET: async () => {
+      POST: async () => {
     // WebSocket URL for receiving Media Stream
     // Nitro WebSocket handlers go in server/routes/
     const streamUrl = `${env.VITE_BASE_URL.replace("http", "ws")}/twilio/stream`;
