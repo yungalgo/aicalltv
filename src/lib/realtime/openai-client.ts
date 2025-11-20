@@ -40,6 +40,10 @@ export class OpenAIRealtimeClient {
    */
   async connect(): Promise<void> {
     const url = "wss://api.openai.com/v1/realtime?model=" + this.config.model;
+    
+    console.log("[OpenAI Realtime] Connecting to:", url);
+    console.log("[OpenAI Realtime] API Key present:", !!this.config.apiKey);
+    console.log("[OpenAI Realtime] API Key length:", this.config.apiKey?.length || 0);
 
     return new Promise((resolve, reject) => {
       this.ws = new WebSocket(url, {
@@ -50,10 +54,10 @@ export class OpenAIRealtimeClient {
       });
 
       this.ws.on("open", () => {
-        console.log("[OpenAI Realtime] Connected");
+        console.log("[OpenAI Realtime] ✅ WebSocket connection OPENED");
         
         // Send session configuration
-        this.sendSessionUpdate({
+        const sessionConfig = {
           voice: this.config.voice,
           instructions: this.config.instructions,
           input_audio_format: "pcm16",
@@ -61,7 +65,10 @@ export class OpenAIRealtimeClient {
           input_audio_transcription: {
             model: "whisper-1",
           },
-        });
+        };
+        
+        console.log("[OpenAI Realtime] Sending session config:", JSON.stringify(sessionConfig, null, 2));
+        this.sendSessionUpdate(sessionConfig);
 
         resolve();
       });
@@ -71,15 +78,18 @@ export class OpenAIRealtimeClient {
       });
 
       this.ws.on("error", (error) => {
-        console.error("[OpenAI Realtime] WebSocket error:", error);
+        console.error("[OpenAI Realtime] ❌ WebSocket ERROR:", error);
+        console.error("[OpenAI Realtime] Error details:", JSON.stringify(error, null, 2));
         if (this.onErrorCallback) {
           this.onErrorCallback(error);
         }
         reject(error);
       });
 
-      this.ws.on("close", () => {
-        console.log("[OpenAI Realtime] Connection closed");
+      this.ws.on("close", (code, reason) => {
+        console.log("[OpenAI Realtime] ❌ Connection CLOSED");
+        console.log("[OpenAI Realtime] Close code:", code);
+        console.log("[OpenAI Realtime] Close reason:", reason.toString());
       });
     });
   }
@@ -134,6 +144,13 @@ export class OpenAIRealtimeClient {
   private handleMessage(data: Buffer) {
     try {
       const message = JSON.parse(data.toString());
+      
+      // Log all messages for debugging
+      console.log("[OpenAI Realtime] 📥 Received message:", message.type);
+      if (message.type !== "response.audio.delta") {
+        // Don't log every audio chunk, too noisy
+        console.log("[OpenAI Realtime] Message data:", JSON.stringify(message, null, 2));
+      }
 
       switch (message.type) {
         case "response.audio.delta":

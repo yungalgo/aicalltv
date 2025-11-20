@@ -10,8 +10,8 @@ export const Route = createFileRoute("/api/twilio/voice")({
     handlers: {
       GET: async () => {
     // WebSocket URL for receiving Media Stream
-    // Nitro handles _ws routes as WebSocket endpoints
-    const streamUrl = `${env.VITE_BASE_URL.replace("http", "ws")}/api/twilio/_ws/stream`;
+    // Nitro WebSocket handlers go in server/routes/
+    const streamUrl = `${env.VITE_BASE_URL.replace("http", "ws")}/twilio/stream`;
 
     // TwiML response that starts the Media Stream and connects to OpenAI Realtime
     // OpenAI will handle the conversation - no need for <Say> here
