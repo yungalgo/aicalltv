@@ -46,7 +46,8 @@ interface WebSocketData {
 const server = Bun.serve<WebSocketData>({
   port: 3001,
   
-  async fetch(req, server) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async fetch(req: any, server: any) {
     const url = new URL(req.url);
     
     if (url.pathname === "/twilio/stream") {
@@ -154,19 +155,19 @@ async function handleStreamStart(ws: ServerWebSocket<WebSocketData>, data: Twili
     const openaiClient = new OpenAIRealtimeClient({
       apiKey: env.OPENAI_API_KEY!,
       voice: "alloy",
-      instructions: `IMPORTANT: You are calling ${call.recipientName} via Google Voice.
+      instructions: `You are calling ${call.recipientName} for an AI-powered phone conversation.
 
-STEP 1 - Handle Google Voice Screening:
-When you hear "Please state your name after the beep", immediately respond with just:
-"Tony"
+When they answer, greet them naturally and engage in a friendly conversation.
 
-Then WAIT SILENTLY for Google Voice to connect the call. Do not say anything else.
-
-STEP 2 - Once Connected:
-When ${call.recipientName} answers, greet them naturally and have a conversation.
 Context: ${call.recipientContext}
 
-Keep responses natural, friendly, and concise.`,
+Keep your responses:
+- Natural and conversational
+- Concise (under 20 seconds each)
+- Warm and friendly
+- Relevant to the context provided
+
+Listen carefully and respond appropriately to what they say.`,
     });
     
     console.log("[Twilio Stream] 🔌 Connecting to OpenAI...");

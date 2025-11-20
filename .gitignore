@@ -21,4 +21,5 @@ dist
 /server/build
 /public/build
 
-.tanstack
+.tanstackngrok.yml
+.tanstack/

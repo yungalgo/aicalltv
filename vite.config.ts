@@ -33,6 +33,8 @@ export default defineConfig({
   server: {
     // Allow ngrok hosts for webhooks
     allowedHosts: [
+      "8574d031581f.ngrok-free.app", // Current main app ngrok
+      "7891220f073b.ngrok-free.app", // Current websocket ngrok
       ".ngrok-free.app", // Allow all ngrok free tier domains
       ".ngrok.io", // Allow all ngrok domains
     ],
