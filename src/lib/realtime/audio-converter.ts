@@ -48,22 +48,33 @@ export function pcm16ToPCMU(pcm16Base64: string): string {
 /**
  * Decode μ-law (PCMU) to linear PCM (16-bit)
  * Based on ITU-T G.711 standard
+ * Reference: https://en.wikipedia.org/wiki/G.711
  */
 function decodeMuLaw(pcmuBuffer: Buffer): Buffer {
   const pcm16Buffer = Buffer.alloc(pcmuBuffer.length * 2); // 16-bit = 2 bytes per sample
   
+  // μ-law decode lookup table for accuracy
+  const MULAW_BIAS = 33;
+  const MULAW_MAX = 0x1FFF;
+  
   for (let i = 0; i < pcmuBuffer.length; i++) {
-    const mulaw = pcmuBuffer[i];
+    let mulaw = pcmuBuffer[i];
     
-    // ITU-T G.711 μ-law decode
-    const sign = (mulaw & 0x80) >> 7;
+    // Invert bits (μ-law standard)
+    mulaw = ~mulaw & 0xff;
+    
+    // Extract sign, exponent, and mantissa
+    const sign = (mulaw & 0x80) ? -1 : 1;
     const exponent = (mulaw & 0x70) >> 4;
     const mantissa = mulaw & 0x0f;
     
-    let sample = ((mantissa << 3) + 132) << (exponent + 3);
-    if (sign === 1) {
-      sample = -sample;
-    }
+    // Decode to linear PCM
+    let sample = ((mantissa << 3) + MULAW_BIAS) << exponent;
+    sample = sample - MULAW_BIAS;
+    
+    // Apply sign and clamp to 16-bit range
+    sample = sign * sample;
+    sample = Math.max(-32768, Math.min(32767, sample));
     
     // Write as 16-bit little-endian
     pcm16Buffer.writeInt16LE(sample, i * 2);
@@ -78,32 +89,38 @@ function decodeMuLaw(pcmuBuffer: Buffer): Buffer {
  */
 function encodeMuLaw(pcm16Buffer: Buffer): Buffer {
   const pcmuBuffer = Buffer.alloc(pcm16Buffer.length / 2);
+  const MULAW_BIAS = 33;
   
   for (let i = 0; i < pcmuBuffer.length; i++) {
-    const sample = pcm16Buffer.readInt16LE(i * 2);
+    let sample = pcm16Buffer.readInt16LE(i * 2);
     
-    // ITU-T G.711 μ-law encode
+    // Get sign and magnitude
     const sign = sample < 0 ? 0x80 : 0x00;
     let magnitude = Math.abs(sample);
     
     // Add bias
-    magnitude += 33;
-    magnitude = Math.min(magnitude, 0x7fff);
+    magnitude += MULAW_BIAS;
+    magnitude = Math.min(magnitude, 0x7FFF);
     
-    // Find exponent and mantissa
+    // Find exponent (segment)
     let exponent = 7;
     for (let exp = 0; exp < 8; exp++) {
-      if (magnitude < (33 << (exp + 3))) {
+      if (magnitude < (MULAW_BIAS << (exp + 3))) {
         exponent = exp;
         break;
       }
     }
     
-    const mantissa = (magnitude >> (exponent + 3)) & 0x0f;
-    const mulaw = sign | (exponent << 4) | mantissa;
+    // Extract mantissa
+    const mantissa = (magnitude >> (exponent + 3)) & 0x0F;
     
-    // Invert bits (μ-law standard)
-    pcmuBuffer[i] = ~mulaw & 0xff;
+    // Combine to create μ-law byte
+    let mulaw = sign | (exponent << 4) | mantissa;
+    
+    // Invert bits (μ-law uses inverted encoding)
+    mulaw = ~mulaw & 0xFF;
+    
+    pcmuBuffer[i] = mulaw;
   }
   
   return pcmuBuffer;
