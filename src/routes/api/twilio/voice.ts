@@ -10,11 +10,12 @@ export const Route = createFileRoute("/api/twilio/voice")({
     handlers: {
       GET: async () => {
     // WebSocket URL for receiving Media Stream
-    const streamUrl = `${env.VITE_BASE_URL.replace("http", "ws")}/api/twilio/stream`;
+    // Nitro handles _ws routes as WebSocket endpoints
+    const streamUrl = `${env.VITE_BASE_URL.replace("http", "ws")}/api/twilio/_ws/stream`;
 
-    // TwiML response that starts the Media Stream
-    // Note: Dual-channel recording is enabled in the call creation (call.ts)
-    // This TwiML handles the Media Stream for real-time audio processing
+    // TwiML response that starts the Media Stream and connects to OpenAI Realtime
+    // OpenAI will handle the conversation - no need for <Say> here
+    // Dual-channel recording is enabled in the call creation (call.ts)
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Start>
@@ -22,12 +23,11 @@ export const Route = createFileRoute("/api/twilio/voice")({
             <Parameter name="callSid" value="{{CallSid}}" />
         </Stream>
     </Start>
-    <Say voice="alice">Connecting you now.</Say>
     <Pause length="300"/>
     <!-- 
-      Note: Dual-channel recording (stereo: left=caller, right=callee) 
-      is configured in the call creation API, not in TwiML.
-      The recording will be available via the recording-status webhook.
+      Note: OpenAI Realtime API handles the conversation via Media Stream.
+      Dual-channel recording (stereo: left=caller, right=callee) 
+      is configured in the call creation API for post-call processing.
     -->
 </Response>`;
 
