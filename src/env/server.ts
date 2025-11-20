@@ -29,6 +29,10 @@ export const env = createEnv({
 
     // fal.ai configuration (for video generation)
     FAL_KEY: z.string().optional(),
+
+    // WebSocket server URL (for Twilio Media Streams)
+    // Use ngrok URL for WebSocket server: wss://your-ws-ngrok.ngrok-free.app/twilio/stream
+    WEBSOCKET_URL: z.string().optional(),
   },
   runtimeEnv: process.env,
 });
