@@ -9,9 +9,13 @@ export const Route = createFileRoute("/api/twilio/voice")({
   server: {
     handlers: {
       POST: async () => {
+    console.log("[TwiML Voice] 📞 Twilio requested TwiML for call");
+    console.log("[TwiML Voice] VITE_BASE_URL:", env.VITE_BASE_URL);
+    
     // WebSocket URL for receiving Media Stream
     // Nitro WebSocket handlers go in server/routes/
     const streamUrl = `${env.VITE_BASE_URL.replace("http", "ws")}/twilio/stream`;
+    console.log("[TwiML Voice] 🔌 Stream URL:", streamUrl);
 
     // TwiML response for bidirectional Media Stream
     // Per Twilio docs: Use <Connect><Stream> for bidirectional streams (not <Start><Stream>)
