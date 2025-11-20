@@ -9,6 +9,7 @@ export const Route = createFileRoute("/api/twilio/voice")({
   server: {
     handlers: {
       POST: async () => {
+    console.log("=".repeat(80));
     console.log("[TwiML Voice] 📞 Twilio requested TwiML for call");
     console.log("[TwiML Voice] VITE_BASE_URL:", env.VITE_BASE_URL);
     
@@ -28,6 +29,10 @@ export const Route = createFileRoute("/api/twilio/voice")({
         </Stream>
     </Connect>
 </Response>`;
+
+    console.log("[TwiML Voice] 📤 Returning TwiML:");
+    console.log(twiml);
+    console.log("=".repeat(80));
 
     return new Response(twiml, {
       headers: {
