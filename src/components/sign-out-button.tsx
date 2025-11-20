@@ -4,7 +4,7 @@ import { Button } from "~/components/ui/button";
 import authClient from "~/lib/auth/auth-client";
 import { authQueryOptions } from "~/lib/auth/queries";
 
-export function SignOutButton() {
+export function SignOutButton({ size = "lg" }: { size?: "sm" | "lg" }) {
   const queryClient = useQueryClient();
   const router = useRouter();
   return (
@@ -23,7 +23,7 @@ export function SignOutButton() {
       type="button"
       className="w-fit"
       variant="destructive"
-      size="lg"
+      size={size}
     >
       Sign out
     </Button>
