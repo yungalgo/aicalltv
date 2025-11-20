@@ -33,10 +33,17 @@ export async function initiateTwilioCall(
     throw new Error("Phone number not found in call record");
   }
 
-  // TODO: Set up webhook URLs for call status updates
-  // For now, we'll use a placeholder webhook URL
+  // Webhook URLs for call status updates
   const statusCallbackUrl = `${env.VITE_BASE_URL}/api/webhooks/twilio/call-status`;
   const recordingStatusCallbackUrl = `${env.VITE_BASE_URL}/api/webhooks/twilio/recording-status`;
+  const twimlUrl = `${env.VITE_BASE_URL}/api/twilio/voice`;
+
+  console.log("=".repeat(80));
+  console.log("[Twilio Call] 📞 Initiating call to:", phoneNumber);
+  console.log("[Twilio Call] TwiML URL:", twimlUrl);
+  console.log("[Twilio Call] Status callback:", statusCallbackUrl);
+  console.log("[Twilio Call] Recording callback:", recordingStatusCallbackUrl);
+  console.log("=".repeat(80));
 
   // Make the call with Media Stream enabled AND dual-channel recording
   // Media Stream: Real-time audio via WebSocket (for live processing)
@@ -44,7 +51,7 @@ export async function initiateTwilioCall(
   const twilioCall = await client.calls.create({
     to: phoneNumber,
     from: env.TWILIO_PHONE_NUMBER,
-    url: `${env.VITE_BASE_URL}/api/twilio/voice`, // TwiML endpoint that starts Media Stream
+    url: twimlUrl, // TwiML endpoint that starts Media Stream
     statusCallback: statusCallbackUrl,
     statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
     statusCallbackMethod: "POST",
