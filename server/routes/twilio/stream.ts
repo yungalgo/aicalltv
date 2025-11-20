@@ -8,7 +8,8 @@
  * Twilio Call → Media Stream (WS) → This Handler → OpenAI Realtime API (WS)
  */
 
-import type { H3Event } from "h3";
+// @ts-expect-error - crossws types not fully available
+import { defineWebSocketHandler } from "crossws/adapters/nitro";
 import { OpenAIRealtimeClient } from "../../../src/lib/realtime/openai-client";
 import { pcmuToPCM16, pcm16ToPCMU } from "../../../src/lib/realtime/audio-converter";
 import { drizzle } from "drizzle-orm/postgres-js";
