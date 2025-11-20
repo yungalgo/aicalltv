@@ -16,6 +16,18 @@ const getAuthConfig = createServerOnlyFn(() =>
       provider: "pg",
     }),
 
+    // https://www.better-auth.com/docs/concepts/database#extending-core-schema
+    user: {
+      additionalFields: {
+        freeCallCredits: {
+          type: "number",
+          required: false,
+          defaultValue: 0,
+          input: false, // Don't allow user to set this during signup
+        },
+      },
+    },
+
     // https://www.better-auth.com/docs/integrations/tanstack#usage-tips
     plugins: [reactStartCookies()],
 
