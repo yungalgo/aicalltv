@@ -20,6 +20,15 @@ export const env = createEnv({
 
     // OpenAI configuration
     OPENAI_API_KEY: z.string().optional(),
+
+    // AWS S3 configuration (for storing audio/video files)
+    AWS_ACCESS_KEY_ID: z.string().optional(),
+    AWS_SECRET_ACCESS_KEY: z.string().optional(),
+    AWS_REGION: z.string().optional(),
+    AWS_S3_BUCKET: z.string().optional(),
+
+    // fal.ai configuration (for video generation)
+    FAL_KEY: z.string().optional(),
   },
   runtimeEnv: process.env,
 });
