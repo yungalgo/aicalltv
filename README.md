@@ -102,12 +102,14 @@ If you haven't used ngrok before:
    - Go to https://dashboard.ngrok.com/get-started/your-authtoken
    - Copy your token
 
-3. **Configure:**
-   ```bash
-   ngrok config add-authtoken YOUR_TOKEN
-   ```
+3. **Add token to `ngrok.yml`:**
+   - Open `ngrok.yml` in the project root
+   - Replace `YOUR_NGROK_AUTHTOKEN_HERE` with your actual token
+   - Save the file
 
-Now you can use the `ngrok http` commands above.
+   The token is stored in `ngrok.yml` (which is gitignored) so you won't need to re-authenticate.
+
+Now you can use the `ngrok start --all --config ngrok.yml` command.
 
 ## Troubleshooting
 
@@ -119,7 +121,7 @@ Now you can use the `ngrok http` commands above.
 
 **"ngrok authentication failed"?**
 - Get new token: https://dashboard.ngrok.com/get-started/your-authtoken
-- Run: `ngrok config add-authtoken YOUR_TOKEN`
+- Update `ngrok.yml` and replace `YOUR_NGROK_AUTHTOKEN_HERE` with your token
 
 **"Database connection failed"?**
 - Check your `DATABASE_URL` in `.env`
