@@ -48,6 +48,16 @@ export const Route = createFileRoute("/api/webhooks/twilio/recording-status")({
             .where(eq(calls.id, call.id));
 
           console.log(`[Twilio Webhook] Recording ready for call ${call.id}: ${recordingUrl}`);
+
+          // Enqueue video generation job now that we have the recording URL
+          const { getBoss, JOB_TYPES } = await import("~/lib/queue/boss");
+          const boss = await getBoss();
+          await boss.send(JOB_TYPES.GENERATE_VIDEO, {
+            callId: call.id,
+            recordingUrl,
+          });
+          
+          console.log(`[Twilio Webhook] Enqueued video generation job for call ${call.id}`);
         }
       }
     } catch (error) {

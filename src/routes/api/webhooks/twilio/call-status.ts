@@ -69,12 +69,9 @@ export const Route = createFileRoute("/api/webhooks/twilio/call-status")({
           })
           .where(eq(calls.id, call.id));
 
-        // Enqueue video generation job
-        const boss = await getBoss();
-        await boss.send(JOB_TYPES.GENERATE_VIDEO, {
-          callId: call.id,
-          recordingUrl: formData.get("RecordingUrl") as string | undefined,
-        });
+        // Note: Video generation will be enqueued when recording is ready
+        // (from recording-status webhook, not here)
+        // The recording URL comes from the recording-status webhook
       } else if (callStatus === "no-answer" || callStatus === "busy" || callStatus === "failed") {
         // Call didn't connect - schedule retry at next available slot
         const { getTimezoneForPhoneNumber } = await import("~/lib/calls/retry-logic");
