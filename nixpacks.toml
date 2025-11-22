@@ -1,0 +1,7 @@
+# Railway Nixpacks configuration
+# Installs FFmpeg for video/audio processing
+# Railway will auto-detect Bun from package.json
+
+[phases.setup]
+nixPkgs = ["ffmpeg"]
+
