@@ -27,3 +27,4 @@ ngrok.yml
 # Non-readme markdown files in root
 BUILD_ORDER.md
 COMPLETE_GUIDE.md
+tmp/

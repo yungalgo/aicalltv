@@ -2,6 +2,8 @@
 
 AI-powered phone calling system using Twilio + OpenAI Realtime API.
 
+Built for the zypherpunk hackathon.
+
 ## Setup
 
 1. **Install dependencies:**
@@ -25,7 +27,7 @@ AI-powered phone calling system using Twilio + OpenAI Realtime API.
    AWS_REGION="us-east-1"
    AWS_S3_BUCKET="your-bucket"
    
-   FAL_KEY="xxxxx"
+   WAVESPEED_API_KEY="xxxxx"
    
    # Add these after getting ngrok URLs (see step 4)
    VITE_BASE_URL="https://your-ngrok-url.ngrok-free.app"
@@ -89,42 +91,47 @@ bun scripts/test-call.ts "+1234567890" "John Doe" "This is a test call"
 
 Watch the logs in Terminal 2 to see the call progress.
 
-## ngrok Setup (First Time)
+## Video Generation
 
-If you haven't used ngrok before:
+The app automatically generates videos from call recordings using **WavespeedAI's `infinitetalk-fast/multi`** model. This creates a dual-person talking avatar video from stereo audio recordings.
 
-1. **Install:**
-   ```bash
-   brew install ngrok
-   ```
+### How It Works
 
-2. **Get auth token:**
-   - Go to https://dashboard.ngrok.com/get-started/your-authtoken
-   - Copy your token
+1. **Recording**: Twilio records calls as stereo audio (left channel = caller, right channel = callee)
+2. **Processing**: The audio is split into two mono channels and uploaded to S3
+3. **Generation**: WavespeedAI generates a multi-person video using:
+   - Left audio (caller)
+   - Right audio (callee)
+   - Default split-screen image (two people on a park bench)
+   - `order: "meanwhile"` mode (shows both people simultaneously)
+4. **Storage**: The final video is uploaded to S3 and linked to the call record
 
-3. **Add token to `ngrok.yml`:**
-   - Open `ngrok.yml` in the project root
-   - Replace `YOUR_NGROK_AUTHTOKEN_HERE` with your actual token
-   - Save the file
+### Testing Video Generation
 
-   The token is stored in `ngrok.yml` (which is gitignored) so you won't need to re-authenticate.
+To test the video generation pipeline with an existing call:
 
-Now you can use the `ngrok start --all --config ngrok.yml` command.
+```bash
+bun run test:video
+```
 
-## Troubleshooting
+This script:
+- Downloads a recording from Twilio
+- Splits the stereo audio into caller/callee channels
+- Generates a multi-person video using WavespeedAI
+- Uploads the final video to S3
+- Cleans up temporary files
 
-**"Got HTTP 404 response" from Twilio?**
-- ngrok URLs expire when you restart ngrok
-- Get new URLs from terminals 3 & 4
-- Update `.env` with new URLs
-- Restart terminals 1 & 2 (env vars don't hot reload)
+**Note**: Make sure you have:
+- `WAVESPEED_API_KEY` set in your `.env`
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, and `AWS_S3_BUCKET` configured
+- FFmpeg installed (required for audio processing)
 
-**"ngrok authentication failed"?**
-- Get new token: https://dashboard.ngrok.com/get-started/your-authtoken
-- Update `ngrok.yml` and replace `YOUR_NGROK_AUTHTOKEN_HERE` with your token
+### Video Model Details
 
-**"Database connection failed"?**
-- Check your `DATABASE_URL` in `.env`
+- **Model**: `infinitetalk-fast/multi` (WavespeedAI)
+- **Input**: Left audio, right audio, and a reference image
+- **Output**: MP4 video with synchronized lip movements for both speakers
+- **Cost**: $0.015 per second of audio
 
 ## What Each Terminal Does
 
