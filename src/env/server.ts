@@ -27,8 +27,8 @@ export const env = createEnv({
     AWS_REGION: z.string().optional(),
     AWS_S3_BUCKET: z.string().optional(),
 
-    // fal.ai configuration (for video generation)
-    FAL_KEY: z.string().optional(),
+    // WavespeedAI configuration (for video generation)
+    WAVESPEED_API_KEY: z.string().optional(),
 
     // WebSocket server URL (for Twilio Media Streams)
     // Use ngrok URL for WebSocket server: wss://your-ws-ngrok.ngrok-free.app/twilio/stream

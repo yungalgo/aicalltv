@@ -36,7 +36,7 @@ export const calls = pgTable("calls", {
   duration: integer("duration"), // seconds
   videoUrl: text("video_url"), // S3 video URL
   videoStatus: videoStatusEnum("video_status").default("pending"),
-  falJobId: text("fal_job_id"),
+  wavespeedJobId: text("wavespeed_job_id"), // WavespeedAI job IDs (comma-separated)
   videoErrorMessage: text("video_error_message"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
