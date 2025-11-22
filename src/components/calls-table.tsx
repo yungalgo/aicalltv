@@ -69,7 +69,7 @@ export function CallsTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {calls.map((call) => (
+          {calls.map((call: typeof calls[0]) => (
             <TableRow key={call.id}>
               <TableCell className="font-medium">{call.recipientName}</TableCell>
               <TableCell>{getStatusBadge(call.status)}</TableCell>

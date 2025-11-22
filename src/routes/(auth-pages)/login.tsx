@@ -10,17 +10,21 @@ import authClient from "~/lib/auth/auth-client";
 
 export const Route = createFileRoute("/(auth-pages)/login")({
   component: LoginForm,
+  validateSearch: (search: Record<string, unknown>): { redirectUrl?: string } => ({
+    redirectUrl: (search.redirectUrl as string) || undefined,
+  }),
 });
 
 function LoginForm() {
-  const { redirectUrl } = Route.useRouteContext();
+  const { redirectUrl } = Route.useSearch();
+  const finalRedirectUrl = redirectUrl || "/";
 
   const { mutate: emailLoginMutate, isPending } = useMutation({
     mutationFn: async (data: { email: string; password: string }) =>
       await authClient.signIn.email(
         {
           ...data,
-          callbackURL: redirectUrl,
+          callbackURL: finalRedirectUrl,
         },
         {
           onError: ({ error }) => {
@@ -98,7 +102,7 @@ function LoginForm() {
           <div className="grid gap-4 sm:grid-cols-2">
             <SignInSocialButton
               provider="github"
-              callbackURL={redirectUrl}
+              callbackURL={finalRedirectUrl}
               disabled={isPending}
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -111,7 +115,7 @@ function LoginForm() {
             />
             <SignInSocialButton
               provider="google"
-              callbackURL={redirectUrl}
+              callbackURL={finalRedirectUrl}
               // disabled={isPending}
               disabled={true} // TODO disabled just for the preview deployment at https://tanstarter.nize.ph
               icon={
@@ -129,7 +133,11 @@ function LoginForm() {
 
       <div className="text-center text-sm">
         Don&apos;t have an account?{" "}
-        <Link to="/signup" className="underline underline-offset-4">
+        <Link 
+          to="/signup" 
+          search={{ redirectUrl: finalRedirectUrl }}
+          className="underline underline-offset-4"
+        >
           Sign up
         </Link>
       </div>

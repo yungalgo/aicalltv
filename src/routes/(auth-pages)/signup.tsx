@@ -11,10 +11,14 @@ import { authQueryOptions } from "~/lib/auth/queries";
 
 export const Route = createFileRoute("/(auth-pages)/signup")({
   component: SignupForm,
+  validateSearch: (search: Record<string, unknown>): { redirectUrl?: string } => ({
+    redirectUrl: (search.redirectUrl as string) || undefined,
+  }),
 });
 
 function SignupForm() {
-  const { redirectUrl } = Route.useRouteContext();
+  const { redirectUrl } = Route.useSearch();
+  const finalRedirectUrl = redirectUrl || "/";
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -23,7 +27,7 @@ function SignupForm() {
       await authClient.signUp.email(
         {
           ...data,
-          callbackURL: redirectUrl,
+          callbackURL: finalRedirectUrl,
         },
         {
           onError: ({ error }) => {
@@ -31,7 +35,7 @@ function SignupForm() {
           },
           onSuccess: () => {
             queryClient.removeQueries({ queryKey: authQueryOptions().queryKey });
-            navigate({ to: redirectUrl });
+            navigate({ to: finalRedirectUrl });
           },
         },
       );
@@ -129,7 +133,7 @@ function SignupForm() {
           <div className="grid gap-4 sm:grid-cols-2">
             <SignInSocialButton
               provider="github"
-              callbackURL={redirectUrl}
+              callbackURL={finalRedirectUrl}
               disabled={isPending}
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
@@ -142,7 +146,7 @@ function SignupForm() {
             />
             <SignInSocialButton
               provider="google"
-              callbackURL={redirectUrl}
+              callbackURL={finalRedirectUrl}
               // disabled={isPending}
               disabled={true} // TODO disabled just for the preview deployment at https://tanstarter.nize.ph
               icon={
@@ -160,7 +164,11 @@ function SignupForm() {
 
       <div className="text-center text-sm">
         Already have an account?{" "}
-        <Link to="/login" className="underline underline-offset-4">
+        <Link 
+          to="/login" 
+          search={{ redirectUrl: finalRedirectUrl }}
+          className="underline underline-offset-4"
+        >
           Login
         </Link>
       </div>
