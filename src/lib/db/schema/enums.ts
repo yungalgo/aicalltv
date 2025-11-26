@@ -2,6 +2,7 @@ import { pgEnum } from "drizzle-orm/pg-core";
 
 export const callStatusEnum = pgEnum("call_status", [
   "call_created",
+  "prompt_ready",
   "call_attempted",
   "call_complete",
   "call_failed",

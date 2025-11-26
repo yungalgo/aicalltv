@@ -29,9 +29,34 @@ export function CallsTable() {
     );
   }
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, videoStatus?: string) => {
+    // Show video status if available
+    if (videoStatus === "completed") {
+      return (
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-green-500/10 text-green-500">
+          Video Ready
+        </span>
+      );
+    }
+    if (videoStatus === "generating") {
+      return (
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-yellow-500/10 text-yellow-500">
+          Generating Video
+        </span>
+      );
+    }
+    if (videoStatus === "failed") {
+      return (
+        <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-red-500/10 text-red-500">
+          Video Failed
+        </span>
+      );
+    }
+
+    // Call status
     const statusConfig = {
       call_created: { label: "Created", className: "bg-blue-500/10 text-blue-500" },
+      prompt_ready: { label: "Ready", className: "bg-green-500/10 text-green-500" },
       call_attempted: { label: "In Progress", className: "bg-yellow-500/10 text-yellow-500" },
       call_complete: { label: "Complete", className: "bg-green-500/10 text-green-500" },
       call_failed: { label: "Failed", className: "bg-red-500/10 text-red-500" },
@@ -63,7 +88,7 @@ export function CallsTable() {
           <TableRow>
             <TableHead>Recipient</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Payment</TableHead>
+            <TableHead>Video</TableHead>
             <TableHead>Created</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -72,11 +97,24 @@ export function CallsTable() {
           {calls.map((call: typeof calls[0]) => (
             <TableRow key={call.id}>
               <TableCell className="font-medium">{call.recipientName}</TableCell>
-              <TableCell>{getStatusBadge(call.status)}</TableCell>
+              <TableCell>{getStatusBadge(call.status, call.videoStatus)}</TableCell>
               <TableCell>
-                <span className="text-sm text-muted-foreground">
-                  {call.isFree ? "Free" : call.paymentMethod.replace("_", " ")}
-                </span>
+                {call.videoUrl ? (
+                  <a 
+                    href={call.videoUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    View Video
+                  </a>
+                ) : (
+                  <span className="text-sm text-muted-foreground">
+                    {call.videoStatus === "generating" ? "Generating..." : 
+                     call.videoStatus === "failed" ? "Failed" :
+                     call.status === "call_complete" ? "Pending" : "Not started"}
+                  </span>
+                )}
               </TableCell>
               <TableCell className="text-sm text-muted-foreground">
                 {formatDate(call.createdAt)}
@@ -90,9 +128,7 @@ export function CallsTable() {
                     </a>
                   </Button>
                 ) : (
-                  <span className="text-sm text-muted-foreground">
-                    {call.status === "call_complete" ? "Processing video..." : "Pending"}
-                  </span>
+                  <span className="text-sm text-muted-foreground">-</span>
                 )}
               </TableCell>
             </TableRow>

@@ -3,6 +3,7 @@
  */
 
 import { env } from "~/env/server";
+import { uploadAudioToS3 } from "~/lib/storage/s3";
 
 export interface DownloadRecordingOptions {
   recordingUrl: string;
@@ -73,8 +74,6 @@ export async function storeRecordingInS3(
   recordingBuffer: Buffer,
   callId: string,
 ): Promise<string> {
-  const { uploadAudioToS3 } = await import("~/lib/storage/s3");
-
   const s3Url = await uploadAudioToS3(
     recordingBuffer,
     callId,

@@ -3,7 +3,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { env } from "~/env/server";
 import { calls } from "~/lib/db/schema/calls";
-import * as schema from "~/lib/db/schema";
+import { user } from "~/lib/db/schema/auth.schema";
 import { getBoss, JOB_TYPES } from "~/lib/queue/boss";
 import { downloadTwilioRecording } from "~/lib/twilio/recording";
 import { splitStereoAudio } from "~/lib/audio/split-channels";
@@ -11,10 +11,7 @@ import {
   generateMultiPersonVideo,
   downloadWavespeedVideo,
 } from "~/lib/video/wavespeed-generator";
-import {
-  generateImage,
-  getDefaultCallImagePrompt,
-} from "~/lib/image/wavespeed-image-generator";
+import { generateImage } from "~/lib/image/wavespeed-image-generator";
 import { uploadFileToS3 } from "~/lib/storage/s3";
 import {
   cleanupTempFiles,
@@ -46,7 +43,7 @@ export async function setupVideoGeneratorWorker() {
 
       // Create database connection
       const driver = postgres(env.DATABASE_URL);
-      const db = drizzle({ client: driver, schema, casing: "snake_case" });
+      const db = drizzle({ client: driver, casing: "snake_case" });
 
       try {
         // Fetch call record
@@ -108,9 +105,49 @@ export async function setupVideoGeneratorWorker() {
           });
         });
 
+        // Generate image prompt using Groq (only if not already generated)
+        // This happens AFTER call completes, so we can generate it now
+        let imagePrompt = call.imagePrompt;
+        
+        if (!imagePrompt) {
+          const { generateImagePrompt } = await import("~/lib/prompts/groq-generator");
+          
+          // Fail loudly if required fields are missing
+          if (!call.targetGender) {
+            throw new Error(`[Video Generator] ❌ Missing required field: targetGender for call ${callId}`);
+          }
+          if (!call.videoStyle) {
+            throw new Error(`[Video Generator] ❌ Missing required field: videoStyle for call ${callId}`);
+          }
+          
+          const promptInput = {
+            targetPerson: {
+              name: call.recipientName,
+              gender: call.targetGender as "male" | "female" | "other",
+              genderCustom: call.targetGenderCustom || undefined,
+              ageRange: call.targetAgeRange || undefined,
+              physicalDescription: call.targetPhysicalDescription || undefined,
+              interestingPiece: call.interestingPiece || undefined,
+            },
+            videoStyle: call.videoStyle,
+            recipientContext: call.recipientContext,
+          };
+          
+          // Fail loudly if generation fails - no fallbacks during development
+          imagePrompt = await generateImagePrompt(promptInput);
+          console.log(`[Video Generator] ✅ Generated image prompt`);
+          
+          // Store the generated prompt in database
+          await db
+            .update(calls)
+            .set({
+              imagePrompt,
+              updatedAt: new Date(),
+            })
+            .where(eq(calls.id, callId));
+        }
+
         // Generate image from prompt using WavespeedAI nano-banana-pro
-        // Always generates PNG, 16:9, 4k resolution
-        const imagePrompt = getDefaultCallImagePrompt();
         const imageResult = await generateImage({
           prompt: imagePrompt,
           callId,
@@ -139,6 +176,13 @@ export async function setupVideoGeneratorWorker() {
           "video/mp4",
         );
 
+        // Get user email for notification
+        const [userRecord] = await db
+          .select()
+          .from(user)
+          .where(eq(user.id, call.userId))
+          .limit(1);
+
         // Update database
         await db
           .update(calls)
@@ -151,6 +195,24 @@ export async function setupVideoGeneratorWorker() {
           .where(eq(calls.id, callId));
 
         console.log(`[Video Generator] ✅ Completed video generation for call ${callId}`);
+
+        // Send email notification if user email is available
+        if (userRecord?.email) {
+          try {
+            const { sendVideoReadyEmail } = await import("~/lib/email/resend");
+            const dashboardUrl = `${env.VITE_BASE_URL}/dashboard`;
+            await sendVideoReadyEmail(
+              userRecord.email,
+              userRecord.name || "User",
+              finalVideoUrl,
+              dashboardUrl,
+            );
+            console.log(`[Video Generator] ✅ Sent email notification to ${userRecord.email}`);
+          } catch (error) {
+            console.error(`[Video Generator] ❌ Failed to send email:`, error);
+            // Don't fail the whole job if email fails
+          }
+        }
       } catch (error) {
         console.error(`[Video Generator] ❌ Error processing video ${callId}:`, error);
 

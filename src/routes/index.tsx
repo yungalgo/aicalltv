@@ -11,6 +11,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { toast } from "sonner";
 import { authQueryOptions } from "~/lib/auth/queries";
 import { createCall } from "~/lib/calls/functions";
+import { VIDEO_STYLES } from "~/lib/constants/video-styles";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -68,6 +69,12 @@ function CallRequestForm() {
     recipientName: "",
     phoneNumber: "",
     recipientContext: "",
+    targetGender: "male" as "male" | "female" | "other",
+    targetGenderCustom: "",
+    targetAgeRange: "" as "" | "18-25" | "26-35" | "36-45" | "46-55" | "56+",
+    targetPhysicalDescription: "",
+    interestingPiece: "",
+    videoStyle: "anime",
   });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -97,21 +104,37 @@ function CallRequestForm() {
       toast.error("Context must be 1000 characters or less");
       return;
     }
+    if (formData.targetGender === "other" && !formData.targetGenderCustom.trim()) {
+      toast.error("Please specify custom gender");
+      return;
+    }
+    if (!formData.videoStyle) {
+      toast.error("Video style is required");
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
       // Dummy payment flow: Automatically uses web3_wallet payment method
       // Call server function - data must be wrapped in { data: ... }
-      await (createCall as any)({
+      console.log("[Client] Calling createCall with data:", formData);
+      const result = await (createCall as any)({
         data: {
           recipientName: formData.recipientName,
           phoneNumber: formData.phoneNumber,
           recipientContext: formData.recipientContext,
-          paymentMethod: "web3_wallet",
-          isFree: false,
+          targetGender: formData.targetGender,
+          targetGenderCustom: formData.targetGender === "other" ? formData.targetGenderCustom : undefined,
+          targetAgeRange: formData.targetAgeRange || undefined,
+          targetPhysicalDescription: formData.targetPhysicalDescription || undefined,
+          interestingPiece: formData.interestingPiece || undefined,
+          videoStyle: formData.videoStyle,
+          paymentMethod: "free", // Default to free for testing
+          isFree: true,
         },
       });
+      console.log("[Client] createCall result:", result); 
 
       toast.success("Payment processed! Call request submitted for processing.");
       
@@ -123,10 +146,21 @@ function CallRequestForm() {
         recipientName: "",
         phoneNumber: "",
         recipientContext: "",
+        targetGender: "male",
+        targetGenderCustom: "",
+        targetAgeRange: "",
+        targetPhysicalDescription: "",
+        interestingPiece: "",
+        videoStyle: "anime",
       });
     } catch (error) {
-      console.error("Error creating call:", error);
-      toast.error("Failed to create call request. Please try again.");
+      console.error("[Client] Error creating call:", error);
+      console.error("[Client] Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+      });
+      toast.error(`Failed to create call request: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -137,17 +171,25 @@ function CallRequestForm() {
     if (formData.recipientName && formData.phoneNumber && formData.recipientContext) {
       setIsSubmitting(true);
       try {
-        await (createCall as any)({
+        console.log("[Client] Calling createCall (from handleAuthSuccess) with data:", formData);
+        const result = await (createCall as any)({
           data: {
             recipientName: formData.recipientName,
             phoneNumber: formData.phoneNumber,
             recipientContext: formData.recipientContext,
-            paymentMethod: "web3_wallet",
-            isFree: false,
+            targetGender: formData.targetGender,
+            targetGenderCustom: formData.targetGender === "other" ? formData.targetGenderCustom : undefined,
+            targetAgeRange: formData.targetAgeRange || undefined,
+            targetPhysicalDescription: formData.targetPhysicalDescription || undefined,
+            interestingPiece: formData.interestingPiece || undefined,
+            videoStyle: formData.videoStyle,
+            paymentMethod: "free", // Default to free for testing
+            isFree: true,
           },
         });
+        console.log("[Client] createCall result (from handleAuthSuccess):", result);
 
-        toast.success("Payment processed! Call request submitted for processing.");
+        toast.success("Call request submitted! Processing will begin shortly.");
         
         // Invalidate calls query to refresh the table
         queryClient.invalidateQueries({ queryKey: ["calls"] });
@@ -157,6 +199,12 @@ function CallRequestForm() {
           recipientName: "",
           phoneNumber: "",
           recipientContext: "",
+          targetGender: "male",
+          targetGenderCustom: "",
+          targetAgeRange: "",
+          targetPhysicalDescription: "",
+          interestingPiece: "",
+          videoStyle: "anime",
         });
       } catch (error) {
         console.error("Error creating call:", error);
@@ -203,6 +251,118 @@ function CallRequestForm() {
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="targetGender">Target Person Gender</Label>
+        <select
+          id="targetGender"
+          value={formData.targetGender}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              targetGender: e.target.value as "male" | "female" | "other",
+              targetGenderCustom: "",
+            })
+          }
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          required
+          disabled={isSubmitting}
+        >
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      {formData.targetGender === "other" && (
+        <div className="space-y-2">
+          <Label htmlFor="targetGenderCustom">Custom Gender</Label>
+          <Input
+            id="targetGenderCustom"
+            value={formData.targetGenderCustom}
+            onChange={(e) =>
+              setFormData({ ...formData, targetGenderCustom: e.target.value })
+            }
+            placeholder="Please specify"
+            required
+            disabled={isSubmitting}
+          />
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <Label htmlFor="targetAgeRange">Target Person Age Range (Optional)</Label>
+        <select
+          id="targetAgeRange"
+          value={formData.targetAgeRange}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              targetAgeRange: e.target.value as typeof formData.targetAgeRange,
+            })
+          }
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={isSubmitting}
+        >
+          <option value="">Prefer not to say</option>
+          <option value="18-25">18-25</option>
+          <option value="26-35">26-35</option>
+          <option value="36-45">36-45</option>
+          <option value="46-55">46-55</option>
+          <option value="56+">56+</option>
+        </select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="targetPhysicalDescription">Physical Description (Optional)</Label>
+        <Textarea
+          id="targetPhysicalDescription"
+          value={formData.targetPhysicalDescription}
+          onChange={(e) =>
+            setFormData({ ...formData, targetPhysicalDescription: e.target.value })
+          }
+          placeholder="Hair color, style, clothing, etc."
+          rows={3}
+          disabled={isSubmitting}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="interestingPiece">Interesting Piece / Personal Hook</Label>
+        <Textarea
+          id="interestingPiece"
+          value={formData.interestingPiece}
+          onChange={(e) =>
+            setFormData({ ...formData, interestingPiece: e.target.value })
+          }
+          placeholder="Small personal details that would hook them - things regular people wouldn't know..."
+          rows={3}
+          disabled={isSubmitting}
+        />
+        <p className="text-xs text-muted-foreground">
+          Personal details that will make the call more engaging and authentic
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="videoStyle">Video Aesthetic Style</Label>
+        <select
+          id="videoStyle"
+          value={formData.videoStyle}
+          onChange={(e) =>
+            setFormData({ ...formData, videoStyle: e.target.value })
+          }
+          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+          required
+          disabled={isSubmitting}
+        >
+          {VIDEO_STYLES.map((style) => (
+            <option key={style} value={style}>
+              {style.charAt(0).toUpperCase() + style.slice(1).replace(/-/g, " ")}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-2">
         <Label htmlFor="recipientContext">Context / Message</Label>
         <Textarea
           id="recipientContext"
@@ -246,7 +406,7 @@ function CallRequestForm() {
         className="w-full"
         disabled={isSubmitting}
       >
-        {isSubmitting ? "Processing..." : "Pay Now & Submit Call"}
+        {isSubmitting ? "Processing..." : "Submit Call Request"}
       </Button>
     </form>
     <AuthModal

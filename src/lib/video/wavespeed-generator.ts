@@ -12,10 +12,6 @@ import { getSignedS3Url } from "~/lib/storage/s3";
 const WAVESPEED_API_BASE = "https://api.wavespeed.ai/api/v3";
 const MODEL_ENDPOINT = `${WAVESPEED_API_BASE}/wavespeed-ai/infinitetalk-fast/multi`;
 
-// Default image for multi-person video (two people on a park bench)
-// This should be a publicly accessible URL or S3 URL
-const DEFAULT_IMAGE = "https://d1q70pf5vjeyhc.cloudfront.net/media/fb8f674bbb1a429d947016fd223cfae1/images/1757382264476270969_9FdH4ftJ.jpeg";
-
 export interface WavespeedVideoResult {
   videoUrl: string;
   jobId: string;
@@ -180,7 +176,7 @@ export async function generateMultiPersonVideo(
   leftAudioUrl: string,
   rightAudioUrl: string,
   callId: string,
-  imageUrl?: string,
+  imageUrl: string, // Required - no fallbacks during development
   audioDuration?: number,
 ): Promise<WavespeedVideoResult> {
   if (!env.WAVESPEED_API_KEY) {
@@ -189,8 +185,14 @@ export async function generateMultiPersonVideo(
     );
   }
 
-  // Use provided image or default
-  const finalImageUrl = imageUrl || DEFAULT_IMAGE;
+  // Fail loudly if image URL is missing - no fallbacks during development
+  if (!imageUrl) {
+    throw new Error(
+      `[WavespeedAI] ❌ Missing required imageUrl for call ${callId}. Image generation must succeed before video generation.`,
+    );
+  }
+
+  const finalImageUrl = imageUrl;
 
   console.log(`[WavespeedAI] Generating multi-person video for call ${callId}`);
 

@@ -31,12 +31,10 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    // Allow ngrok hosts for webhooks
+    // Allow all ngrok domains (no need to update specific URLs)
     allowedHosts: [
-      "8574d031581f.ngrok-free.app", // Current main app ngrok
-      "7891220f073b.ngrok-free.app", // Current websocket ngrok
-      ".ngrok-free.app", // Allow all ngrok free tier domains
-      ".ngrok.io", // Allow all ngrok domains
+      ".ngrok-free.app",
+      ".ngrok.io",
     ],
   },
 });

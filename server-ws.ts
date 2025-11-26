@@ -151,23 +151,30 @@ async function handleStreamStart(ws: ServerWebSocket<WebSocketData>, data: Twili
     }
     
     console.log("[Twilio Stream] ✅ Found call:", call.id);
+    console.log("[Twilio Stream] 🔍 Checking call readiness...");
+    console.log("[Twilio Stream]   Status:", call.status);
+    console.log("[Twilio Stream]   Has OpenAI prompt:", !!call.openaiPrompt);
     
+    // CRITICAL: OpenAI prompt MUST be ready before call can start
+    if (!call.openaiPrompt) {
+      console.error(`[Twilio Stream] ❌ Call ${call.id} missing OpenAI prompt!`);
+      console.error(`[Twilio Stream]   Status: ${call.status}`);
+      console.error(`[Twilio Stream]   Call cannot start without prompt. This should not happen if flow is correct.`);
+      throw new Error(`[WebSocket] ❌ Missing OpenAI prompt for call ${call.id}. Prompt must be ready before call starts. Status: ${call.status}`);
+    }
+    
+    // Verify status is prompt_ready (or at least not call_created)
+    if (call.status === "call_created") {
+      console.error(`[Twilio Stream] ❌ Call ${call.id} still in call_created status - prompt generation may have failed`);
+      throw new Error(`[WebSocket] ❌ Call ${call.id} not ready - still in call_created status`);
+    }
+    
+    console.log("[Twilio Stream] ✅ Call is ready - has prompt and valid status");
+
     const openaiClient = new OpenAIRealtimeClient({
       apiKey: env.OPENAI_API_KEY!,
       voice: "alloy",
-      instructions: `You are calling ${call.recipientName} for an AI-powered phone conversation.
-
-When they answer, greet them naturally and engage in a friendly conversation.
-
-Context: ${call.recipientContext}
-
-Keep your responses:
-- Natural and conversational
-- Concise (under 20 seconds each)
-- Warm and friendly
-- Relevant to the context provided
-
-Listen carefully and respond appropriately to what they say.`,
+      instructions: call.openaiPrompt,
     });
     
     console.log("[Twilio Stream] 🔌 Connecting to OpenAI...");

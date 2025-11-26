@@ -7,6 +7,7 @@ import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { toast } from "sonner";
 import { createCall } from "~/lib/calls/functions";
+import { VIDEO_STYLES } from "~/lib/constants/video-styles";
 
 export const Route = createFileRoute("/(authenticated)/dashboard/")({
   component: DashboardIndex,
@@ -18,6 +19,12 @@ function DashboardIndex() {
     recipientName: "",
     phoneNumber: "",
     recipientContext: "",
+    targetGender: "male" as "male" | "female" | "other",
+    targetGenderCustom: "",
+    targetAgeRange: "" as "" | "18-25" | "26-35" | "36-45" | "46-55" | "56+",
+    targetPhysicalDescription: "",
+    interestingPiece: "",
+    videoStyle: "anime",
     paymentMethod: "free" as "free" | "web3_wallet",
   });
 
@@ -42,6 +49,14 @@ function DashboardIndex() {
       toast.error("Context must be 1000 characters or less");
       return;
     }
+    if (formData.targetGender === "other" && !formData.targetGenderCustom.trim()) {
+      toast.error("Please specify custom gender");
+      return;
+    }
+    if (!formData.videoStyle) {
+      toast.error("Video style is required");
+      return;
+    }
 
     setIsSubmitting(true);
 
@@ -49,13 +64,21 @@ function DashboardIndex() {
       // Dummy payment flow: Simulates payment processing, then submits call for processing
       // In production: Payment processed → Webhook → Create call record
       // For now: Directly create call record (simulating successful payment)
-      // Call server function - data is passed directly as the argument
-      const result = await (createCall as any)({
-        recipientName: formData.recipientName,
-        phoneNumber: formData.phoneNumber,
-        recipientContext: formData.recipientContext,
-        paymentMethod: formData.paymentMethod,
-        isFree: formData.paymentMethod === "free",
+      // Call server function - data must be wrapped in { data: ... }
+      await (createCall as any)({
+        data: {
+          recipientName: formData.recipientName,
+          phoneNumber: formData.phoneNumber,
+          recipientContext: formData.recipientContext,
+          targetGender: formData.targetGender,
+          targetGenderCustom: formData.targetGender === "other" ? formData.targetGenderCustom : undefined,
+          targetAgeRange: formData.targetAgeRange || undefined,
+          targetPhysicalDescription: formData.targetPhysicalDescription || undefined,
+          interestingPiece: formData.interestingPiece || undefined,
+          videoStyle: formData.videoStyle,
+          paymentMethod: formData.paymentMethod,
+          isFree: formData.paymentMethod === "free",
+        },
       });
 
       toast.success(
@@ -69,6 +92,12 @@ function DashboardIndex() {
         recipientName: "",
         phoneNumber: "",
         recipientContext: "",
+        targetGender: "male",
+        targetGenderCustom: "",
+        targetAgeRange: "",
+        targetPhysicalDescription: "",
+        interestingPiece: "",
+        videoStyle: "anime",
         paymentMethod: "free",
       });
 
@@ -122,6 +151,118 @@ function DashboardIndex() {
           <p className="text-xs text-muted-foreground">
             This will be encrypted before storage
           </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="targetGender">Target Person Gender</Label>
+          <select
+            id="targetGender"
+            value={formData.targetGender}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                targetGender: e.target.value as "male" | "female" | "other",
+                targetGenderCustom: "",
+              })
+            }
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            required
+            disabled={isSubmitting}
+          >
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        {formData.targetGender === "other" && (
+          <div className="space-y-2">
+            <Label htmlFor="targetGenderCustom">Custom Gender</Label>
+            <Input
+              id="targetGenderCustom"
+              value={formData.targetGenderCustom}
+              onChange={(e) =>
+                setFormData({ ...formData, targetGenderCustom: e.target.value })
+              }
+              placeholder="Please specify"
+              required
+              disabled={isSubmitting}
+            />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label htmlFor="targetAgeRange">Target Person Age Range (Optional)</Label>
+          <select
+            id="targetAgeRange"
+            value={formData.targetAgeRange}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                targetAgeRange: e.target.value as typeof formData.targetAgeRange,
+              })
+            }
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={isSubmitting}
+          >
+            <option value="">Prefer not to say</option>
+            <option value="18-25">18-25</option>
+            <option value="26-35">26-35</option>
+            <option value="36-45">36-45</option>
+            <option value="46-55">46-55</option>
+            <option value="56+">56+</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="targetPhysicalDescription">Physical Description (Optional)</Label>
+          <Textarea
+            id="targetPhysicalDescription"
+            value={formData.targetPhysicalDescription}
+            onChange={(e) =>
+              setFormData({ ...formData, targetPhysicalDescription: e.target.value })
+            }
+            placeholder="Hair color, style, clothing, etc."
+            rows={3}
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="interestingPiece">Interesting Piece / Personal Hook</Label>
+          <Textarea
+            id="interestingPiece"
+            value={formData.interestingPiece}
+            onChange={(e) =>
+              setFormData({ ...formData, interestingPiece: e.target.value })
+            }
+            placeholder="Small personal details that would hook them - things regular people wouldn't know..."
+            rows={3}
+            disabled={isSubmitting}
+          />
+          <p className="text-xs text-muted-foreground">
+            Personal details that will make the call more engaging and authentic
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="videoStyle">Video Aesthetic Style</Label>
+          <select
+            id="videoStyle"
+            value={formData.videoStyle}
+            onChange={(e) =>
+              setFormData({ ...formData, videoStyle: e.target.value })
+            }
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            required
+            disabled={isSubmitting}
+          >
+            {VIDEO_STYLES.map((style) => (
+              <option key={style} value={style}>
+                {style.charAt(0).toUpperCase() + style.slice(1).replace(/-/g, " ")}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="space-y-2">

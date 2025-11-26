@@ -13,68 +13,82 @@ Built for the zypherpunk hackathon.
 
 2. **Create `.env` file with your credentials:**
    ```bash
-   DATABASE_URL="postgresql://user:pass@your-db.neon.tech/dbname"
-   BETTER_AUTH_SECRET="generate-with: bun run auth:secret"
+   # URL Configuration (update after getting ngrok URLs - see step 4)
+   VITE_BASE_URL="https://your-ngrok-url.ngrok-free.app"
+   WEBSOCKET_URL="wss://your-ws-ngrok-url.ngrok-free.app/twilio/stream"
    
+   # Database
+   DATABASE_URL="postgresql://user:pass@your-db.neon.tech/dbname"
+   
+   # Auth (generate with: bun run auth:secret)
+   BETTER_AUTH_SECRET="your-secret"
+   
+   # Twilio (https://console.twilio.com/)
    TWILIO_ACCOUNT_SID="ACxxxxx"
    TWILIO_AUTH_TOKEN="your-token"
    TWILIO_PHONE_NUMBER="+1234567890"
    
+   # OpenAI (https://platform.openai.com/api-keys)
    OPENAI_API_KEY="sk-xxxxx"
    
+   # AWS S3 (for audio/video storage)
    AWS_ACCESS_KEY_ID="xxxxx"
    AWS_SECRET_ACCESS_KEY="xxxxx"
    AWS_REGION="us-east-1"
    AWS_S3_BUCKET="your-bucket"
    
+   # WavespeedAI (for video generation)
    WAVESPEED_API_KEY="xxxxx"
    
-   # Add these after getting ngrok URLs (see step 4)
-   VITE_BASE_URL="https://your-ngrok-url.ngrok-free.app"
-   WEBSOCKET_URL="wss://your-ngrok-url.ngrok-free.app/twilio/stream"
+   # Groq (for prompt generation)
+   GROQ_API_KEY="xxxxx"
+   
+   # Resend (for email notifications)
+   RESEND_API_KEY="xxxxx"
+   
+   # Development mode
+   TESTING_MODE=true
    ```
 
 3. **Push database schema:**
    ```bash
-   bun run db push
+   bun run db:push
    ```
 
 ## Running the App
 
 You need **3 terminals** open:
 
-### Terminal 1: Main App
-```bash
-bun run dev
-```
-
-### Terminal 2: WebSocket Server
-```bash
-bun run dev:ws
-```
-
-### Terminal 3: ngrok (both tunnels at once)
+### Terminal 1: ngrok (start first!)
 ```bash
 ngrok start --all --config ngrok.yml
 ```
 
-This will show you **2 URLs**:
-- One for port 3000 (main app)
-- One for port 3001 (websocket)
-
-Copy both `https://` URLs
+This will show you **2 forwarding URLs**:
+```
+Forwarding  https://abc123.ngrok-free.app -> http://localhost:3000
+Forwarding  https://xyz789.ngrok-free.app -> http://localhost:3001
+```
 
 ### Update .env with ngrok URLs
 
-Add these to your `.env` file:
+Copy the URLs and update your `.env`:
 ```bash
-VITE_BASE_URL="https://abc123.ngrok-free.app"
-WEBSOCKET_URL="wss://xyz789.ngrok-free.app/twilio/stream"
+VITE_BASE_URL="https://abc123.ngrok-free.app"         # port 3000 URL
+WEBSOCKET_URL="wss://xyz789.ngrok-free.app/twilio/stream"  # port 3001 URL (change https to wss!)
 ```
-**Note:** Change `https://` to `wss://` for WEBSOCKET_URL!
 
-**Then restart terminals 1 & 2** (Ctrl+C and start them again)
-*Environment variables only load at startup, so you need to restart for new URLs*
+### Terminal 2: Main App
+```bash
+bun run dev
+```
+
+### Terminal 3: WebSocket Server
+```bash
+bun run dev:ws
+```
+
+> **Note:** If ngrok restarts with new URLs, you only need to update `.env` and restart terminals 2 & 3. CORS is configured dynamically to allow any ngrok domain.
 
 ## Testing a Call
 
@@ -89,7 +103,7 @@ Or with a custom number:
 bun scripts/test-call.ts "+1234567890" "John Doe" "This is a test call"
 ```
 
-Watch the logs in Terminal 2 to see the call progress.
+Watch the logs in Terminal 3 (WebSocket server) to see the call progress.
 
 ## Video Generation
 
@@ -135,10 +149,32 @@ This script:
 
 ## What Each Terminal Does
 
-1. **Main App (port 3000)** - Your web app UI and API
-2. **WebSocket Server (port 3001)** - Handles Twilio call audio
-3. **ngrok** - Creates 2 public URLs so Twilio can reach your local servers from the internet
+1. **ngrok** - Creates 2 public URLs so Twilio can reach your local servers
+2. **Main App (port 3000)** - Your web app UI and API (TanStack Start)
+3. **WebSocket Server (port 3001)** - Handles Twilio call audio + OpenAI Realtime API
 
 ## Why ngrok?
 
 Twilio needs to make HTTP requests to your server for webhooks and WebSocket connections. Since your computer isn't publicly accessible, ngrok creates temporary public URLs that tunnel to your localhost.
+
+## Production Deployment (Railway)
+
+For production, deploy **2 services** on Railway:
+
+| Service | Description | Environment Variables |
+|---------|-------------|----------------------|
+| Main App | TanStack Start (port 3000) | `VITE_BASE_URL`, `WEBSOCKET_URL`, all secrets |
+| WebSocket | Bun server (port 3001) | `DATABASE_URL`, `OPENAI_API_KEY` |
+
+```bash
+# Build command for Main App
+bun run build
+
+# Start command for Main App
+node .output/server/index.mjs
+
+# Start command for WebSocket
+bun run server-ws.ts
+```
+
+Set `NODE_ENV=production` and update URLs to your Railway domains.

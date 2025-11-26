@@ -45,6 +45,46 @@ export async function setupCallProcessorWorker() {
           throw new Error(`Call ${callId} not found`);
         }
 
+        // CRITICAL: Check that OpenAI prompt is ready before processing call
+        console.log(`[Call Processor] 🔍 Checking call readiness for ${callId}...`);
+        console.log(`[Call Processor]   Status: ${call.status}`);
+        console.log(`[Call Processor]   Has OpenAI prompt: ${!!call.openaiPrompt}`);
+        
+        if (!call.openaiPrompt) {
+          console.error(`[Call Processor] ❌ Call ${callId} missing OpenAI prompt! Status: ${call.status}`);
+          console.error(`[Call Processor]   Call cannot be processed without prompt. Skipping...`);
+          
+          // If status is prompt_ready but prompt is missing, something went wrong
+          if (call.status === "prompt_ready") {
+            console.error(`[Call Processor]   Status says prompt_ready but prompt is missing - data inconsistency!`);
+            await db
+              .update(calls)
+              .set({
+                status: "call_failed",
+                updatedAt: new Date(),
+              })
+              .where(eq(calls.id, callId));
+            return;
+          }
+          
+          // If status is call_created, prompt generation might have failed - don't process
+          if (call.status === "call_created") {
+            console.error(`[Call Processor]   Call still in call_created status without prompt - prompt generation may have failed`);
+            return;
+          }
+          
+          // For other statuses, log and skip
+          return;
+        }
+        
+        // Only process calls that are in "prompt_ready" status
+        if (call.status !== "prompt_ready") {
+          console.log(`[Call Processor] ⏸️  Call ${callId} not ready yet. Status: ${call.status} (expected: prompt_ready)`);
+          return;
+        }
+        
+        console.log(`[Call Processor] ✅ Call ${callId} is ready - has prompt and status is prompt_ready`);
+
         // Check if we should retry this call now
         const retryCheck = await shouldRetryCall(db, callId);
         if (!retryCheck.shouldRetry) {

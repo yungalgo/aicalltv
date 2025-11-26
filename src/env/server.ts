@@ -30,6 +30,15 @@ export const env = createEnv({
     // WavespeedAI configuration (for video generation)
     WAVESPEED_API_KEY: z.string().optional(),
 
+    // Groq configuration (for prompt generation)
+    GROQ_API_KEY: z.string().optional(),
+
+    // Resend configuration (for email notifications)
+    RESEND_API_KEY: z.string().optional(),
+
+    // Testing mode (bypasses time restrictions for calls)
+    TESTING_MODE: z.string().optional(),
+
     // WebSocket server URL (for Twilio Media Streams)
     // Use ngrok URL for WebSocket server: wss://your-ws-ngrok.ngrok-free.app/twilio/stream
     WEBSOCKET_URL: z.string().optional(),
