@@ -28,3 +28,6 @@ ngrok.yml
 BUILD_ORDER.md
 COMPLETE_GUIDE.md
 tmp/
+
+# Planning and internal documentation (not for GitHub)
+plans/
