@@ -1,0 +1,278 @@
+/**
+ * WavespeedAI nano-banana-pro image generation integration
+ * 
+ * Generates images from prompts using Google's nano-banana-pro model
+ * https://wavespeed.ai/models/google/nano-banana-pro
+ */
+
+import { env } from "~/env/server";
+import { retryWithBackoff } from "~/lib/utils/retry";
+import { uploadToS3, getSignedS3Url } from "~/lib/storage/s3";
+
+const WAVESPEED_API_BASE = "https://api.wavespeed.ai/api/v3";
+const MODEL_ENDPOINT = `${WAVESPEED_API_BASE}/google/nano-banana-pro/text-to-image`;
+
+export interface WavespeedImageResult {
+  imageUrl: string;
+  requestId: string;
+  status: "completed";
+  s3Key?: string; // S3 key where image is stored
+}
+
+export interface GenerateImageOptions {
+  prompt: string;
+  callId: string;
+  aspectRatio?: "16:9" | "1:1" | "9:16" | "4:3" | "3:4";
+  resolution?: "1k" | "2k" | "4k";
+  outputFormat?: "png" | "jpg";
+  enableSyncMode?: boolean;
+}
+
+/**
+ * Submit image generation job to WavespeedAI nano-banana-pro
+ */
+async function submitImageGenerationJob(
+  prompt: string,
+  options: {
+    aspectRatio?: string;
+    resolution?: string;
+    outputFormat?: string;
+    enableSyncMode?: boolean;
+  } = {},
+): Promise<string> {
+  if (!env.WAVESPEED_API_KEY) {
+    throw new Error(
+      "WavespeedAI API key not configured. Please set WAVESPEED_API_KEY environment variable",
+    );
+  }
+
+  const payload = {
+    enable_base64_output: false,
+    enable_sync_mode: options.enableSyncMode || false,
+    output_format: options.outputFormat || "png",
+    prompt: prompt,
+    resolution: options.resolution || "1k",
+    aspect_ratio: options.aspectRatio || "16:9",
+  };
+
+  const response = await fetch(MODEL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.WAVESPEED_API_KEY}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `WavespeedAI image API error: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+
+  const result = await response.json();
+  const requestId = result.data?.id;
+
+  if (!requestId) {
+    throw new Error(
+      `WavespeedAI image API error: No request ID in response - ${JSON.stringify(result)}`,
+    );
+  }
+
+  return requestId;
+}
+
+/**
+ * Poll for image generation completion
+ */
+async function pollImageGeneration(
+  requestId: string,
+): Promise<string> {
+  const resultUrl = `${WAVESPEED_API_BASE}/predictions/${requestId}/result`;
+
+  let lastStatus = "";
+  const startTime = Date.now();
+  let pollCount = 0;
+
+  while (true) {
+    const response = await fetch(resultUrl, {
+      headers: {
+        Authorization: `Bearer ${env.WAVESPEED_API_KEY}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `WavespeedAI image polling error: ${response.status} ${response.statusText} - ${errorText}`,
+      );
+    }
+
+    const result = await response.json();
+    const data = result.data;
+
+    if (data.status === "completed") {
+      const imageUrl = data.outputs?.[0];
+      if (!imageUrl) {
+        throw new Error("WavespeedAI image completed but no image URL in response");
+      }
+
+      const pollDuration = (Date.now() - startTime) / 1000;
+
+      // Clear the progress line before logging completion
+      if (pollCount > 0) {
+        process.stdout.write("\r" + " ".repeat(80) + "\r");
+      }
+
+      console.log(`[WavespeedAI Image] ✅ Generated in ${pollDuration.toFixed(1)}s`);
+
+      return imageUrl;
+    } else if (data.status === "failed") {
+      throw new Error(
+        `WavespeedAI image job failed: ${data.error || "Unknown error"}`,
+      );
+    }
+
+    // Log status changes
+    if (data.status !== lastStatus) {
+      if (pollCount > 0) {
+        process.stdout.write("\r" + " ".repeat(80) + "\r");
+      }
+      console.log(`[WavespeedAI Image] Status: ${data.status}`);
+      lastStatus = data.status;
+    }
+
+    // Show progress every 2 seconds
+    pollCount++;
+    if (pollCount % 20 === 0) {
+      const elapsed = (Date.now() - startTime) / 1000;
+      process.stdout.write(`\r[WavespeedAI Image] Processing... ${elapsed.toFixed(0)}s`);
+    }
+
+    // Wait before polling again (100ms as per API example)
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
+
+/**
+ * Download image from WavespeedAI URL and upload to S3
+ */
+async function downloadAndStoreImage(
+  imageUrl: string,
+  callId: string,
+  outputFormat: string = "png",
+): Promise<{ url: string; key: string }> {
+  // Download image from WavespeedAI
+  const response = await retryWithBackoff(
+    async () => {
+      const res = await fetch(imageUrl);
+      if (!res.ok) {
+        throw new Error(`Failed to download image: ${res.status} ${res.statusText}`);
+      }
+      return res;
+    },
+    { maxRetries: 3, initialDelay: 1000 },
+  );
+
+  const arrayBuffer = await response.arrayBuffer();
+  const imageBuffer = Buffer.from(arrayBuffer);
+
+  // Upload to S3
+  const s3Key = `images/${callId}.${outputFormat}`;
+  const contentType = outputFormat === "png" ? "image/png" : "image/jpeg";
+
+  const result = await uploadToS3({
+    file: imageBuffer,
+    key: s3Key,
+    contentType,
+  });
+
+  // Generate signed URL for WavespeedAI video generation (24 hour expiry)
+  // WavespeedAI needs to access this URL, so we use signed URLs
+  const signedUrl = await getSignedS3Url(result.key, 86400, result.bucket); // 24 hours
+
+  console.log(
+    `[WavespeedAI Image] ✅ Stored image (${(imageBuffer.length / 1024).toFixed(1)}KB) at ${s3Key}`,
+  );
+
+  return {
+    url: signedUrl,
+    key: s3Key,
+  };
+}
+
+/**
+ * Generate image from prompt using WavespeedAI nano-banana-pro
+ * Downloads the generated image and stores it in S3, returning a signed URL
+ */
+export async function generateImage(
+  options: GenerateImageOptions,
+): Promise<WavespeedImageResult> {
+  if (!env.WAVESPEED_API_KEY) {
+    throw new Error(
+      "WavespeedAI API key not configured. Please set WAVESPEED_API_KEY environment variable",
+    );
+  }
+
+  const {
+    prompt,
+    callId,
+    aspectRatio = "16:9",
+    resolution = "1k",
+    outputFormat = "png",
+    enableSyncMode = false,
+  } = options;
+
+  console.log(`[WavespeedAI Image] 🎨 Generating image for call ${callId}`);
+
+  // Submit job with retry
+  const requestId = await retryWithBackoff(
+    () =>
+      submitImageGenerationJob(prompt, {
+        aspectRatio,
+        resolution,
+        outputFormat,
+        enableSyncMode,
+      }),
+    { maxRetries: 2, initialDelay: 1000 },
+  );
+
+  console.log(`[WavespeedAI Image] Job submitted: ${requestId.substring(0, 8)}...`);
+
+  // Poll for completion with retry
+  const wavespeedImageUrl = await retryWithBackoff(
+    () => pollImageGeneration(requestId),
+    { maxRetries: 3, initialDelay: 2000 },
+  );
+
+  // Download and store in S3
+  const { url: s3Url, key: s3Key } = await downloadAndStoreImage(
+    wavespeedImageUrl,
+    callId,
+    outputFormat,
+  );
+
+  console.log(`[WavespeedAI Image] ✅ Image generated and stored`);
+
+  return {
+    imageUrl: s3Url,
+    requestId,
+    status: "completed",
+    s3Key,
+  };
+}
+
+/**
+ * Default prompt for split-screen call scenes
+ */
+export function getDefaultCallImagePrompt(): string {
+  return (
+    "Split-screen shot of two puppets on a phone call. " +
+    "Left side: a shaggy puppet with messy brown hair, a scruffy beard, and sleepy-looking white eyes, " +
+    "holding a phone to its ear while sitting in a cluttered room with posters on the wall. " +
+    "Right side: a puppet with long brown yarn hair, glasses, a teal beanie, colorful beaded necklace, " +
+    "and denim overalls, holding a bright green phone to its ear."
+  );
+}
+

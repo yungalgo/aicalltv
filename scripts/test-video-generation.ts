@@ -10,6 +10,10 @@ import {
   generateMultiPersonVideo,
   downloadWavespeedVideo,
 } from "~/lib/video/wavespeed-generator";
+import {
+  generateImage,
+  getDefaultCallImagePrompt,
+} from "~/lib/image/wavespeed-image-generator";
 import { uploadFileToS3 } from "~/lib/storage/s3";
 import { cleanupTempFiles, getTempFilePath } from "~/lib/utils/temp-cleanup";
 import { getTwilioClient } from "~/lib/twilio/client";
@@ -90,13 +94,25 @@ async function testVideoGeneration() {
       });
     });
 
+    // Generate image from prompt using WavespeedAI nano-banana-pro
+    console.log(`[Test] Generating image (this may take 30-60 seconds)...`);
+    const imagePrompt = getDefaultCallImagePrompt();
+    const imageResult = await generateImage({
+      prompt: imagePrompt,
+      callId: TEST_CALL_ID,
+      aspectRatio: "16:9",
+      resolution: "1k",
+      outputFormat: "png",
+    });
+    console.log(`[Test] Image generated: ${imageResult.imageUrl}`);
+
     // Generate multi-person video with WavespeedAI
     console.log(`[Test] Generating video (this may take 2-5 minutes)...`);
     const videoResult = await generateMultiPersonVideo(
       callerS3Url,
       calleeS3Url,
       TEST_CALL_ID,
-      undefined, // Use default image
+      imageResult.imageUrl, // Use generated image
       audioDuration,
     );
 

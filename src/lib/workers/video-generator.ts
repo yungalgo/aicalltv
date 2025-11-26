@@ -11,6 +11,10 @@ import {
   generateMultiPersonVideo,
   downloadWavespeedVideo,
 } from "~/lib/video/wavespeed-generator";
+import {
+  generateImage,
+  getDefaultCallImagePrompt,
+} from "~/lib/image/wavespeed-image-generator";
 import { uploadFileToS3 } from "~/lib/storage/s3";
 import {
   cleanupTempFiles,
@@ -104,12 +108,22 @@ export async function setupVideoGeneratorWorker() {
           });
         });
 
-        // Generate multi-person video with WavespeedAI
+        // Generate image from prompt using WavespeedAI nano-banana-pro
+        const imagePrompt = getDefaultCallImagePrompt();
+        const imageResult = await generateImage({
+          prompt: imagePrompt,
+          callId,
+          aspectRatio: "16:9",
+          resolution: "1k",
+          outputFormat: "png",
+        });
+
+        // Generate multi-person video with WavespeedAI using the generated image
         const videoResult = await generateMultiPersonVideo(
           callerS3Url,
           calleeS3Url,
           callId,
-          undefined, // Use default image
+          imageResult.imageUrl, // Use generated image
           audioDuration,
         );
 
