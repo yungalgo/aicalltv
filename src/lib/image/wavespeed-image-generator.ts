@@ -10,7 +10,7 @@ import { retryWithBackoff } from "~/lib/utils/retry";
 import { uploadToS3, getSignedS3Url } from "~/lib/storage/s3";
 
 const WAVESPEED_API_BASE = "https://api.wavespeed.ai/api/v3";
-const MODEL_ENDPOINT = `${WAVESPEED_API_BASE}/google/nano-banana-pro/text-to-image-multi`;
+const MODEL_ENDPOINT = `${WAVESPEED_API_BASE}/google/nano-banana-pro/text-to-image`;
 
 export interface WavespeedImageResult {
   imageUrl: string;
@@ -26,7 +26,7 @@ export interface GenerateImageOptions {
 
 /**
  * Submit image generation job to WavespeedAI nano-banana-pro
- * Always uses: PNG format, 16:9 aspect ratio
+ * Always uses: PNG format, 16:9 aspect ratio, 4k resolution
  */
 async function submitImageGenerationJob(
   prompt: string,
@@ -38,12 +38,13 @@ async function submitImageGenerationJob(
   }
 
   const payload = {
-    enable_base64_output: false,
-    enable_sync_mode: false,
-    output_format: "png",
     prompt: prompt,
+    resolution: "4k",
     aspect_ratio: "16:9",
-    num_images: 1,
+    output_format: "png",
+    enable_sync_mode: false,
+    enable_base64_output: false,
+    num_images: 1
   };
 
   const response = await fetch(MODEL_ENDPOINT, {
@@ -208,7 +209,7 @@ export async function generateImage(
 
   const { prompt, callId } = options;
 
-  console.log(`[WavespeedAI Image] 🎨 Generating image for call ${callId} (PNG, 16:9)`);
+  console.log(`[WavespeedAI Image] 🎨 Generating image for call ${callId} (PNG, 16:9, 4k)`);
 
   // Submit job with retry (always PNG, 16:9, 4k)
   const requestId = await retryWithBackoff(

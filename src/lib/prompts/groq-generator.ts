@@ -4,6 +4,7 @@
  */
 
 import { env } from "~/env/server";
+import { getRandomCallerDescription } from "./caller-descriptions";
 
 const GROQ_API_BASE = "https://api.groq.com/openai/v1";
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
@@ -121,30 +122,33 @@ export async function generateImagePrompt(
     );
   }
 
-  const systemPrompt = `You are an expert at creating detailed image generation prompts for video call scenes.
+  const systemPrompt = `You generate concise image prompts for AI image generation models.
 
-Your task is to generate a prompt for creating a split-screen video call image in the specified aesthetic style. The prompt should:
-- Describe two people in a split-screen phone call format
-- Match the aesthetic style requested (${input.videoStyle})
-- Include details about the target person based on the provided information (gender, age, physical description)
-- Be visually descriptive and match the style aesthetic
-- Create an engaging visual that would work well for a talking avatar video
-- Be detailed enough to generate a high-quality image
+Generate a split-screen phone call image prompt in ${input.videoStyle} style. Rules:
+- ONLY describe what is VISUALLY SEEN - no narrative, no explanations, no editorializing
+- TWO characters in split-screen format, BOTH holding phones
+- LEFT: Target person (based on provided details)
+- RIGHT: Caller (based on provided description)
+- Keep it SHORT and DIRECT - just visual elements
+- NO phrases like "capturing the essence", "oblivious to", "hint at", "nod to", "exudes", "reminiscent of"
+- NO story/context - just describe appearances, poses, objects, colors, style
 
-Return ONLY the prompt text as a string - do not wrap it in JSON or add any formatting.`;
+Format example: "Split-screen ${input.videoStyle} image. Left: [character description, holding phone type]. Right: [character description, holding phone type]. Background: [simple description]."
 
-  const userPrompt = `Generate an image prompt for a split-screen video call scene:
+Return ONLY the prompt text.`;
 
-**Target Person:**
-- Name: ${input.targetPerson.name}
-- Gender: ${input.targetPerson.gender}${input.targetPerson.genderCustom ? ` (${input.targetPerson.genderCustom})` : ""}
-${input.targetPerson.ageRange ? `- Age Range: ${input.targetPerson.ageRange}` : ""}
-${input.targetPerson.physicalDescription ? `- Physical Description: ${input.targetPerson.physicalDescription}` : ""}
+  const callerDesc = getRandomCallerDescription();
+  
+  const userPrompt = `Split-screen ${input.videoStyle} phone call image.
 
-**Video Aesthetic Style:** ${input.videoStyle}
-${input.anythingElse ? `\n**Additional Context:** ${input.anythingElse}` : ""}
+LEFT (target): ${input.targetPerson.gender}${input.targetPerson.ageRange ? `, ${input.targetPerson.ageRange}` : ""}${input.targetPerson.physicalDescription ? `, ${input.targetPerson.physicalDescription}` : ""}
 
-Generate a detailed visual prompt that describes a split-screen phone call scene in ${input.videoStyle} style, featuring ${input.targetPerson.name}${input.targetPerson.physicalDescription ? ` (${input.targetPerson.physicalDescription})` : ""}. Return ONLY the prompt text.`;
+RIGHT (caller): ${callerDesc}
+
+Style: ${input.videoStyle}
+${input.anythingElse ? `Context: ${input.anythingElse}` : ""}
+
+Write a SHORT, VISUAL-ONLY prompt. Both characters holding phones. No narrative or explanation - just what the image shows.`;
 
   const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
     method: "POST",
