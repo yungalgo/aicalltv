@@ -88,7 +88,15 @@ bun run dev
 bun run dev:ws
 ```
 
-> **Note:** If ngrok restarts with new URLs, you only need to update `.env` and restart terminals 2 & 3. CORS is configured dynamically to allow any ngrok domain.
+### Access the App
+
+**Important:** Open the app via the ngrok URL, not localhost:
+```
+https://abc123.ngrok-free.app  ✅ Use this
+http://localhost:3000          ❌ Don't use this
+```
+
+This avoids CORS issues since the auth client is configured to use the ngrok URL.
 
 ## Testing a Call
 
