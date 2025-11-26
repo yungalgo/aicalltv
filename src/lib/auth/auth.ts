@@ -16,23 +16,6 @@ const getAuthConfig = createServerOnlyFn(() =>
       provider: "pg",
     }),
 
-    // Allow requests from localhost (dev) and production URLs
-    // Dynamic: uses VITE_BASE_URL from env, plus localhost for dev
-    trustedOrigins: [
-      "http://localhost:3000",
-      env.VITE_BASE_URL,
-      // Allow any ngrok domain in development
-      ...(process.env.NODE_ENV !== "production" ? ["*.ngrok-free.app", "*.ngrok.io"] : []),
-    ].filter(Boolean),
-
-    // Configure cookies for cross-origin support (localhost <-> ngrok)
-    advanced: {
-      defaultCookieAttributes: {
-        sameSite: "lax", // Use 'lax' for same-site, 'none' if needed for cross-domain
-        secure: process.env.NODE_ENV === "production", // Secure in production only
-      },
-    },
-
     // https://www.better-auth.com/docs/concepts/database#extending-core-schema
     user: {
       additionalFields: {
