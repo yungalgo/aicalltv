@@ -54,18 +54,18 @@ export const createCall = createServerFn({ method: "POST" }).handler(
   async ({ data: input }: { data: unknown }) => {
     try {
       // Validate input with Zod
-      const data = createCallSchema.parse(input);
+    const data = createCallSchema.parse(input);
       
-      // Get authenticated user
-      const session = await auth.api.getSession({
-        headers: getRequest().headers,
-      });
-      
-      if (!session?.user) {
-        throw new Error("Unauthorized - Please sign in to create a call");
-      }
+    // Get authenticated user
+    const session = await auth.api.getSession({
+      headers: getRequest().headers,
+    });
 
-      const userId = session.user.id;
+    if (!session?.user) {
+        throw new Error("Unauthorized - Please sign in to create a call");
+    }
+
+    const userId = session.user.id;
       console.log(`[Create Call] ✅ Authenticated user: ${session.user.email}`);
 
     // Create database connection
@@ -185,11 +185,11 @@ export const createCall = createServerFn({ method: "POST" }).handler(
       }
     }
 
-      return {
-        success: true,
-        callId: newCall.id,
-        call: newCall,
-      };
+    return {
+      success: true,
+      callId: newCall.id,
+      call: newCall,
+    };
     } catch (error) {
       console.error(`[Create Call] ❌ Error:`, error);
       // Re-throw to let TanStack Start handle it properly
