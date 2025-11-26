@@ -10,7 +10,7 @@ import { retryWithBackoff } from "~/lib/utils/retry";
 import { uploadToS3, getSignedS3Url } from "~/lib/storage/s3";
 
 const WAVESPEED_API_BASE = "https://api.wavespeed.ai/api/v3";
-const MODEL_ENDPOINT = `${WAVESPEED_API_BASE}/google/nano-banana-pro/text-to-image`;
+const MODEL_ENDPOINT = `${WAVESPEED_API_BASE}/google/nano-banana-pro/text-to-image-multi`;
 
 export interface WavespeedImageResult {
   imageUrl: string;
@@ -22,23 +22,14 @@ export interface WavespeedImageResult {
 export interface GenerateImageOptions {
   prompt: string;
   callId: string;
-  aspectRatio?: "16:9" | "1:1" | "9:16" | "4:3" | "3:4";
-  resolution?: "1k" | "2k" | "4k";
-  outputFormat?: "png" | "jpg";
-  enableSyncMode?: boolean;
 }
 
 /**
  * Submit image generation job to WavespeedAI nano-banana-pro
+ * Always uses: PNG format, 16:9 aspect ratio
  */
 async function submitImageGenerationJob(
   prompt: string,
-  options: {
-    aspectRatio?: string;
-    resolution?: string;
-    outputFormat?: string;
-    enableSyncMode?: boolean;
-  } = {},
 ): Promise<string> {
   if (!env.WAVESPEED_API_KEY) {
     throw new Error(
@@ -48,11 +39,11 @@ async function submitImageGenerationJob(
 
   const payload = {
     enable_base64_output: false,
-    enable_sync_mode: options.enableSyncMode || false,
-    output_format: options.outputFormat || "png",
+    enable_sync_mode: false,
+    output_format: "png",
     prompt: prompt,
-    resolution: options.resolution || "1k",
-    aspect_ratio: options.aspectRatio || "16:9",
+    aspect_ratio: "16:9",
+    num_images: 1,
   };
 
   const response = await fetch(MODEL_ENDPOINT, {
@@ -157,11 +148,11 @@ async function pollImageGeneration(
 
 /**
  * Download image from WavespeedAI URL and upload to S3
+ * Always stores as PNG
  */
 async function downloadAndStoreImage(
   imageUrl: string,
   callId: string,
-  outputFormat: string = "png",
 ): Promise<{ url: string; key: string }> {
   // Download image from WavespeedAI
   const response = await retryWithBackoff(
@@ -178,9 +169,9 @@ async function downloadAndStoreImage(
   const arrayBuffer = await response.arrayBuffer();
   const imageBuffer = Buffer.from(arrayBuffer);
 
-  // Upload to S3
-  const s3Key = `images/${callId}.${outputFormat}`;
-  const contentType = outputFormat === "png" ? "image/png" : "image/jpeg";
+  // Upload to S3 (always PNG)
+  const s3Key = `images/${callId}.png`;
+  const contentType = "image/png";
 
   const result = await uploadToS3({
     file: imageBuffer,
@@ -215,26 +206,13 @@ export async function generateImage(
     );
   }
 
-  const {
-    prompt,
-    callId,
-    aspectRatio = "16:9",
-    resolution = "1k",
-    outputFormat = "png",
-    enableSyncMode = false,
-  } = options;
+  const { prompt, callId } = options;
 
-  console.log(`[WavespeedAI Image] 🎨 Generating image for call ${callId}`);
+  console.log(`[WavespeedAI Image] 🎨 Generating image for call ${callId} (PNG, 16:9)`);
 
-  // Submit job with retry
+  // Submit job with retry (always PNG, 16:9, 4k)
   const requestId = await retryWithBackoff(
-    () =>
-      submitImageGenerationJob(prompt, {
-        aspectRatio,
-        resolution,
-        outputFormat,
-        enableSyncMode,
-      }),
+    () => submitImageGenerationJob(prompt),
     { maxRetries: 2, initialDelay: 1000 },
   );
 
@@ -246,11 +224,10 @@ export async function generateImage(
     { maxRetries: 3, initialDelay: 2000 },
   );
 
-  // Download and store in S3
+  // Download and store in S3 (always PNG)
   const { url: s3Url, key: s3Key } = await downloadAndStoreImage(
     wavespeedImageUrl,
     callId,
-    outputFormat,
   );
 
   console.log(`[WavespeedAI Image] ✅ Image generated and stored`);

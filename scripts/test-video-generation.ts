@@ -95,14 +95,12 @@ async function testVideoGeneration() {
     });
 
     // Generate image from prompt using WavespeedAI nano-banana-pro
+    // Always generates PNG, 16:9, 4k resolution
     console.log(`[Test] Generating image (this may take 30-60 seconds)...`);
     const imagePrompt = getDefaultCallImagePrompt();
     const imageResult = await generateImage({
       prompt: imagePrompt,
       callId: TEST_CALL_ID,
-      aspectRatio: "16:9",
-      resolution: "1k",
-      outputFormat: "png",
     });
     console.log(`[Test] Image generated: ${imageResult.imageUrl}`);
 

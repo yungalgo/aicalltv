@@ -109,13 +109,11 @@ export async function setupVideoGeneratorWorker() {
         });
 
         // Generate image from prompt using WavespeedAI nano-banana-pro
+        // Always generates PNG, 16:9, 4k resolution
         const imagePrompt = getDefaultCallImagePrompt();
         const imageResult = await generateImage({
           prompt: imagePrompt,
           callId,
-          aspectRatio: "16:9",
-          resolution: "1k",
-          outputFormat: "png",
         });
 
         // Generate multi-person video with WavespeedAI using the generated image
