@@ -1,8 +1,9 @@
 import { createAuthClient } from "better-auth/react";
-import { env } from "~/env/client";
 
+// Use current origin so auth works from localhost OR ngrok
+// This avoids CORS issues when browsing on localhost but env has ngrok URL
 const authClient = createAuthClient({
-  baseURL: env.VITE_BASE_URL,
+  baseURL: typeof window !== "undefined" ? window.location.origin : undefined,
 });
 
 export default authClient;

@@ -16,6 +16,12 @@ const getAuthConfig = createServerOnlyFn(() =>
       provider: "pg",
     }),
 
+    // Allow requests from localhost (dev) and ngrok URL
+    trustedOrigins: [
+      "http://localhost:3000",
+      env.VITE_BASE_URL,
+    ].filter(Boolean),
+
     // https://www.better-auth.com/docs/concepts/database#extending-core-schema
     user: {
       additionalFields: {
