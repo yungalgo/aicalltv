@@ -130,7 +130,7 @@ export async function setupVideoGeneratorWorker() {
               interestingPiece: call.interestingPiece || undefined,
             },
             videoStyle: call.videoStyle,
-            recipientContext: call.recipientContext,
+            anythingElse: call.anythingElse || undefined,
           };
           
           // Fail loudly if generation fails - no fallbacks during development

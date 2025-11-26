@@ -10,7 +10,7 @@ const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 
 export interface TargetPersonData {
   name: string;
-  gender: "male" | "female" | "other";
+  gender: "male" | "female" | "prefer_not_to_say" | "other";
   genderCustom?: string; // If gender is "other"
   ageRange?: string; // "18-25", "26-35", "36-45", "46-55", "56+"
   physicalDescription?: string;
@@ -20,7 +20,7 @@ export interface TargetPersonData {
 export interface PromptGenerationInput {
   targetPerson: TargetPersonData;
   videoStyle: string; // Aesthetic style: "anime", "claymation", "puppets", etc.
-  recipientContext: string; // Original context from form
+  anythingElse?: string; // Optional additional context
 }
 
 /**
@@ -60,8 +60,7 @@ Return ONLY the prompt text as a string - do not wrap it in JSON or add any form
 ${input.targetPerson.ageRange ? `- Age Range: ${input.targetPerson.ageRange}` : ""}
 ${input.targetPerson.physicalDescription ? `- Physical Description: ${input.targetPerson.physicalDescription}` : ""}
 ${input.targetPerson.interestingPiece ? `- Interesting Hook/Personal Detail: ${input.targetPerson.interestingPiece}` : ""}
-
-**Call Context/Premise:** ${input.recipientContext}
+${input.anythingElse ? `\n**Additional Context:** ${input.anythingElse}` : ""}
 
 **CRITICAL REQUIREMENTS:**
 - Create an AMUSING, ENTERTAINING scenario that will result in funny, awkward, or hilarious reactions
@@ -143,8 +142,7 @@ ${input.targetPerson.ageRange ? `- Age Range: ${input.targetPerson.ageRange}` : 
 ${input.targetPerson.physicalDescription ? `- Physical Description: ${input.targetPerson.physicalDescription}` : ""}
 
 **Video Aesthetic Style:** ${input.videoStyle}
-
-**Call Context:** ${input.recipientContext}
+${input.anythingElse ? `\n**Additional Context:** ${input.anythingElse}` : ""}
 
 Generate a detailed visual prompt that describes a split-screen phone call scene in ${input.videoStyle} style, featuring ${input.targetPerson.name}${input.targetPerson.physicalDescription ? ` (${input.targetPerson.physicalDescription})` : ""}. Return ONLY the prompt text.`;
 

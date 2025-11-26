@@ -18,8 +18,8 @@ function DashboardIndex() {
   const [formData, setFormData] = useState({
     recipientName: "",
     phoneNumber: "",
-    recipientContext: "",
-    targetGender: "male" as "male" | "female" | "other",
+    anythingElse: "",
+    targetGender: "male" as "male" | "female" | "prefer_not_to_say" | "other",
     targetGenderCustom: "",
     targetAgeRange: "" as "" | "18-25" | "26-35" | "36-45" | "46-55" | "56+",
     targetPhysicalDescription: "",
@@ -41,12 +41,8 @@ function DashboardIndex() {
       toast.error("Phone number is required");
       return;
     }
-    if (!formData.recipientContext.trim()) {
-      toast.error("Context/message is required");
-      return;
-    }
-    if (formData.recipientContext.length > 1000) {
-      toast.error("Context must be 1000 characters or less");
+    if (formData.anythingElse && formData.anythingElse.length > 1000) {
+      toast.error("'Anything Else' must be 1000 characters or less");
       return;
     }
     if (formData.targetGender === "other" && !formData.targetGenderCustom.trim()) {
@@ -69,7 +65,7 @@ function DashboardIndex() {
         data: {
           recipientName: formData.recipientName,
           phoneNumber: formData.phoneNumber,
-          recipientContext: formData.recipientContext,
+          anythingElse: formData.anythingElse || undefined,
           targetGender: formData.targetGender,
           targetGenderCustom: formData.targetGender === "other" ? formData.targetGenderCustom : undefined,
           targetAgeRange: formData.targetAgeRange || undefined,
@@ -91,7 +87,7 @@ function DashboardIndex() {
       setFormData({
         recipientName: "",
         phoneNumber: "",
-        recipientContext: "",
+        anythingElse: "",
         targetGender: "male",
         targetGenderCustom: "",
         targetAgeRange: "",
@@ -161,7 +157,7 @@ function DashboardIndex() {
             onChange={(e) =>
               setFormData({
                 ...formData,
-                targetGender: e.target.value as "male" | "female" | "other",
+                targetGender: e.target.value as "male" | "female" | "prefer_not_to_say" | "other",
                 targetGenderCustom: "",
               })
             }
@@ -171,6 +167,7 @@ function DashboardIndex() {
           >
             <option value="male">Male</option>
             <option value="female">Female</option>
+            <option value="prefer_not_to_say">Prefer not to say</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -266,21 +263,20 @@ function DashboardIndex() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="recipientContext">Context / Message</Label>
+          <Label htmlFor="anythingElse">Anything Else? (Optional)</Label>
           <Textarea
-            id="recipientContext"
-            value={formData.recipientContext}
+            id="anythingElse"
+            value={formData.anythingElse}
             onChange={(e) =>
-              setFormData({ ...formData, recipientContext: e.target.value })
+              setFormData({ ...formData, anythingElse: e.target.value })
             }
-            placeholder="Provide context for the call..."
-            rows={6}
+            placeholder="Any additional context or notes..."
+            rows={4}
             maxLength={1000}
-            required
             disabled={isSubmitting}
           />
           <p className="text-xs text-muted-foreground">
-            {formData.recipientContext.length}/1000 characters
+            {formData.anythingElse.length}/1000 characters
           </p>
         </div>
 

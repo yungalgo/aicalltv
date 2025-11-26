@@ -17,9 +17,9 @@ export const calls = pgTable("calls", {
     .references(() => user.id, { onDelete: "cascade" }),
   status: callStatusEnum("status").notNull().default("call_created"),
   recipientName: text("recipient_name").notNull(),
-  recipientContext: text("recipient_context").notNull(), // max 1000 chars enforced in application
+  anythingElse: text("anything_else"), // Optional additional context (was recipientContext)
   // Target person details for personalization
-  targetGender: text("target_gender"), // "male", "female", "other", or custom
+  targetGender: text("target_gender").notNull(), // "male", "female", "prefer_not_to_say", or "other"
   targetGenderCustom: text("target_gender_custom"), // Custom gender if "other" selected
   targetAgeRange: text("target_age_range"), // "18-25", "26-35", "36-45", "46-55", "56+"
   targetPhysicalDescription: text("target_physical_description"), // Hair, clothing, etc.

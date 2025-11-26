@@ -11,12 +11,9 @@ import { getRequest } from "@tanstack/react-start/server";
 const createCallSchema = z.object({
   recipientName: z.string().min(1, "Recipient name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
-  recipientContext: z
-    .string()
-    .min(1, "Context is required")
-    .max(1000, "Context must be 1000 characters or less"),
+  anythingElse: z.string().max(1000, "Must be 1000 characters or less").optional(),
   // Target person details
-  targetGender: z.enum(["male", "female", "other"]),
+  targetGender: z.enum(["male", "female", "prefer_not_to_say", "other"]),
   targetGenderCustom: z.string().optional(), // Required if gender is "other"
   targetAgeRange: z.enum(["18-25", "26-35", "36-45", "46-55", "56+"]).optional(),
   targetPhysicalDescription: z.string().optional(),
@@ -87,7 +84,7 @@ export const createCall = createServerFn({ method: "POST" }).handler(
         interestingPiece: data.interestingPiece,
       },
       videoStyle: data.videoStyle,
-      recipientContext: data.recipientContext,
+      anythingElse: data.anythingElse,
     };
 
     // Generate OpenAI prompt - needed BEFORE call starts
@@ -120,7 +117,7 @@ export const createCall = createServerFn({ method: "POST" }).handler(
       .values({
         userId,
         recipientName: data.recipientName,
-        recipientContext: data.recipientContext,
+        anythingElse: data.anythingElse || null,
         targetGender: data.targetGender,
         targetGenderCustom: data.targetGenderCustom || null,
         targetAgeRange: data.targetAgeRange || null,
