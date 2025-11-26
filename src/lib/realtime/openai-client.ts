@@ -26,6 +26,8 @@ export class OpenAIRealtimeClient {
   private onAudioCallback?: (audio: string) => void;
   private onTranscriptCallback?: (text: string) => void;
   private onErrorCallback?: (error: Error) => void;
+  private firstAudioSentTime?: number;
+  private firstAudioReceivedLogged = false;
 
   constructor(config: OpenAIRealtimeConfig) {
     this.config = {
@@ -114,6 +116,12 @@ export class OpenAIRealtimeClient {
       return;
     }
 
+    // Track when first audio was sent
+    if (!this.firstAudioSentTime) {
+      this.firstAudioSentTime = Date.now();
+      console.log("[OpenAI Realtime] ⏱️  First audio sent to OpenAI");
+    }
+
     this.send({
       type: "input_audio_buffer.append",
       audio,
@@ -155,6 +163,11 @@ export class OpenAIRealtimeClient {
       switch (message.type) {
         case "response.audio.delta":
           // Audio response chunk from OpenAI
+          if (!this.firstAudioReceivedLogged) {
+            this.firstAudioReceivedLogged = true;
+            const responseTime = this.firstAudioSentTime ? Date.now() - this.firstAudioSentTime : 0;
+            console.log(`[OpenAI Realtime] ⏱️  First audio RECEIVED from OpenAI (${responseTime}ms after first send)`);
+          }
           if (this.onAudioCallback && message.delta) {
             this.onAudioCallback(message.delta);
           }

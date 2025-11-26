@@ -124,6 +124,7 @@ console.log("📡 Twilio should connect to: ws://localhost:3001/twilio/stream");
 console.log("   (or via ngrok: wss://your-ngrok-url.ngrok-free.app/twilio/stream)");
 
 async function handleStreamStart(ws: ServerWebSocket<WebSocketData>, data: TwilioStreamMessage) {
+  const startTime = Date.now();
   const callSid = data.start?.callSid;
   
   if (!callSid) {
@@ -131,9 +132,10 @@ async function handleStreamStart(ws: ServerWebSocket<WebSocketData>, data: Twili
     return;
   }
   
-  console.log("[Twilio Stream] Call SID:", callSid);
+  console.log("[Twilio Stream] ⏱️  START - Call SID:", callSid);
   
   // Fetch call from database
+  const dbStartTime = Date.now();
   const driver = postgres(env.DATABASE_URL);
   const db = drizzle({ client: driver, schema, casing: "snake_case" });
   
@@ -143,6 +145,9 @@ async function handleStreamStart(ws: ServerWebSocket<WebSocketData>, data: Twili
       .from(calls)
       .where(eq(calls.callSid, callSid))
       .limit(1);
+    
+    const dbTime = Date.now() - dbStartTime;
+    console.log(`[Twilio Stream] ⏱️  DB lookup: ${dbTime}ms`);
       
     if (!call) {
       console.error("[Twilio Stream] ❌ Call not found");
@@ -151,26 +156,22 @@ async function handleStreamStart(ws: ServerWebSocket<WebSocketData>, data: Twili
     }
     
     console.log("[Twilio Stream] ✅ Found call:", call.id);
-    console.log("[Twilio Stream] 🔍 Checking call readiness...");
-    console.log("[Twilio Stream]   Status:", call.status);
     console.log("[Twilio Stream]   Has OpenAI prompt:", !!call.openaiPrompt);
+    console.log("[Twilio Stream]   Prompt length:", call.openaiPrompt?.length || 0);
     
     // CRITICAL: OpenAI prompt MUST be ready before call can start
     if (!call.openaiPrompt) {
       console.error(`[Twilio Stream] ❌ Call ${call.id} missing OpenAI prompt!`);
-      console.error(`[Twilio Stream]   Status: ${call.status}`);
-      console.error(`[Twilio Stream]   Call cannot start without prompt. This should not happen if flow is correct.`);
-      throw new Error(`[WebSocket] ❌ Missing OpenAI prompt for call ${call.id}. Prompt must be ready before call starts. Status: ${call.status}`);
+      throw new Error(`[WebSocket] ❌ Missing OpenAI prompt for call ${call.id}.`);
     }
     
     // Verify status is prompt_ready (or at least not call_created)
     if (call.status === "call_created") {
-      console.error(`[Twilio Stream] ❌ Call ${call.id} still in call_created status - prompt generation may have failed`);
+      console.error(`[Twilio Stream] ❌ Call ${call.id} still in call_created status`);
       throw new Error(`[WebSocket] ❌ Call ${call.id} not ready - still in call_created status`);
     }
-    
-    console.log("[Twilio Stream] ✅ Call is ready - has prompt and valid status");
 
+    const openaiStartTime = Date.now();
     const openaiClient = new OpenAIRealtimeClient({
       apiKey: env.OPENAI_API_KEY!,
       voice: "alloy",
@@ -179,7 +180,11 @@ async function handleStreamStart(ws: ServerWebSocket<WebSocketData>, data: Twili
     
     console.log("[Twilio Stream] 🔌 Connecting to OpenAI...");
     await openaiClient.connect();
-    console.log("[Twilio Stream] ✅ OpenAI connected");
+    const openaiTime = Date.now() - openaiStartTime;
+    console.log(`[Twilio Stream] ⏱️  OpenAI connect: ${openaiTime}ms`);
+    
+    const totalSetupTime = Date.now() - startTime;
+    console.log(`[Twilio Stream] ⏱️  TOTAL SETUP TIME: ${totalSetupTime}ms`);
     
     ws.data.openaiClient = openaiClient;
     ws.data.callSid = callSid;
@@ -212,7 +217,11 @@ async function handleMediaChunk(ws: ServerWebSocket<WebSocketData>, data: Twilio
   if (!data.media || data.media.track !== "inbound") return;
   
   if (!ws.data.openaiClient) {
-    console.warn("[Twilio Stream] ⚠️  OpenAI not ready");
+    // Log how many chunks we're dropping while waiting for OpenAI
+    ws.data.audioChunkCount++;
+    if (ws.data.audioChunkCount % 50 === 1) {
+      console.warn(`[Twilio Stream] ⚠️  OpenAI not ready - dropped ${ws.data.audioChunkCount} audio chunks`);
+    }
     return;
   }
   
@@ -221,7 +230,7 @@ async function handleMediaChunk(ws: ServerWebSocket<WebSocketData>, data: Twilio
   
   ws.data.audioChunkCount++;
   if (ws.data.audioChunkCount === 1) {
-    console.log("[Twilio Stream] ✅ First audio chunk sent to OpenAI");
+    console.log("[Twilio Stream] ⏱️  First audio chunk sent to OpenAI at:", new Date().toISOString());
   }
 }
 

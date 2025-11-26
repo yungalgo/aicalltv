@@ -11,7 +11,7 @@ import { initiateTwilioCall } from "~/lib/twilio/call";
 /**
  * Simple test endpoint to initiate a Twilio call WITHOUT authentication
  * POST /api/test/call-simple
- * Body: { phoneNumber: string, recipientName: string, recipientContext: string }
+ * Body: { phoneNumber: string, recipientName: string, anythingElse?: string }
  * 
  * WARNING: This endpoint does NOT require authentication - use only for testing!
  * It uses the first user in the database or creates a test user.
@@ -22,12 +22,12 @@ export const Route = createFileRoute("/api/test/call-simple")({
       POST: async ({ request }: { request: Request }) => {
         try {
           const body = await request.json();
-          const { phoneNumber, recipientName, recipientContext } = body;
+          const { phoneNumber, recipientName, anythingElse } = body;
 
-          if (!phoneNumber || !recipientName || !recipientContext) {
+          if (!phoneNumber || !recipientName) {
             return new Response(
               JSON.stringify({
-                error: "Missing required fields: phoneNumber, recipientName, recipientContext",
+                error: "Missing required fields: phoneNumber, recipientName",
               }),
               {
                 status: 400,
@@ -82,7 +82,9 @@ export const Route = createFileRoute("/api/test/call-simple")({
             .values({
               userId: testUserId,
               recipientName,
-              recipientContext,
+              anythingElse: anythingElse || null,
+              targetGender: "prefer_not_to_say",
+              videoStyle: "anime",
               encryptedHandle,
               paymentMethod: "free",
               isFree: true,
@@ -112,7 +114,7 @@ export const Route = createFileRoute("/api/test/call-simple")({
               message: `Call initiated to ${phoneNumber}. Check Twilio console for status.`,
               phoneNumber,
               recipientName,
-              recipientContext,
+              anythingElse,
             }),
             {
               status: 200,

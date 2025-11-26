@@ -50,54 +50,37 @@ export function getTimezoneForPhoneNumber(phoneNumber: string): string {
     const areaCode = digits.substring(digits.length - 10, digits.length - 7);
     
     try {
-      // Use us-area-codes package for comprehensive area code lookup
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const areaCodes = require("us-area-codes");
-      const areaCodeNum = parseInt(areaCode, 10);
-      const areaCodeInfo = areaCodes.get(areaCodeNum);
-      
-      if (areaCodeInfo) {
-        // Map state/timezone regions to IANA timezone identifiers
-        // us-area-codes provides state info, we map states to timezones
-        const state = areaCodeInfo.state;
-        
-        // Map US states to timezones
-        const timezoneMap: Record<string, string> = {
-          // Eastern Time
-          AL: "America/New_York", CT: "America/New_York", DE: "America/New_York",
-          FL: "America/New_York", GA: "America/New_York", IN: "America/Indiana/Indianapolis",
-          KY: "America/New_York", ME: "America/New_York", MD: "America/New_York",
-          MA: "America/New_York", MI: "America/Detroit", NH: "America/New_York",
-          NJ: "America/New_York", NY: "America/New_York", NC: "America/New_York",
-          OH: "America/New_York", PA: "America/New_York", RI: "America/New_York",
-          SC: "America/New_York", TN: "America/New_York", VT: "America/New_York",
-          VA: "America/New_York", WV: "America/New_York", DC: "America/New_York",
-          
+      // Simple area code to timezone mapping (US only)
+      // Inline mapping to avoid ESM/CommonJS issues
+      const AREA_CODE_TIMEZONE: Record<string, string> = {
+        // Eastern Time (NJ, NY, PA, etc.)
+        "201": "America/New_York", "212": "America/New_York", "215": "America/New_York",
+        "267": "America/New_York", "302": "America/New_York", "347": "America/New_York",
+        "484": "America/New_York", "516": "America/New_York", "518": "America/New_York",
+        "551": "America/New_York", "570": "America/New_York", "610": "America/New_York",
+        "646": "America/New_York", "609": "America/New_York", "718": "America/New_York",
+        "732": "America/New_York", "848": "America/New_York", "856": "America/New_York",
+        "862": "America/New_York", "908": "America/New_York", "917": "America/New_York",
+        "929": "America/New_York", "973": "America/New_York",
           // Central Time
-          AR: "America/Chicago", IL: "America/Chicago", IA: "America/Chicago",
-          KS: "America/Chicago", LA: "America/Chicago", MN: "America/Chicago",
-          MS: "America/Chicago", MO: "America/Chicago", NE: "America/Chicago",
-          ND: "America/Chicago", OK: "America/Chicago", SD: "America/Chicago",
-          TX: "America/Chicago", WI: "America/Chicago",
-          
+        "312": "America/Chicago", "214": "America/Chicago", "469": "America/Chicago",
+        "512": "America/Chicago", "713": "America/Chicago", "832": "America/Chicago",
           // Mountain Time
-          AZ: "America/Phoenix", CO: "America/Denver", ID: "America/Denver",
-          MT: "America/Denver", NM: "America/Denver", UT: "America/Denver",
-          WY: "America/Denver",
-          
+        "303": "America/Denver", "720": "America/Denver", "505": "America/Denver",
+        "602": "America/Phoenix", "480": "America/Phoenix",
           // Pacific Time
-          CA: "America/Los_Angeles", NV: "America/Los_Angeles", OR: "America/Los_Angeles",
-          WA: "America/Los_Angeles",
-          
-          // Alaska & Hawaii
-          AK: "America/Anchorage", HI: "Pacific/Honolulu",
+        "213": "America/Los_Angeles", "310": "America/Los_Angeles", "323": "America/Los_Angeles",
+        "408": "America/Los_Angeles", "415": "America/Los_Angeles", "510": "America/Los_Angeles",
+        "619": "America/Los_Angeles", "650": "America/Los_Angeles", "818": "America/Los_Angeles",
+        "858": "America/Los_Angeles", "925": "America/Los_Angeles", "949": "America/Los_Angeles",
         };
         
-        const timezone = timezoneMap[state];
+      const timezone = AREA_CODE_TIMEZONE[areaCode];
         if (timezone) {
           return timezone;
-        }
       }
+      
+      // No match in our common area codes, fall through to default
     } catch (error) {
       console.warn(`[Retry Logic] Error looking up area code ${areaCode}:`, error);
     }
@@ -184,6 +167,12 @@ export async function incrementDailyCallCount(
  * Returns true if we can call RIGHT NOW
  */
 export function isWithinCallingHours(encryptedHandle: string): boolean {
+  // TESTING_MODE: Always allow calls
+  const TESTING_MODE = process.env.TESTING_MODE === "true" || process.env.NODE_ENV === "development";
+  if (TESTING_MODE) {
+    return true;
+  }
+
   const phoneNumber = extractPhoneNumber(encryptedHandle);
   const timezone = getTimezoneForPhoneNumber(phoneNumber);
   const now = new Date();
@@ -289,6 +278,12 @@ export async function shouldRetryCall(
   db: any,
   callId: string,
 ): Promise<{ shouldRetry: boolean; reason?: string }> {
+  // TESTING_MODE: Skip all checks and allow calls
+  const TESTING_MODE = process.env.TESTING_MODE === "true" || process.env.NODE_ENV === "development";
+  if (TESTING_MODE) {
+    return { shouldRetry: true };
+  }
+
   const [call] = await db
     .select()
     .from(calls)

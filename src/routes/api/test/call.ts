@@ -12,7 +12,7 @@ import { initiateTwilioCall } from "~/lib/twilio/call";
 /**
  * Test endpoint to initiate a Twilio call
  * POST /api/test/call
- * Body: { phoneNumber: string, recipientName: string, recipientContext: string }
+ * Body: { phoneNumber: string, recipientName: string, anythingElse?: string }
  * 
  * This is useful for testing calls without going through the full UI flow
  */
@@ -36,12 +36,12 @@ export const Route = createFileRoute("/api/test/call")({
 
         try {
           const body = await request.json();
-          const { phoneNumber, recipientName, recipientContext } = body;
+          const { phoneNumber, recipientName, anythingElse } = body;
 
-          if (!phoneNumber || !recipientName || !recipientContext) {
+          if (!phoneNumber || !recipientName) {
             return new Response(
               JSON.stringify({
-                error: "Missing required fields: phoneNumber, recipientName, recipientContext",
+                error: "Missing required fields: phoneNumber, recipientName",
               }),
               {
                 status: 400,
@@ -72,7 +72,9 @@ export const Route = createFileRoute("/api/test/call")({
             .values({
               userId,
               recipientName,
-              recipientContext,
+              anythingElse: anythingElse || null,
+              targetGender: "prefer_not_to_say",
+              videoStyle: "anime",
               encryptedHandle,
               paymentMethod: "free", // Test calls are free
               isFree: true,
