@@ -52,8 +52,20 @@ const server = Bun.serve<WebSocketData>({
   async fetch(req: any, server: any) {
     const url = new URL(req.url);
     
+    console.log(`[WS Server] 📥 Request: ${req.method} ${url.pathname}`);
+    console.log(`[WS Server] 📥 Headers:`, Object.fromEntries(req.headers.entries()));
+    
     if (url.pathname === "/twilio/stream") {
       console.log("[WS Server] 🔌 WebSocket upgrade request received");
+      
+      // Check if this is actually a WebSocket upgrade request
+      const upgradeHeader = req.headers.get("upgrade");
+      console.log("[WS Server] 🔌 Upgrade header:", upgradeHeader);
+      
+      if (upgradeHeader?.toLowerCase() !== "websocket") {
+        console.error("[WS Server] ❌ Not a WebSocket request - missing upgrade header");
+        return new Response("WebSocket upgrade required", { status: 426 });
+      }
       
       const upgraded = server.upgrade(req, {
         data: {
@@ -66,6 +78,7 @@ const server = Bun.serve<WebSocketData>({
         return new Response("WebSocket upgrade failed", { status: 426 });
       }
       
+      console.log("[WS Server] ✅ WebSocket upgrade successful");
       return undefined; // Upgraded successfully
     }
     
