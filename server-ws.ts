@@ -106,7 +106,12 @@ async function handleStart(ws: WebSocket, wsData: WebSocketData, data: any) {
     await openai.connect();
     wsData.openaiClient = openai;
     
+    let audioSentCount = 0;
     openai.onAudio((audioBase64: string) => {
+      audioSentCount++;
+      if (audioSentCount === 1) {
+        console.log("[WS] 🔊 First audio chunk sent to Twilio");
+      }
       ws.send(JSON.stringify({
         event: "media",
         streamSid: wsData.streamSid,
@@ -124,7 +129,19 @@ async function handleStart(ws: WebSocket, wsData: WebSocketData, data: any) {
 }
 
 function handleMedia(wsData: WebSocketData, data: any) {
-  if (!data.media || data.media.track !== "inbound" || !wsData.openaiClient) return;
+  if (!data.media || data.media.track !== "inbound") return;
+  
+  wsData.audioChunkCount++;
+  if (wsData.audioChunkCount === 1) {
+    console.log("[WS] 🎤 First audio from Twilio received");
+  }
+  
+  if (!wsData.openaiClient) {
+    if (wsData.audioChunkCount % 100 === 1) {
+      console.log("[WS] ⏳ Waiting for OpenAI...", wsData.audioChunkCount, "chunks");
+    }
+    return;
+  }
   
   import("./src/lib/realtime/audio-converter").then(({ pcmuToPCM16 }) => {
     wsData.openaiClient.sendAudio(pcmuToPCM16(data.media.payload));
