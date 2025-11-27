@@ -6,18 +6,6 @@ import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
-// Server-only packages that should not be bundled into client
-const serverOnlyPackages = [
-  "pg-boss",
-  "postgres",
-  "fluent-ffmpeg",
-  "@aws-sdk/client-s3",
-  "@aws-sdk/s3-request-presigner",
-  "resend",
-  "twilio",
-  "ws",
-];
-
 export default defineConfig({
   plugins: [
     devtools(),
@@ -48,18 +36,5 @@ export default defineConfig({
       ".ngrok-free.app",
       ".ngrok.io",
     ],
-  },
-  // Externalize server-only packages
-  ssr: {
-    external: serverOnlyPackages,
-    noExternal: [],
-  },
-  build: {
-    rollupOptions: {
-      external: serverOnlyPackages,
-    },
-  },
-  optimizeDeps: {
-    exclude: serverOnlyPackages,
   },
 });
