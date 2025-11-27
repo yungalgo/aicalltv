@@ -6,13 +6,15 @@ import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
-// Packages that rolldown-vite can't bundle - they'll be resolved from node_modules at runtime
+// Packages that rolldown-vite struggles to bundle - mark as external
+// These will be loaded from node_modules at runtime
 const nodeExternals = [
   "twilio",
   "pg-boss",
   "fluent-ffmpeg",
 ];
 
+// https://tanstack.com/start/latest/docs/framework/react/guide/hosting
 export default defineConfig({
   plugins: [
     devtools(),
@@ -20,15 +22,13 @@ export default defineConfig({
       projects: ["./tsconfig.json"],
     }),
     tanstackStart(),
-    // https://tanstack.com/start/latest/docs/framework/react/guide/hosting
     nitro({
-      // Tell Nitro to NOT bundle these - resolve from node_modules at runtime
-      externals: {
+      // Configure Nitro to NOT bundle these packages
+      rollupConfig: {
         external: nodeExternals,
       },
     }),
     viteReact({
-      // https://react.dev/learn/react-compiler
       babel: {
         plugins: [
           [
@@ -48,8 +48,14 @@ export default defineConfig({
       ".ngrok.io",
     ],
   },
-  // Tell Vite SSR build to skip these packages
+  // Mark these as external for SSR build
   ssr: {
     external: nodeExternals,
+  },
+  // Also mark for client build (shouldn't be needed but just in case)
+  build: {
+    rollupOptions: {
+      external: nodeExternals,
+    },
   },
 });
