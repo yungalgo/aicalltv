@@ -50,10 +50,11 @@ const server = Bun.serve<WebSocketData>({
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async fetch(req: any, server: any) {
-    const url = new URL(req.url);
-    
-    console.log(`[WS Server] 📥 Request: ${req.method} ${url.pathname}`);
-    console.log(`[WS Server] 📥 Headers:`, Object.fromEntries(req.headers.entries()));
+    try {
+      const url = new URL(req.url);
+      
+      console.log(`[WS Server] 📥 Request: ${req.method} ${url.pathname}`);
+      console.log(`[WS Server] 📥 Headers:`, JSON.stringify(Object.fromEntries(req.headers.entries())));
     
     if (url.pathname === "/twilio/stream") {
       console.log("[WS Server] 🔌 WebSocket upgrade request received");
@@ -85,6 +86,10 @@ const server = Bun.serve<WebSocketData>({
     return new Response("WebSocket server for Twilio Media Streams\nConnect to /twilio/stream", {
       status: 200,
     });
+    } catch (error) {
+      console.error("[WS Server] ❌ Fetch handler error:", error);
+      return new Response("Internal Server Error", { status: 500 });
+    }
   },
   
   websocket: {
@@ -137,6 +142,16 @@ const server = Bun.serve<WebSocketData>({
 console.log(`🚀 WebSocket server running on http://localhost:${PORT}`);
 console.log(`📡 Twilio should connect to: ws://localhost:${PORT}/twilio/stream`);
 console.log("   (or via ngrok/Railway: wss://your-domain/twilio/stream)");
+console.log(`🔧 Server object:`, typeof server, server ? "exists" : "null");
+
+// Global error handlers
+process.on("uncaughtException", (err) => {
+  console.error("[WS Server] 💥 Uncaught exception:", err);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[WS Server] 💥 Unhandled rejection:", reason);
+});
 
 async function handleStreamStart(ws: ServerWebSocket<WebSocketData>, data: TwilioStreamMessage) {
   const startTime = Date.now();
