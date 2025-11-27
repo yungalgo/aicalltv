@@ -12,11 +12,13 @@ export const Route = createFileRoute("/api/twilio/voice")({
     console.log("=".repeat(80));
     console.log("[TwiML Voice] 📞 Twilio requested TwiML for call");
     console.log("[TwiML Voice] VITE_BASE_URL:", env.VITE_BASE_URL);
+    console.log("[TwiML Voice] RAW WEBSOCKET_URL env:", process.env.WEBSOCKET_URL);
     
     // WebSocket URL for receiving Media Stream
     // WebSocket server runs on port 3001 with its own ngrok tunnel
-    const streamUrl = env.WEBSOCKET_URL || "ws://localhost:3001/twilio/stream";
+    const streamUrl = env.WEBSOCKET_URL || process.env.WEBSOCKET_URL || "ws://localhost:3001/twilio/stream";
     console.log("[TwiML Voice] 🔌 Stream URL:", streamUrl);
+    console.log("[TwiML Voice] 🔌 Stream URL length:", streamUrl.length);
 
     // TwiML response for bidirectional Media Stream
     // Per Twilio docs: Use <Connect><Stream> for bidirectional streams (not <Start><Stream>)
