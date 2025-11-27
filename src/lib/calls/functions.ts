@@ -144,15 +144,15 @@ export const createCall = createServerFn({ method: "POST" }).handler(
     const { getBoss, JOB_TYPES } = await import("~/lib/queue/boss");
     const boss = await getBoss();
     
-    // Check if testing mode is enabled (bypass time restrictions)
-    const TESTING_MODE = process.env.TESTING_MODE === "true" || process.env.NODE_ENV === "development";
+    // In development, bypass time restrictions
+    const isDev = process.env.NODE_ENV !== "production";
     
-    if (TESTING_MODE) {
-      // Testing mode: bypass time checks and call immediately
+    if (isDev) {
+      // Development: bypass time checks and call immediately
       await boss.send(JOB_TYPES.PROCESS_CALL, {
         callId: newCall.id,
       });
-      console.log(`[Create Call] 🧪 TESTING MODE: Enqueued call ${newCall.id} for immediate processing (bypassed time checks)`);
+      console.log(`[Create Call] 🧪 DEV MODE: Enqueued call ${newCall.id} for immediate processing`);
     } else {
       // Production mode: check calling hours
       const { isWithinCallingHours } = await import("~/lib/calls/retry-logic");
