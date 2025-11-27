@@ -6,15 +6,17 @@ import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
+// Plugin order matches official TanStack Start template
 // https://tanstack.com/start/latest/docs/framework/react/guide/hosting
 export default defineConfig({
   plugins: [
     devtools(),
+    nitro(),
     tsConfigPaths({
       projects: ["./tsconfig.json"],
     }),
+    tailwindcss(),
     tanstackStart(),
-    nitro(),
     viteReact({
       babel: {
         plugins: [
@@ -27,12 +29,8 @@ export default defineConfig({
         ],
       },
     }),
-    tailwindcss(),
   ],
   server: {
-    allowedHosts: [
-      ".ngrok-free.app",
-      ".ngrok.io",
-    ],
+    allowedHosts: [".ngrok-free.app", ".ngrok.io"],
   },
 });
