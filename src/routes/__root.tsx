@@ -17,17 +17,8 @@ import appCss from "~/styles.css?url";
 import { ThemeProvider } from "~/components/theme-provider";
 import { Toaster } from "~/components/ui/sonner";
 
-// Initialize workers on server startup (only once, non-blocking)
-if (typeof window === "undefined") {
-  import("~/lib/workers").then(({ initializeWorkers }) => {
-    // Delay worker initialization to avoid race conditions with pg-boss
-    setTimeout(() => {
-      initializeWorkers().catch((error) => {
-        console.error("[Root] Failed to initialize workers:", error);
-      });
-    }, 2000);
-  });
-}
+// Note: Workers are initialized separately via `bun run worker` command
+// This avoids bundling server-only dependencies (pg-boss, etc.) into the client
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;
