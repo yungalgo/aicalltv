@@ -6,6 +6,13 @@ import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
+// Packages that rolldown-vite can't bundle - they'll be resolved from node_modules at runtime
+const nodeExternals = [
+  "twilio",
+  "pg-boss",
+  "fluent-ffmpeg",
+];
+
 export default defineConfig({
   plugins: [
     devtools(),
@@ -14,7 +21,12 @@ export default defineConfig({
     }),
     tanstackStart(),
     // https://tanstack.com/start/latest/docs/framework/react/guide/hosting
-    nitro(),
+    nitro({
+      // Tell Nitro to NOT bundle these - resolve from node_modules at runtime
+      externals: {
+        external: nodeExternals,
+      },
+    }),
     viteReact({
       // https://react.dev/learn/react-compiler
       babel: {
@@ -31,10 +43,13 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    // Allow all ngrok domains (no need to update specific URLs)
     allowedHosts: [
       ".ngrok-free.app",
       ".ngrok.io",
     ],
+  },
+  // Tell Vite SSR build to skip these packages
+  ssr: {
+    external: nodeExternals,
   },
 });
