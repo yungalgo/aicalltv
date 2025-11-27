@@ -144,8 +144,8 @@ export const createCall = createServerFn({ method: "POST" }).handler(
     const { getBoss, JOB_TYPES } = await import("~/lib/queue/boss");
     const boss = await getBoss();
     
-    // In development, bypass time restrictions
-    const isDev = process.env.NODE_ENV !== "production";
+    // In development or testing mode, bypass time restrictions
+    const isDev = process.env.NODE_ENV !== "production" || process.env.TESTING_MODE === "true";
     
     if (isDev) {
       // Development: bypass time checks and call immediately

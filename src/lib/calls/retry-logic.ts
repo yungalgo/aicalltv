@@ -167,8 +167,8 @@ export async function incrementDailyCallCount(
  * Returns true if we can call RIGHT NOW
  */
 export function isWithinCallingHours(encryptedHandle: string): boolean {
-  // In development, always allow calls (bypass time restrictions)
-  if (process.env.NODE_ENV !== "production") {
+  // In development or testing mode, always allow calls (bypass time restrictions)
+  if (process.env.NODE_ENV !== "production" || process.env.TESTING_MODE === "true") {
     return true;
   }
 
@@ -277,8 +277,8 @@ export async function shouldRetryCall(
   db: any,
   callId: string,
 ): Promise<{ shouldRetry: boolean; reason?: string }> {
-  // In development, skip all checks and allow calls
-  if (process.env.NODE_ENV !== "production") {
+  // In development or testing mode, skip all checks and allow calls
+  if (process.env.NODE_ENV !== "production" || process.env.TESTING_MODE === "true") {
     return { shouldRetry: true };
   }
 

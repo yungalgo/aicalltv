@@ -36,8 +36,9 @@ export const env = createEnv({
     // Resend configuration (for email notifications)
     RESEND_API_KEY: z.string().optional(),
 
-    // Note: TESTING_MODE removed - use NODE_ENV instead
-    // Development mode (NODE_ENV !== 'production') bypasses time restrictions
+    // TESTING_MODE: Set to "true" on Railway to bypass calling hour restrictions
+    // Useful for testing production without time-of-day limitations
+    TESTING_MODE: z.string().optional(),
 
     // WebSocket server URL (for Twilio Media Streams)
     // Use ngrok URL for WebSocket server: wss://your-ws-ngrok.ngrok-free.app/twilio/stream
