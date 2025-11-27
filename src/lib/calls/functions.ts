@@ -146,6 +146,7 @@ export const createCall = createServerFn({ method: "POST" }).handler(
     
     // In development or testing mode, bypass time restrictions
     const isDev = process.env.NODE_ENV !== "production" || process.env.TESTING_MODE === "true";
+    console.log(`[Create Call] 🔧 ENV: NODE_ENV=${process.env.NODE_ENV}, TESTING_MODE=${process.env.TESTING_MODE}, isDev=${isDev}`);
     
     if (isDev) {
       // Development: bypass time checks and call immediately
