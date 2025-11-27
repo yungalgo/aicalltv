@@ -26,6 +26,7 @@ interface WebSocketData {
 
 const server = Bun.serve<WebSocketData>({
   port: PORT,
+  hostname: "0.0.0.0", // Bind to all interfaces (required for Railway)
   
   fetch(req, server) {
     const url = new URL(req.url);
