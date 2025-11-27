@@ -43,8 +43,10 @@ interface WebSocketData {
   audioChunkCount: number;
 }
 
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
+
 const server = Bun.serve<WebSocketData>({
-  port: 3001,
+  port: PORT,
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async fetch(req: any, server: any) {
@@ -119,9 +121,9 @@ const server = Bun.serve<WebSocketData>({
   },
 });
 
-console.log("🚀 WebSocket server running on http://localhost:3001");
-console.log("📡 Twilio should connect to: ws://localhost:3001/twilio/stream");
-console.log("   (or via ngrok: wss://your-ngrok-url.ngrok-free.app/twilio/stream)");
+console.log(`🚀 WebSocket server running on http://localhost:${PORT}`);
+console.log(`📡 Twilio should connect to: ws://localhost:${PORT}/twilio/stream`);
+console.log("   (or via ngrok/Railway: wss://your-domain/twilio/stream)");
 
 async function handleStreamStart(ws: ServerWebSocket<WebSocketData>, data: TwilioStreamMessage) {
   const startTime = Date.now();
