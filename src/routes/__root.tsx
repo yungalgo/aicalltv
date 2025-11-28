@@ -6,6 +6,7 @@ import {
   Outlet,
   Scripts,
 } from "@tanstack/react-router";
+import { lazy, Suspense } from "react";
 
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
@@ -15,8 +16,14 @@ import { authQueryOptions, type AuthQueryResult } from "~/lib/auth/queries";
 import appCss from "~/styles.css?url";
 
 import { ThemeProvider } from "~/components/theme-provider";
-import { ThirdwebProvider } from "~/components/thirdweb-provider";
 import { Toaster } from "~/components/ui/sonner";
+
+// Lazy load ThirdwebProvider to avoid SSR bundling issues with @noble/hashes
+const ThirdwebProvider = lazy(() =>
+  import("~/components/thirdweb-provider").then((mod) => ({
+    default: mod.ThirdwebProvider,
+  })),
+);
 
 // Note: Workers are initialized separately via `bun run worker` command
 // This avoids bundling server-only dependencies (pg-boss, etc.) into the client
@@ -72,12 +79,14 @@ function RootDocument({ children }: { readonly children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <ThirdwebProvider>
-          <ThemeProvider>
-            {children}
-            <Toaster richColors />
-          </ThemeProvider>
-        </ThirdwebProvider>
+        <Suspense fallback={null}>
+          <ThirdwebProvider>
+            <ThemeProvider>
+              {children}
+              <Toaster richColors />
+            </ThemeProvider>
+          </ThirdwebProvider>
+        </Suspense>
 
         <TanStackDevtools
           plugins={[

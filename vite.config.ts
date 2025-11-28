@@ -6,22 +6,30 @@ import { nitro } from "nitro/vite";
 import { defineConfig } from "vite";
 import tsConfigPaths from "vite-tsconfig-paths";
 
+import path from "node:path";
+
 // Plugin order matches official TanStack Start template
 // https://tanstack.com/start/latest/docs/framework/react/guide/hosting
 export default defineConfig({
+  resolve: {
+    alias: {
+      // Fix @noble/hashes/crypto ESM subpath export issue
+      // Some versions don't export ./crypto, so we provide a shim
+      "@noble/hashes/crypto": path.resolve(
+        __dirname,
+        "src/lib/shims/noble-hashes-crypto.ts",
+      ),
+    },
+  },
   plugins: [
     devtools(),
     nitro({
-      // Externalize packages that have ESM subpath export issues
-      // @noble/hashes is used by thirdweb and has problematic exports
-      rollupConfig: {
-        external: [
-          "@noble/hashes",
-          "@noble/hashes/crypto",
-          "@noble/hashes/utils",
-          "@noble/curves",
-          "@noble/secp256k1",
-        ],
+      // Also add alias to Nitro bundler
+      alias: {
+        "@noble/hashes/crypto": path.resolve(
+          __dirname,
+          "src/lib/shims/noble-hashes-crypto.ts",
+        ),
       },
     }),
     tsConfigPaths({
