@@ -86,7 +86,7 @@ export function PaymentModal({
               client={thirdwebClient}
               chain={polygon}
               amount={PAYMENT_CONFIG.priceUSDC}
-              seller={PAYMENT_CONFIG.sellerAddress}
+              seller={PAYMENT_CONFIG.sellerAddress as `0x${string}`}
               name={`AI Call to ${callDetails.recipientName}`}
               description="AI-powered phone call with video generation"
               image="/favicon.ico"
@@ -97,7 +97,8 @@ export function PaymentModal({
               onSuccess={(result) => {
                 console.log("[Payment] Success:", result);
                 setPaymentStatus("complete");
-                const txHash = result?.transactionHash || "tx_" + Date.now();
+                // Get transaction hash from result statuses if available
+                const txHash = result?.statuses?.[0]?.transactions?.[0]?.transactionHash || "tx_" + Date.now();
                 onPaymentComplete(txHash);
               }}
               theme="dark"
