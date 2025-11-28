@@ -8,8 +8,29 @@ import { WebSocketServer, WebSocket } from "ws";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
+interface OpenAIRealtimeClientType {
+  connect: () => Promise<void>;
+  close: () => void;
+  sendAudio: (base64: string) => void;
+  commitAudio: () => void;
+  onAudio: (callback: (audio: string) => void) => void;
+  onTranscript: (callback: (text: string) => void) => void;
+}
+
+interface TwilioMessage {
+  event: string;
+  streamSid?: string;
+  start?: {
+    callSid: string;
+  };
+  media?: {
+    track: string;
+    payload: string;
+  };
+}
+
 interface WebSocketData {
-  openaiClient?: any;
+  openaiClient?: OpenAIRealtimeClientType;
   callSid?: string;
   streamSid?: string;
   audioChunkCount: number;
@@ -70,7 +91,7 @@ httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`WebSocket server listening on port ${PORT}`);
 });
 
-async function handleStart(ws: WebSocket, wsData: WebSocketData, data: any) {
+async function handleStart(ws: WebSocket, wsData: WebSocketData, data: TwilioMessage) {
   const callSid = data.start?.callSid;
   if (!callSid) return;
   
@@ -128,7 +149,7 @@ async function handleStart(ws: WebSocket, wsData: WebSocketData, data: any) {
   }
 }
 
-function handleMedia(wsData: WebSocketData, data: any) {
+function handleMedia(wsData: WebSocketData, data: TwilioMessage) {
   if (!data.media || data.media.track !== "inbound") return;
   
   wsData.audioChunkCount++;
@@ -143,7 +164,11 @@ function handleMedia(wsData: WebSocketData, data: any) {
     return;
   }
   
+  // Capture values before async import to satisfy TypeScript
+  const client = wsData.openaiClient;
+  const payload = data.media.payload;
+  
   import("./src/lib/realtime/audio-converter").then(({ pcmuToPCM16 }) => {
-    wsData.openaiClient.sendAudio(pcmuToPCM16(data.media.payload));
+    client.sendAudio(pcmuToPCM16(payload));
   });
 }

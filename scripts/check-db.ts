@@ -2,16 +2,12 @@
  * Check database schema and verify all tables/columns exist
  */
 
-import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { env } from "~/env/server";
-import * as schema from "~/lib/db/schema";
-import { sql } from "drizzle-orm";
 
 async function checkDatabase() {
   console.log("🔍 Checking database schema...\n");
   const driver = postgres(env.DATABASE_URL);
-  const db = drizzle({ client: driver, schema, casing: "snake_case" });
 
   try {
     // Check if tables exist
@@ -24,8 +20,8 @@ async function checkDatabase() {
     `);
 
     console.log("📊 Tables found:");
-    const tableNames = tables.map((t: any) => t.table_name);
-    tableNames.forEach((name: string) => {
+    const tableNames = (tables as unknown as Array<{ table_name: string }>).map((t) => t.table_name);
+    tableNames.forEach((name) => {
       console.log(`  ✅ ${name}`);
     });
 
@@ -38,7 +34,8 @@ async function checkDatabase() {
       ORDER BY ordinal_position;
     `);
 
-    const expectedColumns = [
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+const expectedColumns = [
       "id",
       "user_id",
       "status",
@@ -76,7 +73,7 @@ async function checkDatabase() {
       "updated_at",
     ];
 
-    const foundColumns = callsColumns.map((c: any) => c.column_name);
+    const foundColumns = (callsColumns as unknown as Array<{ column_name: string }>).map((c) => c.column_name);
     
     console.log(`  Total columns: ${foundColumns.length}`);
     console.log("\n  New fields check:");
@@ -110,7 +107,7 @@ async function checkDatabase() {
       ORDER BY typname;
     `);
 
-    const enumNames = enums.map((e: any) => e.typname);
+    const enumNames = (enums as unknown as Array<{ typname: string }>).map((e) => e.typname);
     const expectedEnums = ["call_status", "payment_method", "video_status"];
     
     expectedEnums.forEach((enumName) => {
@@ -139,7 +136,7 @@ async function checkDatabase() {
     `);
 
     if (foreignKeys.length > 0) {
-      foreignKeys.forEach((fk: any) => {
+      (foreignKeys as unknown as Array<{ table_name: string; column_name: string; foreign_table_name: string; foreign_column_name: string }>).forEach((fk) => {
         console.log(`  ✅ ${fk.table_name}.${fk.column_name} → ${fk.foreign_table_name}.${fk.foreign_column_name}`);
       });
     } else {

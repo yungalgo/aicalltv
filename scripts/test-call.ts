@@ -2,7 +2,7 @@
 
 /**
  * Direct test script to initiate a Twilio call
- * Usage: bun scripts/test-call.ts <phone-number> <recipient-name> <recipient-context>
+ * Usage: bun scripts/test-call.ts <phone-number> <recipient-name> <context>
  * Example: bun scripts/test-call.ts "+15005550006" "Test User" "This is a test call"
  */
 
@@ -18,12 +18,12 @@ import { initiateTwilioCall } from "../src/lib/twilio/call";
 async function main() {
   const phoneNumber = process.argv[2] || "+19083363673"; // Google Voice number
   const recipientName = process.argv[3] || "Test User";
-  const recipientContext = process.argv[4] || "This is a test call to verify dual-channel recording works.";
+  const anythingElse = process.argv[4] || "This is a test call to verify dual-channel recording works.";
 
   console.log("📞 Making test call...");
   console.log(`Phone Number: ${phoneNumber}`);
   console.log(`Recipient Name: ${recipientName}`);
-  console.log(`Recipient Context: ${recipientContext}`);
+  console.log(`Context: ${anythingElse}`);
   console.log("");
 
   try {
@@ -57,14 +57,17 @@ async function main() {
       console.log(`✓ Created test user: ${testUserEmail}`);
     }
 
-    // Create call record
+    // Create call record with required fields
     const encryptedHandle = `encrypted_${phoneNumber}`;
     const [newCall] = await db
       .insert(calls)
       .values({
         userId: testUserId,
         recipientName,
-        recipientContext,
+        anythingElse,
+        targetGender: "prefer_not_to_say",
+        videoStyle: "anime",
+        openaiPrompt: `You are making a test call to ${recipientName}. Context: ${anythingElse}`,
         encryptedHandle,
         paymentMethod: "free",
         isFree: true,
@@ -100,8 +103,8 @@ async function main() {
   } catch (error) {
     console.error("❌ Error:", error instanceof Error ? error.message : error);
     if (error instanceof Error && 'code' in error) {
-      console.error("Error code:", (error as any).code);
-      console.error("Error details:", (error as any).detail);
+      console.error("Error code:", (error as Record<string, unknown>).code);
+      console.error("Error details:", (error as Record<string, unknown>).detail);
     }
     console.error("Full error:", error);
     process.exit(1);
@@ -109,4 +112,3 @@ async function main() {
 }
 
 main();
-

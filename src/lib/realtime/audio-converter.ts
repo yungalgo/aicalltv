@@ -53,9 +53,9 @@ export function pcm16ToPCMU(pcm16Base64: string): string {
 function decodeMuLaw(pcmuBuffer: Buffer): Buffer {
   const pcm16Buffer = Buffer.alloc(pcmuBuffer.length * 2); // 16-bit = 2 bytes per sample
   
-  // μ-law decode lookup table for accuracy
+  // μ-law decode constants
   const MULAW_BIAS = 33;
-  const MULAW_MAX = 0x1FFF;
+  // Note: MULAW_MAX (0x1FFF) not used but kept for reference
   
   for (let i = 0; i < pcmuBuffer.length; i++) {
     let mulaw = pcmuBuffer[i];
@@ -92,7 +92,7 @@ function encodeMuLaw(pcm16Buffer: Buffer): Buffer {
   const MULAW_BIAS = 33;
   
   for (let i = 0; i < pcmuBuffer.length; i++) {
-    let sample = pcm16Buffer.readInt16LE(i * 2);
+    const sample = pcm16Buffer.readInt16LE(i * 2);
     
     // Get sign and magnitude
     const sign = sample < 0 ? 0x80 : 0x00;

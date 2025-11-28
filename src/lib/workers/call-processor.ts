@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import type { Job } from "pg-boss";
+// Job type from pg-boss (used indirectly through getBoss)
 import { env } from "~/env/server";
 import { calls } from "~/lib/db/schema/calls";
 import * as schema from "~/lib/db/schema";

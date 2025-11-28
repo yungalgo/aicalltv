@@ -12,10 +12,49 @@ import {
 import { Button } from "~/components/ui/button";
 import { getUserCalls } from "~/lib/calls/queries";
 
+// Type for call data returned from getUserCalls
+interface CallData {
+  id: string;
+  userId: string;
+  status: string;
+  recipientName: string;
+  anythingElse: string | null;
+  targetGender: string;
+  targetGenderCustom: string | null;
+  targetAgeRange: string | null;
+  targetPhysicalDescription: string | null;
+  interestingPiece: string | null;
+  videoStyle: string | null;
+  openaiPrompt: string | null;
+  imagePrompt: string | null;
+  script: string | null;
+  attempts: number;
+  maxAttempts: number;
+  firstAttemptAt: Date | null;
+  lastAttemptAt: Date | null;
+  daysSinceFirstAttempt: number | null;
+  nextRetryAt: Date | null;
+  isFree: boolean;
+  paymentMethod: string;
+  paymentTxHash: string | null;
+  paymentAmount: string | null;
+  encryptedHandle: string | null;
+  callSid: string | null;
+  recordingUrl: string | null;
+  recordingSid: string | null;
+  duration: number | null;
+  videoUrl: string | null;
+  videoStatus: string | null;
+  wavespeedJobId: string | null;
+  videoErrorMessage: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 const callsQueryOptions = () =>
   queryOptions({
     queryKey: ["calls"],
-    queryFn: () => (getUserCalls as any)(),
+    queryFn: () => getUserCalls() as Promise<CallData[]>,
   });
 
 export function CallsTable() {
@@ -29,7 +68,7 @@ export function CallsTable() {
     );
   }
 
-  const getStatusBadge = (status: string, videoStatus?: string) => {
+  const getStatusBadge = (status: string, videoStatus?: string | null) => {
     // Show video status if available
     if (videoStatus === "completed") {
       return (
@@ -94,7 +133,7 @@ export function CallsTable() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {calls.map((call: typeof calls[0]) => (
+          {calls.map((call) => (
             <TableRow key={call.id}>
               <TableCell className="font-medium">{call.recipientName}</TableCell>
               <TableCell>{getStatusBadge(call.status, call.videoStatus)}</TableCell>

@@ -47,13 +47,13 @@ export async function getBoss(): Promise<PgBoss> {
     // createQueue is idempotent - safe to call multiple times
     try {
       await boss.createQueue(JOB_TYPES.PROCESS_CALL);
-    } catch (error) {
+    } catch {
       // Queue might already exist, ignore
     }
     
     try {
       await boss.createQueue(JOB_TYPES.GENERATE_VIDEO);
-    } catch (error) {
+    } catch {
       // Queue might already exist, ignore
     }
 

@@ -68,10 +68,11 @@ export async function uploadToS3(
   try {
     await client.send(command);
     isPublic = true;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { name?: string; code?: string };
     // If ACL fails (bucket policy doesn't allow), upload without ACL
     // We'll use signed URLs instead
-    if (error.name === "AccessControlListNotSupported" || error.code === "AccessDenied") {
+    if (err.name === "AccessControlListNotSupported" || err.code === "AccessDenied") {
       // ACL not supported, will use signed URLs
       const commandWithoutACL = new PutObjectCommand({
         Bucket: bucket,

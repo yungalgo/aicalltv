@@ -73,6 +73,7 @@ function DashboardIndex() {
 
     try {
       // Create call record after successful payment
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (createCall as any)({
         data: {
           recipientName: formData.recipientName,

@@ -7,7 +7,6 @@
 
 import { env } from "~/env/server";
 import { retryWithBackoff } from "~/lib/utils/retry";
-import { getSignedS3Url } from "~/lib/storage/s3";
 
 const WAVESPEED_API_BASE = "https://api.wavespeed.ai/api/v3";
 const MODEL_ENDPOINT = `${WAVESPEED_API_BASE}/wavespeed-ai/infinitetalk-fast/multi`;
@@ -116,7 +115,6 @@ async function pollWavespeedJob(jobId: string): Promise<WavespeedVideoResult> {
       // Extract inference time from API response (for logging only)
       const inferenceTimeMs = data.timings?.inference || 0;
       const inferenceTimeSeconds = inferenceTimeMs / 1000;
-      const pollDuration = (Date.now() - startTime) / 1000;
 
       // Extract cost from API response (use absolute value if negative)
       const apiCost = data.cost !== undefined ? Math.abs(data.cost) : undefined;

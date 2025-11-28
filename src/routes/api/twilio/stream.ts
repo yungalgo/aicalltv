@@ -11,7 +11,7 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/api/twilio/stream")({
   server: {
     handlers: {
-      GET: async ({ request }: { request: Request }) => {
+      GET: async () => {
         console.log("[Twilio Stream] GET request received - WebSocket upgrade expected");
         
         // For now, return a placeholder

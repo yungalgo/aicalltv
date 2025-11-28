@@ -47,8 +47,9 @@ async function resetDatabase() {
     const { execSync } = await import("child_process");
     try {
       execSync("bunx drizzle-kit push", { stdio: "inherit" });
-    } catch (error: any) {
-      if (error.status === 130 || error.signal === "SIGINT") {
+    } catch (error: unknown) {
+      const execError = error as { status?: number; signal?: string };
+      if (execError.status === 130 || execError.signal === "SIGINT") {
         // User cancelled - that's okay
         console.log("\n⚠️  Schema push cancelled or requires confirmation");
         console.log("   Please run 'bunx drizzle-kit push' manually");

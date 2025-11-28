@@ -17,11 +17,11 @@ async function checkEnum() {
     `);
     
     console.log("📋 call_status enum values:");
-    result.forEach((r: any) => {
+    (result as unknown as Array<{ enumlabel: string }>).forEach((r) => {
       console.log(`  ✅ ${r.enumlabel}`);
     });
     
-    const hasPromptReady = result.some((r: any) => r.enumlabel === 'prompt_ready');
+    const hasPromptReady = (result as unknown as Array<{ enumlabel: string }>).some((r) => r.enumlabel === 'prompt_ready');
     if (hasPromptReady) {
       console.log("\n✅ Migration successful! 'prompt_ready' status is available.");
     } else {

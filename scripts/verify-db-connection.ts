@@ -30,7 +30,7 @@ async function verifyConnection() {
       console.log("\n💡 Run: bunx drizzle-kit push");
       console.log("   (Type 'Yes, I want to execute all statements' when prompted)");
     } else {
-      tables.forEach((t: any) => {
+      (tables as unknown as Array<{ table_name: string }>).forEach((t) => {
         console.log(`   - ${t.table_name}`);
       });
     }

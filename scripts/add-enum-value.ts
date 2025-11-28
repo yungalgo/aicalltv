@@ -40,12 +40,12 @@ async function addEnumValue() {
     `);
     
     console.log("\n📋 All call_status enum values:");
-    result.forEach((r: any) => {
+    (result as unknown as Array<{ enumlabel: string }>).forEach((r) => {
       console.log(`  ✅ ${r.enumlabel}`);
     });
     
-  } catch (error: any) {
-    if (error.message?.includes('already exists')) {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.message?.includes('already exists')) {
       console.log("✅ 'prompt_ready' already exists in enum");
     } else {
       console.error("❌ Error:", error);

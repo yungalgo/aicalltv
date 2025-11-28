@@ -90,7 +90,7 @@ export async function cleanupTempFilesByCallId(callId: string): Promise<void> {
         if (existsSync(filePath)) {
           await unlink(filePath);
         }
-      } catch (error) {
+      } catch {
         // Silently fail - cleanup is non-critical
       }
     });

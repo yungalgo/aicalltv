@@ -6,7 +6,6 @@
  */
 
 import WebSocket from "ws";
-import { env } from "~/env/server";
 
 export interface OpenAIRealtimeConfig {
   apiKey: string;
@@ -99,7 +98,7 @@ export class OpenAIRealtimeClient {
   /**
    * Send session configuration
    */
-  private sendSessionUpdate(config: any) {
+  private sendSessionUpdate(config: Record<string, unknown>) {
     this.send({
       type: "session.update",
       session: config,
@@ -140,7 +139,7 @@ export class OpenAIRealtimeClient {
   /**
    * Send generic message
    */
-  private send(message: any) {
+  private send(message: Record<string, unknown>) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
     }

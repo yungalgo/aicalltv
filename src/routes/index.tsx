@@ -115,6 +115,7 @@ function CallRequestForm() {
       // Dummy payment flow: Automatically uses web3_wallet payment method
       // Call server function - data must be wrapped in { data: ... }
       console.log("[Client] Calling createCall with data:", formData);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await (createCall as any)({
         data: {
           recipientName: formData.recipientName,
@@ -168,6 +169,7 @@ function CallRequestForm() {
       setIsSubmitting(true);
       try {
         console.log("[Client] Calling createCall (from handleAuthSuccess) with data:", formData);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const result = await (createCall as any)({
           data: {
             recipientName: formData.recipientName,

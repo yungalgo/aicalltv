@@ -18,7 +18,7 @@ async function checkUsers() {
       console.log("❌ No users found in database");
     } else {
       console.log(`✅ Found ${users.length} user(s):\n`);
-      users.forEach((user: any, index: number) => {
+      (users as unknown as Array<{ id: string; name: string; email: string; email_verified: boolean; free_call_credits: number; created_at: string }>).forEach((user, index) => {
         console.log(`User ${index + 1}:`);
         console.log(`  ID: ${user.id}`);
         console.log(`  Name: ${user.name}`);
@@ -45,7 +45,7 @@ async function checkUsers() {
       console.log("⚠️  No active sessions found");
     } else {
       console.log(`✅ Found ${sessions.length} active session(s):\n`);
-      sessions.forEach((session: any, index: number) => {
+      (sessions as unknown as Array<{ id: string; user_id: string; email: string; expires_at: string; created_at: string }>).forEach((session, index) => {
         console.log(`Session ${index + 1}:`);
         console.log(`  Session ID: ${session.id.substring(0, 20)}...`);
         console.log(`  User: ${session.email} (${session.user_id.substring(0, 20)}...)`);

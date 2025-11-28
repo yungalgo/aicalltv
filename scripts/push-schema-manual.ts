@@ -4,12 +4,12 @@
  */
 
 import { drizzle } from "drizzle-orm/postgres-js";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql } from "drizzle-orm";
 import postgres from "postgres";
 import { env } from "~/env/server";
 import * as schema from "~/lib/db/schema";
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function pushSchema() {
   console.log("🔄 Pushing schema to database...");
   const driver = postgres(env.DATABASE_URL);
