@@ -81,10 +81,10 @@ function RootDocument({ children }: { readonly children: React.ReactNode }) {
       <body>
         <Suspense fallback={null}>
           <ThirdwebProvider>
-            <ThemeProvider>
-              {children}
-              <Toaster richColors />
-            </ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <Toaster richColors />
+        </ThemeProvider>
           </ThirdwebProvider>
         </Suspense>
 

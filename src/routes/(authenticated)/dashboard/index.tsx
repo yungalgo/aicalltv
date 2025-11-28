@@ -126,7 +126,7 @@ function DashboardIndex() {
         callDetails={{ recipientName: formData.recipientName }}
       />
 
-      <div className="container mx-auto max-w-2xl p-6">
+    <div className="container mx-auto max-w-2xl p-6">
         {/* Header - Cameo style */}
         <div className="rounded-2xl bg-card border p-6 mb-6">
           <div className="flex items-start justify-between">
@@ -134,8 +134,8 @@ function DashboardIndex() {
               <h1 className="text-2xl font-bold">AI Call TV</h1>
               <p className="text-muted-foreground mt-1">
                 Personalized AI video call + generated video
-              </p>
-            </div>
+        </p>
+      </div>
             <div className="text-right">
               <div className="text-3xl font-bold text-primary">
                 ${PAYMENT_CONFIG.priceUSD}
@@ -164,61 +164,61 @@ function DashboardIndex() {
         <div className="rounded-2xl bg-card border p-6 space-y-6">
           <h2 className="text-lg font-semibold">Customize Your Call</h2>
           
-          <div className="space-y-2">
+        <div className="space-y-2">
             <Label htmlFor="recipientName">Who should we call? *</Label>
-            <Input
-              id="recipientName"
-              value={formData.recipientName}
-              onChange={(e) =>
-                setFormData({ ...formData, recipientName: e.target.value })
-              }
+          <Input
+            id="recipientName"
+            value={formData.recipientName}
+            onChange={(e) =>
+              setFormData({ ...formData, recipientName: e.target.value })
+            }
               placeholder="Their name"
-              required
-              disabled={isSubmitting}
+            required
+            disabled={isSubmitting}
               className="text-lg"
-            />
-          </div>
+          />
+        </div>
 
-          <div className="space-y-2">
+        <div className="space-y-2">
             <Label htmlFor="phoneNumber">Their phone number *</Label>
-            <Input
-              id="phoneNumber"
-              type="tel"
-              value={formData.phoneNumber}
-              onChange={(e) =>
-                setFormData({ ...formData, phoneNumber: e.target.value })
-              }
+          <Input
+            id="phoneNumber"
+            type="tel"
+            value={formData.phoneNumber}
+            onChange={(e) =>
+              setFormData({ ...formData, phoneNumber: e.target.value })
+            }
               placeholder="+1 (555) 123-4567"
-              required
-              disabled={isSubmitting}
+            required
+            disabled={isSubmitting}
               className="text-lg"
-            />
-            <p className="text-xs text-muted-foreground">
+          />
+          <p className="text-xs text-muted-foreground">
               🔒 Encrypted before storage
-            </p>
-          </div>
+          </p>
+        </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
+        <div className="space-y-2">
               <Label htmlFor="targetGender">Gender</Label>
-              <select
-                id="targetGender"
-                value={formData.targetGender}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
+          <select
+            id="targetGender"
+            value={formData.targetGender}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
                     targetGender: e.target.value as typeof formData.targetGender,
-                    targetGenderCustom: "",
-                  })
-                }
+                targetGenderCustom: "",
+              })
+            }
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                disabled={isSubmitting}
-              >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="prefer_not_to_say">Prefer not to say</option>
-                <option value="other">Other</option>
-              </select>
+            disabled={isSubmitting}
+          >
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="prefer_not_to_say">Prefer not to say</option>
+            <option value="other">Other</option>
+          </select>
             </div>
 
             <div className="space-y-2">
@@ -243,45 +243,45 @@ function DashboardIndex() {
                 <option value="56+">56+</option>
               </select>
             </div>
-          </div>
+        </div>
 
-          {formData.targetGender === "other" && (
-            <div className="space-y-2">
-              <Label htmlFor="targetGenderCustom">Specify gender *</Label>
-              <Input
-                id="targetGenderCustom"
-                value={formData.targetGenderCustom}
-                onChange={(e) =>
-                  setFormData({ ...formData, targetGenderCustom: e.target.value })
-                }
-                placeholder="Please specify"
-                required
-                disabled={isSubmitting}
-              />
-            </div>
-          )}
-
+        {formData.targetGender === "other" && (
           <div className="space-y-2">
-            <Label htmlFor="videoStyle">Video Style *</Label>
-            <select
-              id="videoStyle"
-              value={formData.videoStyle}
+              <Label htmlFor="targetGenderCustom">Specify gender *</Label>
+            <Input
+              id="targetGenderCustom"
+              value={formData.targetGenderCustom}
               onChange={(e) =>
-                setFormData({ ...formData, videoStyle: e.target.value })
+                setFormData({ ...formData, targetGenderCustom: e.target.value })
               }
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="Please specify"
               required
               disabled={isSubmitting}
-            >
-              {VIDEO_STYLES.map((style) => (
-                <option key={style} value={style}>
-                  {style.charAt(0).toUpperCase() + style.slice(1).replace(/-/g, " ")}
-                </option>
-              ))}
-            </select>
+            />
           </div>
+        )}
 
-          <div className="space-y-2">
+        <div className="space-y-2">
+            <Label htmlFor="videoStyle">Video Style *</Label>
+          <select
+            id="videoStyle"
+            value={formData.videoStyle}
+            onChange={(e) =>
+              setFormData({ ...formData, videoStyle: e.target.value })
+            }
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            required
+            disabled={isSubmitting}
+          >
+            {VIDEO_STYLES.map((style) => (
+              <option key={style} value={style}>
+                {style.charAt(0).toUpperCase() + style.slice(1).replace(/-/g, " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-2">
             <Label htmlFor="interestingPiece">
               Personal hook <span className="text-muted-foreground">(makes it more authentic)</span>
             </Label>
@@ -301,20 +301,20 @@ function DashboardIndex() {
             <Label htmlFor="anythingElse">
               Additional notes <span className="text-muted-foreground">(optional)</span>
             </Label>
-            <Textarea
-              id="anythingElse"
-              value={formData.anythingElse}
-              onChange={(e) =>
-                setFormData({ ...formData, anythingElse: e.target.value })
-              }
+          <Textarea
+            id="anythingElse"
+            value={formData.anythingElse}
+            onChange={(e) =>
+              setFormData({ ...formData, anythingElse: e.target.value })
+            }
               placeholder="Any other context or special requests..."
               rows={2}
-              maxLength={1000}
-              disabled={isSubmitting}
-            />
+            maxLength={1000}
+            disabled={isSubmitting}
+          />
             <p className="text-xs text-muted-foreground text-right">
               {formData.anythingElse.length}/1000
-            </p>
+          </p>
           </div>
         </div>
 
