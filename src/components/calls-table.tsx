@@ -63,7 +63,7 @@ export function CallsTable() {
   if (calls.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center">
-        <p className="text-muted-foreground">No calls yet. Submit your first call request above!</p>
+        <p className="text-muted-foreground">No calls yet. Buy your first AI call above!</p>
       </div>
     );
   }

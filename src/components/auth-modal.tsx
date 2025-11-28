@@ -110,7 +110,7 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess }: AuthModalProps)
           </DialogTitle>
           <DialogDescription>
             {isLogin
-              ? "Sign in to submit your call request"
+              ? "Sign in to complete your purchase"
               : "Sign up to get started"}
           </DialogDescription>
         </DialogHeader>

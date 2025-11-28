@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { authQueryOptions } from "~/lib/auth/queries";
 import { createCall } from "~/lib/calls/functions";
 import { VIDEO_STYLES } from "~/lib/constants/video-styles";
+import { PAYMENT_CONFIG } from "~/lib/thirdweb/config";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -23,9 +24,9 @@ function HomePage() {
       <Header />
       <div className="container mx-auto max-w-4xl p-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">Request a Call</h1>
+          <h1 className="text-3xl font-bold">Buy an AI Call</h1>
           <p className="text-muted-foreground mt-2">
-            Fill out the form below to request an AI call. Pay-per-call pricing ($5 per call).
+            Personalized AI video call + generated video. <span className="font-semibold text-primary">${PAYMENT_CONFIG.priceUSD} per call</span>
           </p>
         </div>
 
@@ -401,10 +402,10 @@ function CallRequestForm() {
       <Button
         type="submit"
         size="lg"
-        className="w-full"
+        className="w-full h-14 text-lg font-semibold rounded-full"
         disabled={isSubmitting}
       >
-        {isSubmitting ? "Processing..." : "Submit Call Request"}
+        {isSubmitting ? "Processing..." : `🛡️ Buy a Call $${PAYMENT_CONFIG.priceUSD}`}
       </Button>
     </form>
     <AuthModal
