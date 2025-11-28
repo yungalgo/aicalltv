@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { CheckoutWidget } from "thirdweb/react";
 import { polygon } from "thirdweb/chains";
-import { thirdwebClient, PAYMENT_CONFIG } from "~/lib/thirdweb/client";
+import { thirdwebClient } from "~/lib/thirdweb/client";
+import { PAYMENT_CONFIG, isThirdwebConfigured } from "~/lib/thirdweb/config";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +31,7 @@ export function PaymentModal({
   const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "complete" | "error">("idle");
 
   // Check if thirdweb is configured
-  const isConfigured = !!import.meta.env.VITE_THIRDWEB_CLIENT_ID && !!import.meta.env.VITE_THIRDWEB_SELLER_ADDRESS;
+  const isConfigured = isThirdwebConfigured();
 
   if (!isConfigured) {
     return (
@@ -86,7 +87,7 @@ export function PaymentModal({
               client={thirdwebClient}
               chain={polygon}
               amount={PAYMENT_CONFIG.priceUSDC}
-              seller={PAYMENT_CONFIG.sellerAddress as `0x${string}`}
+              seller={PAYMENT_CONFIG.sellerAddress}
               name={`AI Call to ${callDetails.recipientName}`}
               description="AI-powered phone call with video generation"
               image="/favicon.ico"

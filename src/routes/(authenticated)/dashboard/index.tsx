@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { createCall } from "~/lib/calls/functions";
 import { VIDEO_STYLES } from "~/lib/constants/video-styles";
 import { PaymentModal } from "~/components/payment-modal";
-import { PAYMENT_CONFIG } from "~/lib/thirdweb/client";
+import { PAYMENT_CONFIG } from "~/lib/thirdweb/config";
 
 export const Route = createFileRoute("/(authenticated)/dashboard/")({
   component: DashboardIndex,
