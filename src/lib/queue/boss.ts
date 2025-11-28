@@ -17,15 +17,19 @@ export async function getBoss(): Promise<PgBoss> {
 
   // Start initialization
   bossInitializing = (async () => {
-    // Use pooled connection URL if available (recommended for Neon serverless)
-    // Neon pooler URLs have "-pooler" in the hostname
+    // Neon best practices:
+    // 1. Use pooled connection URL (has "-pooler" in hostname) - handles idle timeouts
+    // 2. Set connection timeout to handle cold starts (Neon may need to wake up)
+    // 3. Keep pool small for serverless (max 3-5 connections)
+    // See: https://neon.tech/docs/connect/connection-pooling
     const connectionString = env.DATABASE_URL;
     
     boss = new PgBoss({
       connectionString,
-      // Connection pool settings (small for serverless)
-      max: 3,
-      // Monitoring interval (helps keep connection alive)
+      // Neon serverless settings
+      max: 3, // Small pool for serverless
+      connectionTimeoutMillis: 10000, // 10s timeout for Neon cold starts
+      // pg-boss maintenance (keeps connection active)
       monitorIntervalSeconds: 30,
     });
 
