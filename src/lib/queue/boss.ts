@@ -17,11 +17,27 @@ export async function getBoss(): Promise<PgBoss> {
 
   // Start initialization
   bossInitializing = (async () => {
-  boss = new PgBoss({
-    connectionString: env.DATABASE_URL,
-  });
+    // Use pooled connection URL if available (recommended for Neon serverless)
+    // Neon pooler URLs have "-pooler" in the hostname
+    const connectionString = env.DATABASE_URL;
+    
+    boss = new PgBoss({
+      connectionString,
+      // Connection pool settings (small for serverless)
+      max: 3,
+      // Monitoring interval (helps keep connection alive)
+      monitorIntervalSeconds: 30,
+    });
 
-  await boss.start();
+    // Handle pg-boss errors (connection drops, etc.)
+    // PgBoss extends EventEmitter but types aren't exported correctly
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (boss as any).on("error", (error: Error) => {
+      console.error("[pg-boss] Error:", error.message);
+    });
+
+    await boss.start();
+    console.log("[pg-boss] Started successfully");
 
     // Create queues if they don't exist (required before workers can start)
     // createQueue is idempotent - safe to call multiple times
