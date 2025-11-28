@@ -11,7 +11,19 @@ import tsConfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
   plugins: [
     devtools(),
-    nitro(),
+    nitro({
+      // Externalize packages that have ESM subpath export issues
+      // @noble/hashes is used by thirdweb and has problematic exports
+      rollupConfig: {
+        external: [
+          "@noble/hashes",
+          "@noble/hashes/crypto",
+          "@noble/hashes/utils",
+          "@noble/curves",
+          "@noble/secp256k1",
+        ],
+      },
+    }),
     tsConfigPaths({
       projects: ["./tsconfig.json"],
     }),
