@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PayEmbed } from "thirdweb/react";
+import { CheckoutWidget } from "thirdweb/react";
 import { polygon } from "thirdweb/chains";
 import { thirdwebClient, PAYMENT_CONFIG } from "~/lib/thirdweb/client";
 import {
@@ -11,9 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
-
-// USDC contract address on Polygon
-const USDC_POLYGON = "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359";
 
 export interface PaymentModalProps {
   open: boolean;
@@ -85,27 +82,23 @@ export function PaymentModal({
               </p>
             </div>
           ) : (
-            <PayEmbed
+            <CheckoutWidget
               client={thirdwebClient}
-              payOptions={{
-                mode: "direct_payment",
-                paymentInfo: {
-                  amount: PAYMENT_CONFIG.priceUSDC,
-                  chain: polygon,
-                  token: USDC_POLYGON,
-                  sellerAddress: PAYMENT_CONFIG.sellerAddress,
-                },
-                metadata: {
-                  name: `AI Call to ${callDetails.recipientName}`,
-                  image: "/favicon.ico",
-                },
-                onPurchaseSuccess: (result) => {
-                  console.log("[Payment] Success:", result);
-                  setPaymentStatus("complete");
-                  // Get transaction hash from result
-                  const txHash = result.transactionHash || result.client?.transactionHash || "test_tx_" + Date.now();
-                  onPaymentComplete(txHash);
-                },
+              chain={polygon}
+              amount={PAYMENT_CONFIG.priceUSDC}
+              seller={PAYMENT_CONFIG.sellerAddress}
+              name={`AI Call to ${callDetails.recipientName}`}
+              description="AI-powered phone call with video generation"
+              image="/favicon.ico"
+              purchaseData={{
+                productType: "ai_call",
+                recipientName: callDetails.recipientName,
+              }}
+              onSuccess={(result) => {
+                console.log("[Payment] Success:", result);
+                setPaymentStatus("complete");
+                const txHash = result?.transactionHash || "tx_" + Date.now();
+                onPaymentComplete(txHash);
               }}
               theme="dark"
             />
@@ -120,4 +113,3 @@ export function PaymentModal({
     </Dialog>
   );
 }
-
