@@ -40,26 +40,28 @@ export function PaymentModal({
   const isConfigured = isThirdwebConfigured();
   const isTestMode = isPaymentTestMode();
 
-  // Test mode - show a bypass button for development
-  if (isTestMode) {
+  // Test mode OR not configured - show a bypass button for development
+  if (isTestMode || !isConfigured || !thirdwebClient) {
+    const reason = isTestMode 
+      ? "Test mode is enabled" 
+      : "Payment gateway not configured";
+    
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>🧪 Test Mode Payment</DialogTitle>
             <DialogDescription>
-              Payment test mode is enabled. Click below to simulate a successful
-              payment.
+              {reason}. Click below to simulate a successful payment.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                <strong>Test Mode Active</strong>
+                <strong>{reason}</strong>
                 <br />
-                Real payments are disabled. This will create a call without
-                charging.
+                This will create a call without charging.
               </p>
             </div>
 
@@ -92,29 +94,7 @@ export function PaymentModal({
     );
   }
 
-  // Not configured - show setup instructions
-  if (!isConfigured) {
-    return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Payment Configuration Required</DialogTitle>
-            <DialogDescription>
-              thirdweb is not configured. Please set VITE_THIRDWEB_CLIENT_ID and
-              VITE_THIRDWEB_SELLER_ADDRESS in your environment.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              Or set VITE_PAYMENT_TEST_MODE=true to test without real payments.
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  // Real payment mode
+  // Real payment mode - only reached if thirdweb is configured and not in test mode
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
