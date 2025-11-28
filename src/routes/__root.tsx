@@ -15,6 +15,7 @@ import { authQueryOptions, type AuthQueryResult } from "~/lib/auth/queries";
 import appCss from "~/styles.css?url";
 
 import { ThemeProvider } from "~/components/theme-provider";
+import { ThirdwebProvider } from "~/components/thirdweb-provider";
 import { Toaster } from "~/components/ui/sonner";
 
 // Note: Workers are initialized separately via `bun run worker` command
@@ -71,10 +72,12 @@ function RootDocument({ children }: { readonly children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <ThemeProvider>
-          {children}
-          <Toaster richColors />
-        </ThemeProvider>
+        <ThirdwebProvider>
+          <ThemeProvider>
+            {children}
+            <Toaster richColors />
+          </ThemeProvider>
+        </ThirdwebProvider>
 
         <TanStackDevtools
           plugins={[

@@ -8,6 +8,8 @@ import { Textarea } from "~/components/ui/textarea";
 import { toast } from "sonner";
 import { createCall } from "~/lib/calls/functions";
 import { VIDEO_STYLES } from "~/lib/constants/video-styles";
+import { PaymentModal } from "~/components/payment-modal";
+import { PAYMENT_CONFIG } from "~/lib/thirdweb/client";
 
 export const Route = createFileRoute("/(authenticated)/dashboard/")({
   component: DashboardIndex,
@@ -15,6 +17,7 @@ export const Route = createFileRoute("/(authenticated)/dashboard/")({
 
 function DashboardIndex() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [formData, setFormData] = useState({
     recipientName: "",
     phoneNumber: "",
@@ -25,42 +28,51 @@ function DashboardIndex() {
     targetPhysicalDescription: "",
     interestingPiece: "",
     videoStyle: "anime",
-    paymentMethod: "free" as "free" | "web3_wallet",
   });
 
+  // Form validation
+  const validateForm = (): boolean => {
+    if (!formData.recipientName.trim()) {
+      toast.error("Recipient name is required");
+      return false;
+    }
+    if (!formData.phoneNumber.trim()) {
+      toast.error("Phone number is required");
+      return false;
+    }
+    if (formData.anythingElse && formData.anythingElse.length > 1000) {
+      toast.error("'Anything Else' must be 1000 characters or less");
+      return false;
+    }
+    if (formData.targetGender === "other" && !formData.targetGenderCustom.trim()) {
+      toast.error("Please specify custom gender");
+      return false;
+    }
+    if (!formData.videoStyle) {
+      toast.error("Video style is required");
+      return false;
+    }
+    return true;
+  };
+
+  // Handle form submission - opens payment modal
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (isSubmitting) return;
 
-    // Basic validation
-    if (!formData.recipientName.trim()) {
-      toast.error("Recipient name is required");
-      return;
-    }
-    if (!formData.phoneNumber.trim()) {
-      toast.error("Phone number is required");
-      return;
-    }
-    if (formData.anythingElse && formData.anythingElse.length > 1000) {
-      toast.error("'Anything Else' must be 1000 characters or less");
-      return;
-    }
-    if (formData.targetGender === "other" && !formData.targetGenderCustom.trim()) {
-      toast.error("Please specify custom gender");
-      return;
-    }
-    if (!formData.videoStyle) {
-      toast.error("Video style is required");
-      return;
-    }
+    if (!validateForm()) return;
 
+    // Open payment modal
+    setShowPaymentModal(true);
+  };
+
+  // Handle payment completion - creates the call
+  const handlePaymentComplete = async (transactionHash: string) => {
     setIsSubmitting(true);
+    setShowPaymentModal(false);
 
     try {
-      // Dummy payment flow: Simulates payment processing, then submits call for processing
-      // In production: Payment processed → Webhook → Create call record
-      // For now: Directly create call record (simulating successful payment)
-      // Call server function - data must be wrapped in { data: ... }
+      // Create call record after successful payment
       await (createCall as any)({
         data: {
           recipientName: formData.recipientName,
@@ -72,16 +84,14 @@ function DashboardIndex() {
           targetPhysicalDescription: formData.targetPhysicalDescription || undefined,
           interestingPiece: formData.interestingPiece || undefined,
           videoStyle: formData.videoStyle,
-          paymentMethod: formData.paymentMethod,
-          isFree: formData.paymentMethod === "free",
+          paymentMethod: "web3_wallet",
+          isFree: false,
+          paymentTxHash: transactionHash,
+          paymentAmount: PAYMENT_CONFIG.priceUSDC,
         },
       });
 
-      toast.success(
-        formData.paymentMethod === "free"
-          ? "Call request submitted! (Free call)"
-          : "Payment processed! Call request submitted for processing.",
-      );
+      toast.success("Payment successful! Call request submitted for processing.");
       
       // Reset form
       setFormData({
@@ -94,14 +104,10 @@ function DashboardIndex() {
         targetPhysicalDescription: "",
         interestingPiece: "",
         videoStyle: "anime",
-        paymentMethod: "free",
       });
-
-      // Navigate to calls/videos tab (we'll create this next)
-      // navigate({ to: "/dashboard/calls" });
     } catch (error) {
       console.error("Error creating call:", error);
-      toast.error("Failed to create call request. Please try again.");
+      toast.error("Payment succeeded but failed to create call. Please contact support.");
     } finally {
       setIsSubmitting(false);
     }
@@ -109,10 +115,18 @@ function DashboardIndex() {
 
   return (
     <div className="container mx-auto max-w-2xl p-6">
-        <div className="mb-6">
+      {/* Payment Modal */}
+      <PaymentModal
+        open={showPaymentModal}
+        onOpenChange={setShowPaymentModal}
+        onPaymentComplete={handlePaymentComplete}
+        callDetails={{ recipientName: formData.recipientName }}
+      />
+
+      <div className="mb-6">
         <h1 className="text-3xl font-bold">Request a Call</h1>
         <p className="text-muted-foreground mt-2">
-          Fill out the form below to request an AI call. Pay-per-call pricing ($5 per call).
+          Fill out the form below to request an AI call. <span className="font-semibold">${PAYMENT_CONFIG.priceUSD} per video</span>
         </p>
       </div>
 
@@ -280,44 +294,6 @@ function DashboardIndex() {
           </p>
         </div>
 
-        <div className="space-y-2">
-          <Label>Payment Method</Label>
-          <div className="flex gap-4">
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="free"
-                checked={formData.paymentMethod === "free"}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    paymentMethod: e.target.value as "free" | "web3_wallet",
-                  })
-                }
-                disabled={isSubmitting}
-              />
-              <span>Free (if credits available)</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="web3_wallet"
-                checked={formData.paymentMethod === "web3_wallet"}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    paymentMethod: e.target.value as "free" | "web3_wallet",
-                  })
-                }
-                disabled={isSubmitting}
-              />
-              <span>Pay Now (Dummy)</span>
-            </label>
-          </div>
-        </div>
-
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -348,11 +324,7 @@ function DashboardIndex() {
           className="w-full"
           disabled={isSubmitting}
         >
-          {isSubmitting
-            ? "Processing..."
-            : formData.paymentMethod === "free"
-              ? "Submit Call Request (Free)"
-              : "Process Payment & Submit Call"}
+          {isSubmitting ? "Processing..." : `Pay $${PAYMENT_CONFIG.priceUSD} & Submit Call`}
         </Button>
       </form>
 
