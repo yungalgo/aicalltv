@@ -4,7 +4,11 @@ import { useState } from "react";
 import { CheckoutWidget } from "thirdweb/react";
 import { polygon } from "thirdweb/chains";
 import { thirdwebClient } from "~/lib/thirdweb/client";
-import { PAYMENT_CONFIG, isThirdwebConfigured } from "~/lib/thirdweb/config";
+import {
+  PAYMENT_CONFIG,
+  isThirdwebConfigured,
+  isPaymentTestMode,
+} from "~/lib/thirdweb/config";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { Button } from "~/components/ui/button";
 
 export interface PaymentModalProps {
   open: boolean;
@@ -28,24 +33,58 @@ export function PaymentModal({
   onPaymentComplete,
   callDetails,
 }: PaymentModalProps) {
-  const [paymentStatus, setPaymentStatus] = useState<"idle" | "processing" | "complete" | "error">("idle");
+  const [paymentStatus, setPaymentStatus] = useState<
+    "idle" | "processing" | "complete" | "error"
+  >("idle");
 
-  // Check if thirdweb is configured
   const isConfigured = isThirdwebConfigured();
+  const isTestMode = isPaymentTestMode();
 
-  if (!isConfigured) {
+  // Test mode - show a bypass button for development
+  if (isTestMode) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Payment Configuration Required</DialogTitle>
+            <DialogTitle>🧪 Test Mode Payment</DialogTitle>
             <DialogDescription>
-              thirdweb is not configured. Please set VITE_THIRDWEB_CLIENT_ID and VITE_THIRDWEB_SELLER_ADDRESS in your environment.
+              Payment test mode is enabled. Click below to simulate a successful
+              payment.
             </DialogDescription>
           </DialogHeader>
-          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              For development, you can use test mode in the thirdweb dashboard.
+
+          <div className="space-y-4">
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                <strong>Test Mode Active</strong>
+                <br />
+                Real payments are disabled. This will create a call without
+                charging.
+              </p>
+            </div>
+
+            <div className="text-center">
+              <p className="text-2xl font-bold">${PAYMENT_CONFIG.priceUSD}</p>
+              <p className="text-sm text-muted-foreground">
+                AI Call to {callDetails.recipientName}
+              </p>
+            </div>
+
+            <Button
+              onClick={() => {
+                const testTxHash = `test_tx_${Date.now()}`;
+                console.log("[Payment] Test mode - simulating success:", testTxHash);
+                setPaymentStatus("complete");
+                onPaymentComplete(testTxHash);
+              }}
+              className="w-full h-12 text-lg"
+              size="lg"
+            >
+              🧪 Simulate Payment (Test)
+            </Button>
+
+            <p className="text-xs text-center text-muted-foreground">
+              Set VITE_PAYMENT_TEST_MODE=false to enable real payments
             </p>
           </div>
         </DialogContent>
@@ -53,13 +92,37 @@ export function PaymentModal({
     );
   }
 
+  // Not configured - show setup instructions
+  if (!isConfigured) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Payment Configuration Required</DialogTitle>
+            <DialogDescription>
+              thirdweb is not configured. Please set VITE_THIRDWEB_CLIENT_ID and
+              VITE_THIRDWEB_SELLER_ADDRESS in your environment.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+            <p className="text-sm text-yellow-800 dark:text-yellow-200">
+              Or set VITE_PAYMENT_TEST_MODE=true to test without real payments.
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Real payment mode
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Complete Payment</DialogTitle>
           <DialogDescription>
-            Pay ${PAYMENT_CONFIG.priceUSD} to request a call to {callDetails.recipientName}
+            Pay ${PAYMENT_CONFIG.priceUSD} to request a call to{" "}
+            {callDetails.recipientName}
           </DialogDescription>
         </DialogHeader>
 
@@ -98,8 +161,9 @@ export function PaymentModal({
               onSuccess={(result) => {
                 console.log("[Payment] Success:", result);
                 setPaymentStatus("complete");
-                // Get transaction hash from result statuses if available
-                const txHash = result?.statuses?.[0]?.transactions?.[0]?.transactionHash || "tx_" + Date.now();
+                const txHash =
+                  result?.statuses?.[0]?.transactions?.[0]?.transactionHash ||
+                  "tx_" + Date.now();
                 onPaymentComplete(txHash);
               }}
               theme="dark"

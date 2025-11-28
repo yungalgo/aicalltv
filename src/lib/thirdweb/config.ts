@@ -4,6 +4,11 @@
  * to avoid SSR bundling issues with @noble/hashes
  */
 
+// Test mode - bypasses real payment for development
+// Set VITE_PAYMENT_TEST_MODE=true in .env to enable
+export const isPaymentTestMode = () =>
+  import.meta.env.VITE_PAYMENT_TEST_MODE === "true";
+
 export const PAYMENT_CONFIG = {
   priceUSD: 9,
   priceUSDC: "9", // As string for thirdweb
@@ -19,4 +24,3 @@ export const PAYMENT_CONFIG = {
 export const isThirdwebConfigured = () =>
   !!import.meta.env.VITE_THIRDWEB_CLIENT_ID &&
   !!import.meta.env.VITE_THIRDWEB_SELLER_ADDRESS;
-
