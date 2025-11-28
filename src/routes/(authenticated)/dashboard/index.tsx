@@ -30,7 +30,14 @@ function DashboardIndex() {
     videoStyle: "anime",
   });
 
-  // Form validation
+  // Check if form is valid for purchase
+  const isFormValid = 
+    formData.recipientName.trim() !== "" && 
+    formData.phoneNumber.trim() !== "" &&
+    formData.videoStyle !== "" &&
+    (formData.targetGender !== "other" || formData.targetGenderCustom.trim() !== "");
+
+  // Form validation with toast messages
   const validateForm = (): boolean => {
     if (!formData.recipientName.trim()) {
       toast.error("Recipient name is required");
@@ -55,14 +62,9 @@ function DashboardIndex() {
     return true;
   };
 
-  // Handle form submission - opens payment modal
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-
+  // Handle buy button click
+  const handleBuyClick = () => {
     if (!validateForm()) return;
-
-    // Open payment modal
     setShowPaymentModal(true);
   };
 
@@ -92,7 +94,7 @@ function DashboardIndex() {
         },
       });
 
-      toast.success("Payment successful! Call request submitted for processing.");
+      toast.success("🎉 Purchase complete! Your AI call is being processed.");
       
       // Reset form
       setFormData({
@@ -115,7 +117,7 @@ function DashboardIndex() {
   };
 
   return (
-    <div className="container mx-auto max-w-2xl p-6">
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/80">
       {/* Payment Modal */}
       <PaymentModal
         open={showPaymentModal}
@@ -124,213 +126,233 @@ function DashboardIndex() {
         callDetails={{ recipientName: formData.recipientName }}
       />
 
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Request a Call</h1>
-        <p className="text-muted-foreground mt-2">
-          Fill out the form below to request an AI call. <span className="font-semibold">${PAYMENT_CONFIG.priceUSD} per video</span>
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-2">
-          <Label htmlFor="recipientName">Recipient Name</Label>
-          <Input
-            id="recipientName"
-            value={formData.recipientName}
-            onChange={(e) =>
-              setFormData({ ...formData, recipientName: e.target.value })
-            }
-            placeholder="John Doe"
-            required
-            disabled={isSubmitting}
-          />
+      <div className="container mx-auto max-w-2xl p-6">
+        {/* Header - Cameo style */}
+        <div className="rounded-2xl bg-card border p-6 mb-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold">AI Call TV</h1>
+              <p className="text-muted-foreground mt-1">
+                Personalized AI video call + generated video
+              </p>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold text-primary">
+                ${PAYMENT_CONFIG.priceUSD}
+              </div>
+              <p className="text-sm text-muted-foreground">per video</p>
+            </div>
+          </div>
+          
+          <div className="flex gap-6 mt-4 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-yellow-500">⚡</span>
+              <span>~24hr delivery</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-green-500">✓</span>
+              <span>HD Video</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-blue-500">📞</span>
+              <span>Real AI Call</span>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="phoneNumber">Phone Number</Label>
-          <Input
-            id="phoneNumber"
-            type="tel"
-            value={formData.phoneNumber}
-            onChange={(e) =>
-              setFormData({ ...formData, phoneNumber: e.target.value })
-            }
-            placeholder="+1234567890"
-            required
-            disabled={isSubmitting}
-          />
-          <p className="text-xs text-muted-foreground">
-            This will be encrypted before storage
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="targetGender">Target Person Gender</Label>
-          <select
-            id="targetGender"
-            value={formData.targetGender}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                targetGender: e.target.value as "male" | "female" | "prefer_not_to_say" | "other",
-                targetGenderCustom: "",
-              })
-            }
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            required
-            disabled={isSubmitting}
-          >
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-            <option value="prefer_not_to_say">Prefer not to say</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-
-        {formData.targetGender === "other" && (
+        {/* Form */}
+        <div className="rounded-2xl bg-card border p-6 space-y-6">
+          <h2 className="text-lg font-semibold">Customize Your Call</h2>
+          
           <div className="space-y-2">
-            <Label htmlFor="targetGenderCustom">Custom Gender</Label>
+            <Label htmlFor="recipientName">Who should we call? *</Label>
             <Input
-              id="targetGenderCustom"
-              value={formData.targetGenderCustom}
+              id="recipientName"
+              value={formData.recipientName}
               onChange={(e) =>
-                setFormData({ ...formData, targetGenderCustom: e.target.value })
+                setFormData({ ...formData, recipientName: e.target.value })
               }
-              placeholder="Please specify"
+              placeholder="Their name"
               required
+              disabled={isSubmitting}
+              className="text-lg"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phoneNumber">Their phone number *</Label>
+            <Input
+              id="phoneNumber"
+              type="tel"
+              value={formData.phoneNumber}
+              onChange={(e) =>
+                setFormData({ ...formData, phoneNumber: e.target.value })
+              }
+              placeholder="+1 (555) 123-4567"
+              required
+              disabled={isSubmitting}
+              className="text-lg"
+            />
+            <p className="text-xs text-muted-foreground">
+              🔒 Encrypted before storage
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="targetGender">Gender</Label>
+              <select
+                id="targetGender"
+                value={formData.targetGender}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    targetGender: e.target.value as typeof formData.targetGender,
+                    targetGenderCustom: "",
+                  })
+                }
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                disabled={isSubmitting}
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="targetAgeRange">Age Range</Label>
+              <select
+                id="targetAgeRange"
+                value={formData.targetAgeRange}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    targetAgeRange: e.target.value as typeof formData.targetAgeRange,
+                  })
+                }
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                disabled={isSubmitting}
+              >
+                <option value="">Any</option>
+                <option value="18-25">18-25</option>
+                <option value="26-35">26-35</option>
+                <option value="36-45">36-45</option>
+                <option value="46-55">46-55</option>
+                <option value="56+">56+</option>
+              </select>
+            </div>
+          </div>
+
+          {formData.targetGender === "other" && (
+            <div className="space-y-2">
+              <Label htmlFor="targetGenderCustom">Specify gender *</Label>
+              <Input
+                id="targetGenderCustom"
+                value={formData.targetGenderCustom}
+                onChange={(e) =>
+                  setFormData({ ...formData, targetGenderCustom: e.target.value })
+                }
+                placeholder="Please specify"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <Label htmlFor="videoStyle">Video Style *</Label>
+            <select
+              id="videoStyle"
+              value={formData.videoStyle}
+              onChange={(e) =>
+                setFormData({ ...formData, videoStyle: e.target.value })
+              }
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              required
+              disabled={isSubmitting}
+            >
+              {VIDEO_STYLES.map((style) => (
+                <option key={style} value={style}>
+                  {style.charAt(0).toUpperCase() + style.slice(1).replace(/-/g, " ")}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="interestingPiece">
+              Personal hook <span className="text-muted-foreground">(makes it more authentic)</span>
+            </Label>
+            <Textarea
+              id="interestingPiece"
+              value={formData.interestingPiece}
+              onChange={(e) =>
+                setFormData({ ...formData, interestingPiece: e.target.value })
+              }
+              placeholder="Things only they would know... e.g. 'they love their dog Biscuit' or 'their favorite movie is The Matrix'"
+              rows={3}
               disabled={isSubmitting}
             />
           </div>
-        )}
 
-        <div className="space-y-2">
-          <Label htmlFor="targetAgeRange">Target Person Age Range (Optional)</Label>
-          <select
-            id="targetAgeRange"
-            value={formData.targetAgeRange}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                targetAgeRange: e.target.value as typeof formData.targetAgeRange,
-              })
-            }
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            disabled={isSubmitting}
+          <div className="space-y-2">
+            <Label htmlFor="anythingElse">
+              Additional notes <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <Textarea
+              id="anythingElse"
+              value={formData.anythingElse}
+              onChange={(e) =>
+                setFormData({ ...formData, anythingElse: e.target.value })
+              }
+              placeholder="Any other context or special requests..."
+              rows={2}
+              maxLength={1000}
+              disabled={isSubmitting}
+            />
+            <p className="text-xs text-muted-foreground text-right">
+              {formData.anythingElse.length}/1000
+            </p>
+          </div>
+        </div>
+
+        {/* Purchase Button - Cameo style */}
+        <div className="mt-6 rounded-2xl bg-card border p-6">
+          <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
+            <input type="checkbox" id="terms" required className="rounded" />
+            <label htmlFor="terms">
+              I agree to the <a href="/terms" className="underline">Terms</a> and{" "}
+              <a href="/privacy" className="underline">Privacy Policy</a>
+            </label>
+          </div>
+
+          <Button
+            type="button"
+            size="lg"
+            onClick={handleBuyClick}
+            disabled={isSubmitting || !isFormValid}
+            className="w-full h-14 text-lg font-semibold bg-primary hover:bg-primary/90 rounded-full"
           >
-            <option value="">Prefer not to say</option>
-            <option value="18-25">18-25</option>
-            <option value="26-35">26-35</option>
-            <option value="36-45">36-45</option>
-            <option value="46-55">46-55</option>
-            <option value="56+">56+</option>
-          </select>
-        </div>
+            {isSubmitting ? (
+              "Processing..."
+            ) : (
+              <>
+                <span className="mr-2">🛡️</span>
+                Buy a Call ${PAYMENT_CONFIG.priceUSD}
+              </>
+            )}
+          </Button>
 
-        <div className="space-y-2">
-          <Label htmlFor="targetPhysicalDescription">Physical Description (Optional)</Label>
-          <Textarea
-            id="targetPhysicalDescription"
-            value={formData.targetPhysicalDescription}
-            onChange={(e) =>
-              setFormData({ ...formData, targetPhysicalDescription: e.target.value })
-            }
-            placeholder="Hair color, style, clothing, etc."
-            rows={3}
-            disabled={isSubmitting}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="interestingPiece">Interesting Piece / Personal Hook</Label>
-          <Textarea
-            id="interestingPiece"
-            value={formData.interestingPiece}
-            onChange={(e) =>
-              setFormData({ ...formData, interestingPiece: e.target.value })
-            }
-            placeholder="Small personal details that would hook them - things regular people wouldn't know..."
-            rows={3}
-            disabled={isSubmitting}
-          />
-          <p className="text-xs text-muted-foreground">
-            Personal details that will make the call more engaging and authentic
+          <p className="text-center text-xs text-muted-foreground mt-3">
+            Secure payment via credit card or crypto
           </p>
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="videoStyle">Video Aesthetic Style</Label>
-          <select
-            id="videoStyle"
-            value={formData.videoStyle}
-            onChange={(e) =>
-              setFormData({ ...formData, videoStyle: e.target.value })
-            }
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            required
-            disabled={isSubmitting}
-          >
-            {VIDEO_STYLES.map((style) => (
-              <option key={style} value={style}>
-                {style.charAt(0).toUpperCase() + style.slice(1).replace(/-/g, " ")}
-              </option>
-            ))}
-          </select>
+        <div className="mt-8 pt-8 border-t text-center">
+          <SignOutButton />
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="anythingElse">Anything Else? (Optional)</Label>
-          <Textarea
-            id="anythingElse"
-            value={formData.anythingElse}
-            onChange={(e) =>
-              setFormData({ ...formData, anythingElse: e.target.value })
-            }
-            placeholder="Any additional context or notes..."
-            rows={4}
-            maxLength={1000}
-            disabled={isSubmitting}
-          />
-          <p className="text-xs text-muted-foreground">
-            {formData.anythingElse.length}/1000 characters
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="tos"
-            required
-            disabled={isSubmitting}
-          />
-          <Label htmlFor="tos" className="text-sm">
-            I agree to the Terms of Service
-          </Label>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="privacy"
-            required
-            disabled={isSubmitting}
-          />
-          <Label htmlFor="privacy" className="text-sm">
-            I agree to the Privacy Policy
-          </Label>
-        </div>
-
-        <Button
-          type="submit"
-          size="lg"
-          className="w-full"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Processing..." : `Pay $${PAYMENT_CONFIG.priceUSD} & Submit Call`}
-        </Button>
-      </form>
-
-      <div className="mt-8 pt-8 border-t">
-        <SignOutButton />
       </div>
     </div>
   );
