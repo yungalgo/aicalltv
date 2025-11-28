@@ -197,10 +197,6 @@ export async function setupCallProcessorWorker() {
           })
           .where(eq(calls.id, callId));
 
-        // TODO: Step 1 - Generate script with OpenAI GPT-4 Turbo
-        // const script = await generateScript(call.recipientContext);
-        // await db.update(calls).set({ script }).where(eq(calls.id, callId));
-
         // Step 2 - Initiate Twilio call
         try {
           const { initiateTwilioCall } = await import("~/lib/twilio/call");

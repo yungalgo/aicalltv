@@ -17,8 +17,8 @@ export interface DownloadRecordingOptions {
 export async function downloadTwilioRecording(
   options: DownloadRecordingOptions,
 ): Promise<Buffer> {
-  // callId is part of interface but not used in this function
-const { recordingUrl, maxRetries = 3 } = options;
+  // Note: callId is in interface for logging context but not currently used
+  const { recordingUrl, maxRetries = 3 } = options;
 
   if (!env.TWILIO_ACCOUNT_SID || !env.TWILIO_AUTH_TOKEN) {
     throw new Error(

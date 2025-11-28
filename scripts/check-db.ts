@@ -35,12 +35,12 @@ async function checkDatabase() {
     `);
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const expectedColumns = [
+    const expectedColumns = [
       "id",
       "user_id",
       "status",
       "recipient_name",
-      "recipient_context",
+      "anything_else",
       "target_gender",
       "target_gender_custom",
       "target_age_range",

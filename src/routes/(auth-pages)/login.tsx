@@ -116,8 +116,7 @@ function LoginForm() {
             <SignInSocialButton
               provider="google"
               callbackURL={finalRedirectUrl}
-              // disabled={isPending}
-              disabled={true} // TODO disabled just for the preview deployment at https://tanstarter.nize.ph
+              disabled={true} // TODO: Re-enable when ready for production
               icon={
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
                   <path
