@@ -25,6 +25,13 @@ const Web3Provider = lazy(() =>
   })),
 );
 
+// Lazy load SolanaProvider for Solana wallet-ui
+const SolanaProvider = lazy(() =>
+  import("~/components/solana/solana-provider").then((mod) => ({
+    default: mod.SolanaProvider,
+  })),
+);
+
 // Note: Workers are initialized separately via `bun run worker` command
 // This avoids bundling server-only dependencies (pg-boss, etc.) into the client
 
@@ -81,10 +88,12 @@ function RootDocument({ children }: { readonly children: React.ReactNode }) {
       <body>
         <Suspense fallback={null}>
           <Web3Provider>
-            <ThemeProvider>
-              {children}
-              <Toaster richColors />
-            </ThemeProvider>
+            <SolanaProvider>
+              <ThemeProvider>
+                {children}
+                <Toaster richColors />
+              </ThemeProvider>
+            </SolanaProvider>
           </Web3Provider>
         </Suspense>
 

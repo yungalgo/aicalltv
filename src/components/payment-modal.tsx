@@ -25,6 +25,20 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
+import { useWalletUi, useWalletUiSigner, WalletUiDropdown, type UiWalletAccount } from "@wallet-ui/react";
+import { useWalletUiGill } from "@wallet-ui/react-gill";
+import {
+  address as toAddress,
+  createTransaction,
+  getBase58Decoder,
+  signAndSendTransactionMessageWithSigners,
+} from "gill";
+import {
+  getAssociatedTokenAccountAddress,
+  getTransferInstruction,
+  getCreateAssociatedTokenIdempotentInstruction,
+  TOKEN_PROGRAM_ADDRESS,
+} from "gill/programs/token";
 
 // ERC20 transfer ABI (minimal)
 const erc20Abi = [
@@ -49,6 +63,122 @@ export interface PaymentModalProps {
   callDetails: {
     recipientName: string;
   };
+}
+
+// Separate component for Solana payment button that uses the signer hook
+function SolanaPayButton({
+  account,
+  paymentStatus,
+  onPaymentStart,
+  onPaymentComplete,
+  onPaymentError,
+}: {
+  account: UiWalletAccount;
+  paymentStatus: "idle" | "processing" | "complete" | "error";
+  onPaymentStart: () => void;
+  onPaymentComplete: (signature: string) => void;
+  onPaymentError: () => void;
+}) {
+  const client = useWalletUiGill();
+  const signer = useWalletUiSigner({ account });
+
+  const handlePayment = async () => {
+    onPaymentStart();
+
+    try {
+      console.log("[Solana] Wallet:", account.address);
+
+      // Constants
+      const USDC_MINT = toAddress("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+      const recipientAddress = toAddress(PAYMENT_CONFIG.solanaAddress);
+      const tokenProgram = TOKEN_PROGRAM_ADDRESS;
+
+      // Get associated token accounts
+      const sourceAta = await getAssociatedTokenAccountAddress(USDC_MINT, signer.address, tokenProgram);
+      const destinationAta = await getAssociatedTokenAccountAddress(USDC_MINT, recipientAddress, tokenProgram);
+
+      console.log("[Solana] From ATA:", sourceAta);
+      console.log("[Solana] To ATA:", destinationAta);
+      console.log("[Solana] Recipient:", PAYMENT_CONFIG.solanaAddress);
+
+      // Get latest blockhash
+      const { value: latestBlockhash } = await client.rpc.getLatestBlockhash({ commitment: "confirmed" }).send();
+      console.log("[Solana] Blockhash:", latestBlockhash.blockhash);
+
+      // Build transaction exactly like the gill token transfer example
+      const transaction = createTransaction({
+        feePayer: signer,
+        version: "legacy",
+        instructions: [
+          // Create destination ATA if it doesn't exist (idempotent - won't fail if already exists)
+          getCreateAssociatedTokenIdempotentInstruction({
+            mint: USDC_MINT,
+            payer: signer,
+            tokenProgram,
+            owner: recipientAddress,
+            ata: destinationAta,
+          }),
+          // Transfer 9 USDC (9,000,000 with 6 decimals)
+          getTransferInstruction({
+            source: sourceAta,
+            authority: signer,
+            destination: destinationAta,
+            amount: BigInt(9_000_000),
+          }),
+        ],
+        latestBlockhash,
+      });
+
+      console.log("[Solana] Requesting signature...");
+
+      // Sign and send exactly like the template
+      const signatureBytes = await signAndSendTransactionMessageWithSigners(transaction);
+      const signature = getBase58Decoder().decode(signatureBytes);
+
+      console.log("[Solana] Sent! Signature:", signature);
+      console.log("[Solana] https://solscan.io/tx/" + signature);
+
+      // Wait for confirmation
+      let confirmed = false;
+      for (let i = 0; i < 30; i++) {
+        const statusResult = await client.rpc
+          .getSignatureStatuses([signature as Parameters<typeof client.rpc.getSignatureStatuses>[0][0]])
+          .send();
+
+        const status = statusResult.value[0];
+        if (status) {
+          if (status.err) {
+            throw new Error("Transaction failed: " + JSON.stringify(status.err));
+          }
+          if (status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized") {
+            confirmed = true;
+            break;
+          }
+        }
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+
+      if (!confirmed) {
+        throw new Error("Transaction confirmation timeout");
+      }
+
+      console.log("[Solana] CONFIRMED!");
+      onPaymentComplete(signature);
+    } catch (err: any) {
+      console.error("[Solana] Error:", err);
+      onPaymentError();
+    }
+  };
+
+  return (
+    <Button
+      onClick={handlePayment}
+      disabled={paymentStatus === "processing"}
+      className="h-12 w-full text-lg"
+    >
+      {paymentStatus === "processing" ? "Processing..." : "Pay 9 USDC"}
+    </Button>
+  );
 }
 
 export function PaymentModal({
@@ -124,138 +254,8 @@ export function PaymentModal({
     }
   };
 
-  // Handle Solana payment - using gill SDK with Phantom wallet
-  const handleSolanaPayment = async () => {
-    try {
-      // Get Phantom provider
-      const provider = (window as any)?.phantom?.solana;
-      if (!provider?.isPhantom) {
-        window.open("https://phantom.app/", "_blank");
-        return;
-      }
-
-      setPaymentStatus("processing");
-
-      // Connect
-      const resp = await provider.connect();
-      const walletPubkey = resp.publicKey;
-      console.log("[Solana] Wallet:", walletPubkey.toString());
-
-      // Import gill SDK
-      const {
-        createSolanaClient,
-        address,
-        createTransactionMessage,
-        setTransactionMessageLifetimeUsingBlockhash,
-        setTransactionMessageFeePayer,
-        appendTransactionMessageInstruction,
-        pipe,
-        compileTransaction,
-        getBase64Encoder,
-      } = await import("gill");
-      const { findAssociatedTokenPda, getTransferCheckedInstruction } = await import("gill/programs/token");
-
-      // RPC endpoint
-      const rpcUrl = import.meta.env.VITE_HELIUS_RPC_URL || "https://api.mainnet-beta.solana.com";
-      console.log("[Solana] RPC:", rpcUrl.substring(0, 40) + "...");
-
-      // Create Solana client
-      const { rpc } = createSolanaClient({ urlOrMoniker: rpcUrl });
-
-      // Constants
-      const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
-      const USDC_DECIMALS = 6;
-      const senderAddress = address(walletPubkey.toString());
-      const recipientAddress = address(PAYMENT_CONFIG.solanaAddress);
-
-      // Get associated token accounts
-      const [sourceAta] = await findAssociatedTokenPda({
-        owner: senderAddress,
-        mint: address(USDC_MINT),
-        tokenProgram: address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-      });
-
-      const [destinationAta] = await findAssociatedTokenPda({
-        owner: recipientAddress,
-        mint: address(USDC_MINT),
-        tokenProgram: address("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
-      });
-
-      console.log("[Solana] From ATA:", sourceAta);
-      console.log("[Solana] To ATA:", destinationAta);
-      console.log("[Solana] Recipient:", PAYMENT_CONFIG.solanaAddress);
-
-      // Get latest blockhash
-      const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
-      console.log("[Solana] Blockhash:", latestBlockhash.blockhash);
-
-      // Create transfer instruction (9 USDC = 9,000,000 with 6 decimals)
-      const transferIx = getTransferCheckedInstruction({
-        source: sourceAta,
-        mint: address(USDC_MINT),
-        destination: destinationAta,
-        authority: senderAddress,
-        amount: BigInt(9_000_000),
-        decimals: USDC_DECIMALS,
-      });
-
-      // Build transaction message
-      const transactionMessage = pipe(
-        createTransactionMessage({ version: 0 }),
-        (tx) => setTransactionMessageFeePayer(senderAddress, tx),
-        (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
-        (tx) => appendTransactionMessageInstruction(transferIx, tx)
-      );
-
-      // Compile transaction to wire format
-      const compiledTx = compileTransaction(transactionMessage);
-      
-      // Encode to bytes that Phantom can understand
-      const { getTransactionEncoder } = await import("gill");
-      const encoder = getTransactionEncoder();
-      const txBytes = encoder.encode(compiledTx);
-
-      console.log("[Solana] Transaction size:", txBytes.length, "bytes");
-      console.log("[Solana] Requesting signature from Phantom...");
-
-      // Phantom can sign and send versioned transaction bytes
-      const { signature } = await provider.signAndSendTransaction(txBytes);
-
-      console.log("[Solana] Sent! Signature:", signature);
-      console.log("[Solana] https://solscan.io/tx/" + signature);
-
-      // Wait for confirmation
-      let confirmed = false;
-      for (let i = 0; i < 30; i++) {
-        const statusResult = await rpc
-          .getSignatureStatuses([signature as Parameters<typeof rpc.getSignatureStatuses>[0][0]])
-          .send();
-
-        const status = statusResult.value[0];
-        if (status) {
-          if (status.err) {
-            throw new Error("Transaction failed: " + JSON.stringify(status.err));
-          }
-          if (status.confirmationStatus === "confirmed" || status.confirmationStatus === "finalized") {
-            confirmed = true;
-            break;
-          }
-        }
-        await new Promise((r) => setTimeout(r, 1000));
-      }
-
-      if (!confirmed) {
-        throw new Error("Transaction confirmation timeout");
-      }
-
-      console.log("[Solana] CONFIRMED!");
-      setPaymentStatus("complete");
-      onPaymentComplete(signature);
-    } catch (err: any) {
-      console.error("[Solana] Error:", err);
-      setPaymentStatus("error");
-    }
-  };
+  // Wallet UI hooks for Solana
+  const { account: solanaAccount } = useWalletUi();
 
   // Test mode bypass
   if (isTestMode) {
@@ -495,7 +495,7 @@ export function PaymentModal({
             <DialogHeader>
               <DialogTitle>Pay on Solana</DialogTitle>
               <DialogDescription>
-                Send {PAYMENT_CONFIG.priceUSD} USDC via Phantom
+                Send {PAYMENT_CONFIG.priceUSD} USDC via Solana wallet
               </DialogDescription>
             </DialogHeader>
 
@@ -523,25 +523,29 @@ export function PaymentModal({
                     <p className="text-sm text-muted-foreground">on Solana</p>
                   </div>
 
-                  {/* Pay Button */}
-                  <Button
-                    onClick={handleSolanaPayment}
-                    disabled={paymentStatus === "processing"}
-                    className="h-12 w-full text-lg"
-                  >
-                    {paymentStatus === "processing" ? (
-                      "Processing..."
-                    ) : (
-                      <>
-                        <span className="mr-2">👻</span>
-                        Connect Phantom & Pay
-                      </>
-                    )}
-                  </Button>
+                  {/* Connect or Pay Button */}
+                  {!solanaAccount ? (
+                    <div className="flex justify-center">
+                      <WalletUiDropdown />
+                    </div>
+                  ) : (
+                    <SolanaPayButton
+                      account={solanaAccount}
+                      paymentStatus={paymentStatus}
+                      onPaymentStart={() => setPaymentStatus("processing")}
+                      onPaymentComplete={(signature) => {
+                        setPaymentStatus("complete");
+                        onPaymentComplete(signature);
+                      }}
+                      onPaymentError={() => setPaymentStatus("error")}
+                    />
+                  )}
 
-                  <p className="text-center text-xs text-muted-foreground">
-                    Requires Phantom wallet extension
-                  </p>
+                  {solanaAccount && (
+                    <p className="text-center text-xs text-muted-foreground truncate">
+                      Connected: {solanaAccount.address.slice(0, 4)}...{solanaAccount.address.slice(-4)}
+                    </p>
+                  )}
                 </>
               )}
 
