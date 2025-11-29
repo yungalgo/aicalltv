@@ -148,21 +148,7 @@ export function PaymentModal({
 
       setPaymentStatus("processing");
 
-      // Connect to Phantom
-      let publicKey;
-      try {
-        const resp = await phantom.connect();
-        publicKey = resp.publicKey;
-      } catch {
-        // Retry after disconnect
-        console.log("[Solana] Retrying connection...");
-        try { await phantom.disconnect?.(); } catch {}
-        const resp = await phantom.connect();
-        publicKey = resp.publicKey;
-      }
-      console.log("[Solana] Connected:", publicKey.toString());
-
-      // Import Solana libraries
+      // Import Solana libraries FIRST (need PublicKey for conversion)
       const { 
         Connection, 
         PublicKey: SolPublicKey, 
@@ -178,6 +164,23 @@ export function PaymentModal({
         ASSOCIATED_TOKEN_PROGRAM_ID,
       } = await import("@solana/spl-token");
 
+      // Connect to Phantom
+      let phantomPubkey;
+      try {
+        const resp = await phantom.connect();
+        phantomPubkey = resp.publicKey;
+      } catch {
+        // Retry after disconnect
+        console.log("[Solana] Retrying connection...");
+        try { await phantom.disconnect?.(); } catch {}
+        const resp = await phantom.connect();
+        phantomPubkey = resp.publicKey;
+      }
+      
+      // CRITICAL: Convert Phantom's PublicKey to @solana/web3.js PublicKey
+      const publicKey = new SolPublicKey(phantomPubkey.toString());
+      console.log("[Solana] Connected:", publicKey.toString());
+
       // Set up connection with Helius RPC
       const heliusRpc = import.meta.env.VITE_HELIUS_RPC_URL || "https://api.mainnet-beta.solana.com";
       console.log("[Solana] Using RPC:", heliusRpc.substring(0, 50) + "...");
@@ -187,7 +190,7 @@ export function PaymentModal({
       const usdcMint = new SolPublicKey(PAYMENT_CONFIG.solanaUsdc);
       const recipientPublicKey = new SolPublicKey(PAYMENT_CONFIG.solanaAddress);
 
-      // Get token accounts
+      // Get token accounts (now using proper @solana/web3.js PublicKey)
       const senderTokenAccount = await getAssociatedTokenAddress(usdcMint, publicKey);
       const recipientTokenAccount = await getAssociatedTokenAddress(usdcMint, recipientPublicKey);
 
