@@ -19,25 +19,20 @@ export const PAYMENT_CONFIG = {
   priceUSDC: "9000000", // 9 USDC (6 decimals for EVM)
   priceUSDCSolana: "9000000", // 9 USDC (6 decimals for Solana)
 
-  // EVM seller address (Base)
+  // EVM seller address (Base) - from env var
   get evmAddress(): `0x${string}` {
-    const addr = import.meta.env.VITE_EVM_PAYMENT_ADDRESS;
-    return (addr ||
-      "0x0000000000000000000000000000000000000000") as `0x${string}`;
+    return (import.meta.env.VITE_EVM_PAYMENT_ADDRESS || "") as `0x${string}`;
   },
 
-  // Solana seller address
+  // Solana seller address - from env var
   get solanaAddress(): string {
-    return (
-      import.meta.env.VITE_SOLANA_PAYMENT_ADDRESS ||
-      "11111111111111111111111111111111"
-    );
+    return import.meta.env.VITE_SOLANA_PAYMENT_ADDRESS || "";
   },
 
-  // Base USDC contract address
+  // Base USDC contract address (public, not sensitive)
   baseUsdc: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as `0x${string}`,
 
-  // Solana USDC token address
+  // Solana USDC token address (public, not sensitive)
   solanaUsdc: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
 };
 
@@ -45,10 +40,9 @@ export const PAYMENT_CONFIG = {
 export const isPaymentTestMode = () =>
   import.meta.env.VITE_PAYMENT_TEST_MODE === "true";
 
-export const isEvmConfigured = () => !!import.meta.env.VITE_EVM_PAYMENT_ADDRESS;
-
-export const isSolanaConfigured = () =>
-  !!import.meta.env.VITE_SOLANA_PAYMENT_ADDRESS;
+// Always enable payment options - will show error if env vars not configured
+export const isEvmConfigured = () => true;
+export const isSolanaConfigured = () => true;
 
 // Wallet connectors - browser extension wallets only (no WalletConnect needed)
 const connectors = connectorsForWallets(
