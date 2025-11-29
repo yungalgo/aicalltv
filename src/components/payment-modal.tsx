@@ -124,10 +124,10 @@ export function PaymentModal({
     }
   };
 
-  // Handle Solana payment - SIMPLE direct browser approach
+  // Handle Solana payment - Sign with Phantom, send via Connection
   const handleSolanaPayment = async () => {
     try {
-      // Get Phantom provider directly from window
+      // Get Phantom provider
       const provider = (window as any)?.phantom?.solana;
       if (!provider?.isPhantom) {
         window.open("https://phantom.app/", "_blank");
@@ -136,58 +136,75 @@ export function PaymentModal({
 
       setPaymentStatus("processing");
 
-      // Connect and get public key
-      const { publicKey } = await provider.connect();
-      console.log("[Solana] Connected:", publicKey.toBase58());
+      // Connect
+      const resp = await provider.connect();
+      const walletPubkey = resp.publicKey;
+      console.log("[Solana] Wallet:", walletPubkey.toString());
 
-      // Import only what we need
+      // Import Solana libs
       const { Connection, PublicKey, Transaction } = await import("@solana/web3.js");
-      const { createTransferInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } = await import("@solana/spl-token");
+      const { createTransferInstruction, getAssociatedTokenAddress } = await import("@solana/spl-token");
 
-      // RPC
+      // Connection to Helius RPC
       const rpc = import.meta.env.VITE_HELIUS_RPC_URL || "https://api.mainnet-beta.solana.com";
-      const connection = new Connection(rpc);
+      console.log("[Solana] RPC:", rpc.substring(0, 40) + "...");
+      const connection = new Connection(rpc, "confirmed");
 
-      // Addresses
-      const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"); // Mainnet USDC
-      const RECIPIENT = new PublicKey(PAYMENT_CONFIG.solanaAddress);
-      const sender = new PublicKey(publicKey.toBase58());
+      // Create PublicKey instances
+      const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+      const recipientWallet = new PublicKey(PAYMENT_CONFIG.solanaAddress);
+      const senderWallet = new PublicKey(walletPubkey.toString());
 
-      // Get token accounts
-      const senderATA = await getAssociatedTokenAddress(USDC_MINT, sender);
-      const recipientATA = await getAssociatedTokenAddress(USDC_MINT, RECIPIENT);
+      // Get Associated Token Accounts
+      const fromATA = await getAssociatedTokenAddress(USDC_MINT, senderWallet);
+      const toATA = await getAssociatedTokenAddress(USDC_MINT, recipientWallet);
+      
+      console.log("[Solana] From ATA:", fromATA.toString());
+      console.log("[Solana] To ATA:", toATA.toString());
+      console.log("[Solana] Recipient:", PAYMENT_CONFIG.solanaAddress);
 
-      console.log("[Solana] From:", senderATA.toBase58());
-      console.log("[Solana] To:", recipientATA.toBase58());
-
-      // Build simple transaction
-      const tx = new Transaction();
-      tx.add(
-        createTransferInstruction(
-          senderATA,
-          recipientATA, 
-          sender,
-          9_000_000 // 9 USDC (6 decimals)
-        )
+      // Create transaction
+      const transaction = new Transaction();
+      
+      // Add transfer instruction (9 USDC = 9,000,000 with 6 decimals)
+      transaction.add(
+        createTransferInstruction(fromATA, toATA, senderWallet, 9_000_000)
       );
 
-      // Get blockhash and set fee payer
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      tx.recentBlockhash = blockhash;
-      tx.feePayer = sender;
+      // Get recent blockhash
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = senderWallet;
 
-      console.log("[Solana] Sending...");
+      console.log("[Solana] Blockhash:", blockhash);
+      console.log("[Solana] Requesting signature...");
 
-      // Sign and send via Phantom
-      const { signature } = await provider.signAndSendTransaction(tx);
+      // Sign with Phantom
+      const signedTx = await provider.signTransaction(transaction);
       
-      console.log("[Solana] Signature:", signature);
+      console.log("[Solana] Signed! Sending raw transaction...");
+
+      // Send the signed transaction ourselves via the connection
+      const signature = await connection.sendRawTransaction(signedTx.serialize(), {
+        skipPreflight: false,
+        preflightCommitment: "confirmed",
+      });
+
+      console.log("[Solana] Sent! Signature:", signature);
       console.log("[Solana] https://solscan.io/tx/" + signature);
 
-      // Wait for confirmation
-      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight });
-      console.log("[Solana] Confirmed!");
+      // Confirm
+      const confirmation = await connection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight,
+      }, "confirmed");
 
+      if (confirmation.value.err) {
+        throw new Error("Transaction failed: " + JSON.stringify(confirmation.value.err));
+      }
+
+      console.log("[Solana] CONFIRMED!");
       setPaymentStatus("complete");
       onPaymentComplete(signature);
     } catch (err: any) {
