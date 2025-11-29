@@ -31,6 +31,7 @@ import { Button } from "~/components/ui/button";
 interface PhantomProvider {
   isPhantom?: boolean;
   connect: () => Promise<{ publicKey: PublicKey }>;
+  disconnect?: () => Promise<void>;
   signAndSendTransaction: (transaction: Transaction) => Promise<{ signature: string }>;
 }
 
@@ -73,7 +74,7 @@ export function PaymentModal({
   // EVM hooks
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
-  const { switchChain } = useSwitchChain();
+  const { switchChainAsync } = useSwitchChain();
   const { writeContract, data: txHash, isPending, error } = useWriteContract();
 
   // Wait for transaction confirmation
@@ -99,28 +100,33 @@ export function PaymentModal({
     onOpenChange(isOpen);
   };
 
-  // Handle Base payment
-  const handleBasePayment = () => {
+  // Handle Base payment - switches chain if needed and sends tx
+  const handleBasePayment = async () => {
     if (!isConnected || !address) return;
-
-    // Switch to Base if not on it
-    if (chainId !== base.id) {
-      switchChain({ chainId: base.id });
-      return;
-    }
 
     setPaymentStatus("processing");
 
-    writeContract({
-      address: PAYMENT_CONFIG.baseUsdc,
-      abi: erc20Abi,
-      functionName: "transfer",
-      args: [
-        PAYMENT_CONFIG.evmAddress,
-        parseUnits("9", 6), // 9 USDC (6 decimals)
-      ],
-      chainId: base.id,
-    });
+    try {
+      // Switch to Base if not on it
+      if (chainId !== base.id) {
+        await switchChainAsync({ chainId: base.id });
+      }
+
+      // Send the USDC transfer
+      writeContract({
+        address: PAYMENT_CONFIG.baseUsdc,
+        abi: erc20Abi,
+        functionName: "transfer",
+        args: [
+          PAYMENT_CONFIG.evmAddress,
+          parseUnits("9", 6), // 9 USDC (6 decimals)
+        ],
+        chainId: base.id,
+      });
+    } catch (err) {
+      console.error("[Base] Payment error:", err);
+      setPaymentStatus("error");
+    }
   };
 
   // Handle Solana payment (Phantom)
@@ -136,9 +142,20 @@ export function PaymentModal({
 
       setPaymentStatus("processing");
 
-      // Connect to Phantom
-      const resp = await phantom.connect();
-      const publicKey = resp.publicKey;
+      // Connect to Phantom with retry
+      let publicKey;
+      try {
+        const resp = await phantom.connect();
+        publicKey = resp.publicKey;
+      } catch (connectErr) {
+        // Try disconnect and reconnect if there's a port error
+        console.log("[Solana] Connection failed, trying to reconnect...");
+        try {
+          await phantom.disconnect?.();
+        } catch {}
+        const resp = await phantom.connect();
+        publicKey = resp.publicKey;
+      }
       console.log("[Solana] Connected:", publicKey.toString());
 
       // Import Solana libraries dynamically
