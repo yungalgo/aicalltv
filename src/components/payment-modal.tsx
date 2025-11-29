@@ -10,7 +10,6 @@ import {
   useChainId,
 } from "wagmi";
 import { parseUnits } from "viem";
-import type { PublicKey, Transaction, VersionedTransaction } from "@solana/web3.js";
 import {
   PAYMENT_CONFIG,
   isEvmConfigured,
@@ -26,17 +25,6 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
-
-// Phantom wallet provider type (supports both legacy and versioned transactions)
-interface PhantomProvider {
-  isPhantom?: boolean;
-  connect: () => Promise<{ publicKey: PublicKey }>;
-  disconnect?: () => Promise<void>;
-  signAndSendTransaction: (
-    transaction: Transaction | VersionedTransaction,
-    options?: { skipPreflight?: boolean; preflightCommitment?: string }
-  ) => Promise<{ signature: string }>;
-}
 
 // ERC20 transfer ABI (minimal)
 const erc20Abi = [
@@ -136,143 +124,74 @@ export function PaymentModal({
     }
   };
 
-  // Handle Solana payment (Phantom) - Using VersionedTransaction like Phantom SDK example
+  // Handle Solana payment - SIMPLE direct browser approach
   const handleSolanaPayment = async () => {
     try {
-      // Check if Phantom is installed
-      const phantom = (window as unknown as { phantom?: { solana?: PhantomProvider } })?.phantom?.solana;
-      if (!phantom?.isPhantom) {
+      // Get Phantom provider directly from window
+      const provider = (window as any)?.phantom?.solana;
+      if (!provider?.isPhantom) {
         window.open("https://phantom.app/", "_blank");
         return;
       }
 
       setPaymentStatus("processing");
 
-      // Import Solana libraries FIRST (need PublicKey for conversion)
-      const { 
-        Connection, 
-        PublicKey: SolPublicKey, 
-        TransactionMessage,
-        VersionedTransaction,
-        ComputeBudgetProgram,
-      } = await import("@solana/web3.js");
-      const {
-        getAssociatedTokenAddress,
-        createTransferInstruction,
-        createAssociatedTokenAccountInstruction,
-        TOKEN_PROGRAM_ID,
-        ASSOCIATED_TOKEN_PROGRAM_ID,
-      } = await import("@solana/spl-token");
+      // Connect and get public key
+      const { publicKey } = await provider.connect();
+      console.log("[Solana] Connected:", publicKey.toBase58());
 
-      // Connect to Phantom
-      let phantomPubkey;
-      try {
-        const resp = await phantom.connect();
-        phantomPubkey = resp.publicKey;
-      } catch {
-        // Retry after disconnect
-        console.log("[Solana] Retrying connection...");
-        try { await phantom.disconnect?.(); } catch {}
-        const resp = await phantom.connect();
-        phantomPubkey = resp.publicKey;
-      }
-      
-      // CRITICAL: Convert Phantom's PublicKey to @solana/web3.js PublicKey
-      const publicKey = new SolPublicKey(phantomPubkey.toString());
-      console.log("[Solana] Connected:", publicKey.toString());
+      // Import only what we need
+      const { Connection, PublicKey, Transaction } = await import("@solana/web3.js");
+      const { createTransferInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } = await import("@solana/spl-token");
 
-      // Set up connection with Helius RPC
-      const heliusRpc = import.meta.env.VITE_HELIUS_RPC_URL || "https://api.mainnet-beta.solana.com";
-      console.log("[Solana] Using RPC:", heliusRpc.substring(0, 50) + "...");
-      const connection = new Connection(heliusRpc, "confirmed");
+      // RPC
+      const rpc = import.meta.env.VITE_HELIUS_RPC_URL || "https://api.mainnet-beta.solana.com";
+      const connection = new Connection(rpc);
 
-      // USDC token mint on Solana mainnet
-      const usdcMint = new SolPublicKey(PAYMENT_CONFIG.solanaUsdc);
-      const recipientPublicKey = new SolPublicKey(PAYMENT_CONFIG.solanaAddress);
+      // Addresses
+      const USDC_MINT = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"); // Mainnet USDC
+      const RECIPIENT = new PublicKey(PAYMENT_CONFIG.solanaAddress);
+      const sender = new PublicKey(publicKey.toBase58());
 
-      // Get token accounts (now using proper @solana/web3.js PublicKey)
-      const senderTokenAccount = await getAssociatedTokenAddress(usdcMint, publicKey);
-      const recipientTokenAccount = await getAssociatedTokenAddress(usdcMint, recipientPublicKey);
+      // Get token accounts
+      const senderATA = await getAssociatedTokenAddress(USDC_MINT, sender);
+      const recipientATA = await getAssociatedTokenAddress(USDC_MINT, RECIPIENT);
 
-      console.log("[Solana] Sender ATA:", senderTokenAccount.toString());
-      console.log("[Solana] Recipient ATA:", recipientTokenAccount.toString());
+      console.log("[Solana] From:", senderATA.toBase58());
+      console.log("[Solana] To:", recipientATA.toBase58());
 
-      // Build instructions array
-      const instructions = [];
-
-      // Priority fee for faster landing
-      instructions.push(
-        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 100000 })
-      );
-
-      // Check if recipient token account exists
-      const recipientAccountInfo = await connection.getAccountInfo(recipientTokenAccount);
-      if (!recipientAccountInfo) {
-        console.log("[Solana] Creating recipient ATA...");
-        instructions.push(
-          createAssociatedTokenAccountInstruction(
-            publicKey,
-            recipientTokenAccount,
-            recipientPublicKey,
-            usdcMint,
-            TOKEN_PROGRAM_ID,
-            ASSOCIATED_TOKEN_PROGRAM_ID
-          )
-        );
-      }
-
-      // Transfer instruction
-      instructions.push(
+      // Build simple transaction
+      const tx = new Transaction();
+      tx.add(
         createTransferInstruction(
-          senderTokenAccount,
-          recipientTokenAccount,
-          publicKey,
-          9_000_000, // 9 USDC
-          [],
-          TOKEN_PROGRAM_ID
+          senderATA,
+          recipientATA, 
+          sender,
+          9_000_000 // 9 USDC (6 decimals)
         )
       );
 
-      // Get recent blockhash
-      const { blockhash } = await connection.getLatestBlockhash("confirmed");
-      console.log("[Solana] Blockhash:", blockhash);
+      // Get blockhash and set fee payer
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      tx.recentBlockhash = blockhash;
+      tx.feePayer = sender;
 
-      // Create V0 message (modern format like Phantom SDK example)
-      const messageV0 = new TransactionMessage({
-        payerKey: publicKey,
-        recentBlockhash: blockhash,
-        instructions,
-      }).compileToV0Message();
+      console.log("[Solana] Sending...");
 
-      const transaction = new VersionedTransaction(messageV0);
-
-      console.log("[Solana] Requesting signature from Phantom...");
+      // Sign and send via Phantom
+      const { signature } = await provider.signAndSendTransaction(tx);
       
-      // Phantom's signAndSendTransaction handles the rest
-      const { signature } = await phantom.signAndSendTransaction(transaction);
+      console.log("[Solana] Signature:", signature);
+      console.log("[Solana] https://solscan.io/tx/" + signature);
 
-      console.log("[Solana] Transaction sent:", signature);
-      console.log("[Solana] View on Solscan: https://solscan.io/tx/" + signature);
+      // Wait for confirmation
+      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight });
+      console.log("[Solana] Confirmed!");
 
-      // Trust Phantom - if we got a signature, the tx was submitted
-      // Simple confirmation check (non-blocking)
-      try {
-        const confirmation = await connection.confirmTransaction(signature, "confirmed");
-        if (confirmation.value.err) {
-          console.warn("[Solana] Transaction error:", confirmation.value.err);
-        } else {
-          console.log("[Solana] Transaction confirmed!");
-        }
-      } catch (confirmErr) {
-        // Even if confirmation times out, tx may have landed
-        console.log("[Solana] Confirmation timeout - check Solscan:", confirmErr);
-      }
-
-      // Complete the payment - signature exists means tx was submitted
       setPaymentStatus("complete");
       onPaymentComplete(signature);
-    } catch (err) {
-      console.error("[Solana] Payment error:", err);
+    } catch (err: any) {
+      console.error("[Solana] Error:", err);
       setPaymentStatus("error");
     }
   };
