@@ -107,12 +107,16 @@ export function PaymentModal({
     setPaymentStatus("processing");
 
     try {
-      // Switch to Base if not on it
+      // Switch to Base first if not on it
       if (chainId !== base.id) {
+        console.log("[Base] Switching to Base chain...");
         await switchChainAsync({ chainId: base.id });
+        // Give wagmi a moment to sync state
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      // Send the USDC transfer
+      console.log("[Base] Sending USDC transfer...");
+      // Send the USDC transfer with explicit chain
       writeContract({
         address: PAYMENT_CONFIG.baseUsdc,
         abi: erc20Abi,
@@ -121,7 +125,7 @@ export function PaymentModal({
           PAYMENT_CONFIG.evmAddress,
           parseUnits("9", 6), // 9 USDC (6 decimals)
         ],
-        chainId: base.id,
+        chain: base, // Pass chain object instead of chainId
       });
     } catch (err) {
       console.error("[Base] Payment error:", err);
@@ -168,11 +172,9 @@ export function PaymentModal({
         TOKEN_PROGRAM_ID,
       } = await import("@solana/spl-token");
 
-      // Set up connection (use public RPC)
-      const connection = new Connection(
-        "https://api.mainnet-beta.solana.com",
-        "confirmed"
-      );
+      // Set up connection - use Helius RPC (from env var)
+      const heliusRpc = import.meta.env.VITE_HELIUS_RPC_URL || "https://api.mainnet-beta.solana.com";
+      const connection = new Connection(heliusRpc, "confirmed");
 
       // USDC token mint on Solana
       const usdcMint = new PublicKey(PAYMENT_CONFIG.solanaUsdc);
