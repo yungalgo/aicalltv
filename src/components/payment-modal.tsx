@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import {
   useAccount,
@@ -36,6 +36,7 @@ import {
   buildTransferTokensTransaction,
   TOKEN_PROGRAM_ADDRESS,
 } from "gill/programs/token";
+import { createCredit } from "~/lib/credits/functions";
 
 // ERC20 transfer ABI (minimal)
 const erc20Abi = [
@@ -178,6 +179,25 @@ function SolanaPayButton({
       }
 
       console.log("[Solana] CONFIRMED!");
+
+      // Create credit on server
+      try {
+        console.log("[Solana] Creating credit for tx:", signature);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (createCredit as any)({
+          data: {
+            paymentMethod: "sol",
+            paymentRef: signature,
+            network: "solana",
+            amountCents: 900, // $9.00
+          },
+        });
+        console.log("[Solana] Credit created successfully");
+      } catch (creditErr) {
+        console.error("[Solana] Failed to create credit:", creditErr);
+        // Still complete - tx is on chain, support can help if needed
+      }
+
       onPaymentComplete(signature);
     } catch (err: any) {
       console.error("[Solana] Error:", err);
@@ -219,11 +239,40 @@ export function PaymentModal({
       hash: txHash,
     });
 
-  // Handle successful transaction
-  if (isConfirmed && paymentStatus !== "complete" && txHash) {
-    setPaymentStatus("complete");
-    onPaymentComplete(txHash);
-  }
+  // Track if we've already processed this tx (prevent duplicate credit creation)
+  const processedTxRef = useRef<string | null>(null);
+
+  // Handle successful Base transaction - create credit then complete
+  useEffect(() => {
+    if (isConfirmed && txHash && processedTxRef.current !== txHash) {
+      processedTxRef.current = txHash;
+      
+      // Create credit on server
+      (async () => {
+        try {
+          console.log("[Base] Creating credit for tx:", txHash);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (createCredit as any)({
+            data: {
+              paymentMethod: "web3_wallet",
+              paymentRef: txHash,
+              network: "base",
+              amountCents: 900, // $9.00
+            },
+          });
+          console.log("[Base] Credit created successfully");
+          setPaymentStatus("complete");
+          onPaymentComplete(txHash);
+        } catch (err) {
+          console.error("[Base] Failed to create credit:", err);
+          // Still complete payment - tx is on chain, we just failed to record it
+          // This is a rare edge case, user can contact support with tx hash
+          setPaymentStatus("complete");
+          onPaymentComplete(txHash);
+        }
+      })();
+    }
+  }, [isConfirmed, txHash, onPaymentComplete]);
 
   const isTestMode = isPaymentTestMode();
 
@@ -285,8 +334,24 @@ export function PaymentModal({
             </DialogDescription>
           </DialogHeader>
           <Button
-            onClick={() => {
-              onPaymentComplete(`test_tx_${Date.now()}`);
+            onClick={async () => {
+              const testTxHash = `test_tx_${Date.now()}`;
+              try {
+                // Create credit even in test mode
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await (createCredit as any)({
+                  data: {
+                    paymentMethod: "free",
+                    paymentRef: testTxHash,
+                    network: "test",
+                    amountCents: 900,
+                  },
+                });
+                console.log("[Test] Credit created");
+              } catch (err) {
+                console.error("[Test] Failed to create credit:", err);
+              }
+              onPaymentComplete(testTxHash);
             }}
             className="w-full"
           >

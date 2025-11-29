@@ -15,6 +15,13 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "mina",
   "zcash",
   "web3_wallet",
+  "lemon_squeezy",
+]);
+
+export const creditStateEnum = pgEnum("credit_state", [
+  "unused",    // Credit is available to use
+  "consumed",  // Credit has been used for a call
+  "expired",   // Credit expired or was refunded
 ]);
 
 export const videoStatusEnum = pgEnum("video_status", [

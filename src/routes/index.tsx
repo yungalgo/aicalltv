@@ -144,7 +144,8 @@ function CallRequestForm() {
     setShowPaymentModal(false);
 
     try {
-      console.log("[Client] Payment complete, creating call with tx:", transactionHash);
+      console.log("[Client] Payment complete, creating call...");
+      // Credit was created in payment modal, backend will consume it
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result = await (createCall as any)({
         data: {
@@ -161,10 +162,6 @@ function CallRequestForm() {
             formData.targetPhysicalDescription || undefined,
           interestingPiece: formData.interestingPiece || undefined,
           videoStyle: formData.videoStyle,
-          paymentMethod: "web3_wallet",
-          isFree: false,
-          paymentTxHash: transactionHash,
-          paymentAmount: PAYMENT_CONFIG.priceUSDC,
         },
       });
       console.log("[Client] Call created:", result);

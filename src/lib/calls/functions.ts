@@ -7,6 +7,7 @@ import { calls } from "~/lib/db/schema/calls";
 import * as schema from "~/lib/db/schema";
 import { auth } from "~/lib/auth/auth";
 import { getRequest } from "@tanstack/react-start/server";
+import { consumeCredit } from "~/lib/credits/functions";
 
 const createCallSchema = z.object({
   recipientName: z.string().min(1, "Recipient name is required"),
@@ -19,18 +20,6 @@ const createCallSchema = z.object({
   targetPhysicalDescription: z.string().optional(),
   interestingPiece: z.string().optional(), // Personal details/hook
   videoStyle: z.string().min(1, "Video style is required"), // Aesthetic style
-  // Payment
-  paymentMethod: z.enum([
-    "free",
-    "web3_wallet",
-    "near_ai",
-    "sol",
-    "mina",
-    "zcash",
-  ]),
-  isFree: z.boolean(),
-  paymentTxHash: z.string().optional(),
-  paymentAmount: z.string().optional(),
 }).refine(
   (data) => {
     // If gender is "other", genderCustom must be provided
@@ -106,10 +95,6 @@ export const createCall = createServerFn({ method: "POST" }).handler(
 
     // Note: Image prompt will be generated later in video-generator worker after call completes
 
-    // TODO: Check free credits if paymentMethod is "free"
-    // If free: Check user.freeCallCredits > 0, decrement if available
-    // If paid: Payment already processed (via webhook or dummy flow)
-
     // Create call record with prompt_ready status
     // Status: prompt_ready → Call is ready to be processed (has OpenAI prompt)
     const [newCall] = await db
@@ -127,13 +112,24 @@ export const createCall = createServerFn({ method: "POST" }).handler(
         openaiPrompt,
         imagePrompt: null, // Will be generated later in video-generator worker
         encryptedHandle,
-        paymentMethod: data.paymentMethod,
-        isFree: data.isFree,
-        paymentTxHash: data.paymentTxHash || null,
-        paymentAmount: data.paymentAmount || null,
+        paymentMethod: "web3_wallet", // Will be updated from credit
+        isFree: false, // Will be updated from credit
         status: "prompt_ready", // Status indicates prompt is ready
       })
       .returning();
+
+    // SECURITY: Consume a credit for this call
+    // This is the core of payment verification - no credit = no call
+    try {
+      await consumeCredit(db, userId, newCall.id);
+      console.log(`[Create Call] ✅ Credit consumed for call ${newCall.id}`);
+    } catch (creditError) {
+      // No credit available - delete the call we just created
+      const { eq } = await import("drizzle-orm");
+      await db.delete(calls).where(eq(calls.id, newCall.id));
+      console.log(`[Create Call] ❌ No credit available, deleted call ${newCall.id}`);
+      throw new Error("Payment required. Please purchase a call credit first.");
+    }
     
     console.log(`[Create Call] ✅ Call created with status: prompt_ready (ID: ${newCall.id})`);
 

@@ -74,7 +74,8 @@ function DashboardIndex() {
     setShowPaymentModal(false);
 
     try {
-      // Create call record after successful payment
+      // Create call record - payment credit was created in payment modal
+      // The backend will consume an unused credit for this user
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (createCall as any)({
         data: {
@@ -87,10 +88,6 @@ function DashboardIndex() {
           targetPhysicalDescription: formData.targetPhysicalDescription || undefined,
           interestingPiece: formData.interestingPiece || undefined,
           videoStyle: formData.videoStyle,
-          paymentMethod: "web3_wallet",
-          isFree: false,
-          paymentTxHash: transactionHash,
-          paymentAmount: PAYMENT_CONFIG.priceUSDC,
         },
       });
 
