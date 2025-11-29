@@ -428,27 +428,30 @@ export function PaymentModal({
                     <p className="text-sm text-muted-foreground">on Base</p>
                   </div>
 
-                  {/* Connect Wallet */}
-                  <div className="flex justify-center">
-                    <ConnectButton />
-                  </div>
+                  {/* Connect or Pay Button */}
+                  <ConnectButton.Custom>
+                    {({ account, chain, openConnectModal, mounted }) => {
+                      const connected = mounted && account && chain;
 
-                  {/* Pay Button */}
-                  {isConnected && (
-                    <Button
-                      onClick={handleBasePayment}
-                      disabled={isPending || isConfirming}
-                      className="h-12 w-full text-lg"
-                    >
-                      {chainId !== base.id
-                        ? "Switch to Base"
-                        : isPending
-                          ? "Confirm in wallet..."
-                          : isConfirming
-                            ? "Confirming..."
-                            : "Pay 9 USDC"}
-                    </Button>
-                  )}
+                      return (
+                        <Button
+                          onClick={connected ? handleBasePayment : openConnectModal}
+                          disabled={connected && (isPending || isConfirming)}
+                          className="h-12 w-full text-lg"
+                        >
+                          {!connected
+                            ? "Connect Wallet"
+                            : chain?.id !== base.id
+                              ? "Switch to Base & Pay"
+                              : isPending
+                                ? "Confirm in wallet..."
+                                : isConfirming
+                                  ? "Confirming..."
+                                  : "Pay 9 USDC"}
+                        </Button>
+                      );
+                    }}
+                  </ConnectButton.Custom>
                 </>
               )}
 
