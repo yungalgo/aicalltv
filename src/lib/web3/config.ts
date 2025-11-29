@@ -5,11 +5,7 @@
 
 import { http, createConfig } from "wagmi";
 import { base } from "wagmi/chains";
-import {
-  metaMaskWallet,
-  coinbaseWallet,
-  rabbyWallet,
-} from "@rainbow-me/rainbowkit/wallets";
+import { metaMaskWallet } from "@rainbow-me/rainbowkit/wallets";
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 
 // Payment configuration
@@ -48,7 +44,7 @@ const connectors = connectorsForWallets(
   [
     {
       groupName: "EVM Wallets",
-      wallets: [metaMaskWallet, coinbaseWallet, rabbyWallet],
+      wallets: [metaMaskWallet],
     },
   ],
   {
