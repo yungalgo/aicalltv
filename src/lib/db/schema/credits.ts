@@ -4,7 +4,9 @@ import {
   text,
   timestamp,
   uuid,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { user } from "./auth.schema";
 import { calls } from "./calls";
 import { creditStateEnum, paymentMethodEnum } from "./enums";
@@ -49,5 +51,9 @@ export const callCredits = pgTable("call_credits", {
   // Timestamps
   createdAt: timestamp("created_at").defaultNow().notNull(),
   consumedAt: timestamp("consumed_at"),
-});
+}, (table) => ({
+  // SECURITY: Unique constraint prevents duplicate credits from same payment
+  // Even if race condition occurs, DB will reject the duplicate
+  uniquePaymentRef: uniqueIndex("unique_payment_ref").on(table.paymentRef).where(sql`${table.paymentRef} IS NOT NULL`),
+}));
 
