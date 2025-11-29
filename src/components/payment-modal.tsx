@@ -199,6 +199,7 @@ function SolanaPayButton({
       }
 
       onPaymentComplete(signature);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       console.error("[Solana] Error:", err);
       onPaymentError();

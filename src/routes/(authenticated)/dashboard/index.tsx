@@ -69,7 +69,9 @@ function DashboardIndex() {
   };
 
   // Handle payment completion - creates the call
-  const handlePaymentComplete = async (transactionHash: string) => {
+  // Note: transactionHash kept for interface compatibility, credit was created in payment modal
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handlePaymentComplete = async (_transactionHash: string) => {
     setIsSubmitting(true);
     setShowPaymentModal(false);
 

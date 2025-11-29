@@ -123,7 +123,7 @@ export const createCall = createServerFn({ method: "POST" }).handler(
     try {
       await consumeCredit(db, userId, newCall.id);
       console.log(`[Create Call] ✅ Credit consumed for call ${newCall.id}`);
-    } catch (creditError) {
+    } catch {
       // No credit available - delete the call we just created
       const { eq } = await import("drizzle-orm");
       await db.delete(calls).where(eq(calls.id, newCall.id));
