@@ -1,5 +1,11 @@
 "use client";
 
+// Polyfill Buffer for Solana SDK (needs to be before any Solana imports)
+import { Buffer } from "buffer";
+if (typeof window !== "undefined") {
+  window.Buffer = Buffer;
+}
+
 import "@rainbow-me/rainbowkit/styles.css";
 
 import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
