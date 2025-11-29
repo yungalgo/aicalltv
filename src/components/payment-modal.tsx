@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
-import { useWalletUi, useWalletUiSigner, WalletUiDropdown, type UiWalletAccount } from "@wallet-ui/react";
+import { useWalletUi, useWalletUiSigner, WalletUiList, type UiWalletAccount } from "@wallet-ui/react";
 import { useWalletUiGill } from "@wallet-ui/react-gill";
 import {
   address as toAddress,
@@ -321,7 +321,10 @@ export function PaymentModal({
   };
 
   // Wallet UI hooks for Solana
-  const { account: solanaAccount } = useWalletUi();
+  const { account: solanaAccount, wallets, connect } = useWalletUi();
+  
+  // Filter to only Phantom wallet
+  const phantomWallets = wallets.filter(w => w.name.toLowerCase().includes('phantom'));
 
   // Test mode bypass
   if (isTestMode) {
@@ -629,9 +632,20 @@ export function PaymentModal({
 
                   {/* Connect or Pay Button */}
                   {!solanaAccount ? (
-                    <div className="flex justify-center">
-                      <WalletUiDropdown />
-                    </div>
+                    phantomWallets.length > 0 ? (
+                      <WalletUiList 
+                        wallets={phantomWallets} 
+                        select={async (account) => connect(account)}
+                        className="flex justify-center"
+                      />
+                    ) : (
+                      <Button
+                        onClick={() => window.open("https://phantom.app/", "_blank")}
+                        className="h-12 w-full text-lg"
+                      >
+                        Install Phantom Wallet
+                      </Button>
+                    )
                   ) : (
                     <SolanaPayButton
                       account={solanaAccount}
