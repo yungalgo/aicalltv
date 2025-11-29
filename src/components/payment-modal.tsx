@@ -32,7 +32,10 @@ interface PhantomProvider {
   isPhantom?: boolean;
   connect: () => Promise<{ publicKey: PublicKey }>;
   disconnect?: () => Promise<void>;
-  signAndSendTransaction: (transaction: Transaction) => Promise<{ signature: string }>;
+  signAndSendTransaction: (
+    transaction: Transaction,
+    options?: { skipPreflight?: boolean; preflightCommitment?: string }
+  ) => Promise<{ signature: string }>;
 }
 
 // ERC20 transfer ABI (minimal)
@@ -163,17 +166,23 @@ export function PaymentModal({
       console.log("[Solana] Connected:", publicKey.toString());
 
       // Import Solana libraries dynamically
-      const { Connection, PublicKey, Transaction } = await import(
-        "@solana/web3.js"
-      );
+      const { 
+        Connection, 
+        PublicKey, 
+        Transaction,
+        ComputeBudgetProgram,
+      } = await import("@solana/web3.js");
       const {
         getAssociatedTokenAddress,
         createTransferInstruction,
+        createAssociatedTokenAccountInstruction,
         TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID,
       } = await import("@solana/spl-token");
 
       // Set up connection - use Helius RPC (from env var)
       const heliusRpc = import.meta.env.VITE_HELIUS_RPC_URL || "https://api.mainnet-beta.solana.com";
+      console.log("[Solana] Using RPC:", heliusRpc.substring(0, 50) + "...");
       const connection = new Connection(heliusRpc, "confirmed");
 
       // USDC token mint on Solana
@@ -190,47 +199,117 @@ export function PaymentModal({
         recipientPublicKey
       );
 
-      // Create transfer instruction (9 USDC = 9,000,000 with 6 decimals)
-      const transferInstruction = createTransferInstruction(
-        senderTokenAccount,
-        recipientTokenAccount,
-        publicKey,
-        9_000_000, // 9 USDC
-        [],
-        TOKEN_PROGRAM_ID
+      console.log("[Solana] Sender token account:", senderTokenAccount.toString());
+      console.log("[Solana] Recipient token account:", recipientTokenAccount.toString());
+
+      // Check if recipient token account exists
+      const recipientAccountInfo = await connection.getAccountInfo(recipientTokenAccount);
+      
+      // Create transaction with priority fees for reliable landing
+      const transaction = new Transaction();
+      
+      // Add priority fee (helps transaction land faster)
+      transaction.add(
+        ComputeBudgetProgram.setComputeUnitPrice({
+          microLamports: 50000, // Priority fee
+        })
       );
 
-      // Create transaction
-      const transaction = new Transaction().add(transferInstruction);
-      transaction.feePayer = publicKey;
-
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      transaction.recentBlockhash = blockhash;
-
-      // Sign and send via Phantom
-      const { signature } = await phantom.signAndSendTransaction(transaction);
-
-      console.log("[Solana] Transaction sent:", signature);
-
-      // Try to confirm, but don't fail if it times out
-      // The transaction might still land even if confirmation times out
-      try {
-        await connection.confirmTransaction(
-          {
-            signature,
-            blockhash,
-            lastValidBlockHeight,
-          },
-          "confirmed"
+      // If recipient doesn't have a USDC token account, create it
+      if (!recipientAccountInfo) {
+        console.log("[Solana] Creating recipient token account...");
+        transaction.add(
+          createAssociatedTokenAccountInstruction(
+            publicKey, // payer
+            recipientTokenAccount, // ata
+            recipientPublicKey, // owner
+            usdcMint, // mint
+            TOKEN_PROGRAM_ID,
+            ASSOCIATED_TOKEN_PROGRAM_ID
+          )
         );
-        console.log("[Solana] Transaction confirmed!");
-      } catch (confirmErr) {
-        // Log but don't fail - tx was sent, might still land
-        console.warn("[Solana] Confirmation timeout, but tx was sent:", signature);
-        console.warn("[Solana] Check status at: https://solscan.io/tx/" + signature);
       }
 
-      // If we got here, the tx was sent successfully
+      // Add the transfer instruction
+      transaction.add(
+        createTransferInstruction(
+          senderTokenAccount,
+          recipientTokenAccount,
+          publicKey,
+          9_000_000, // 9 USDC (6 decimals)
+          [],
+          TOKEN_PROGRAM_ID
+        )
+      );
+
+      // Get fresh blockhash with "confirmed" commitment (not "finalized" - more recent)
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+      transaction.recentBlockhash = blockhash;
+      transaction.feePayer = publicKey;
+
+      console.log("[Solana] Blockhash:", blockhash);
+      console.log("[Solana] Last valid block height:", lastValidBlockHeight);
+
+      // Sign and send via Phantom with options
+      console.log("[Solana] Requesting signature from Phantom...");
+      const { signature } = await phantom.signAndSendTransaction(transaction, {
+        skipPreflight: false,
+        preflightCommitment: "confirmed", // Match blockhash commitment
+      });
+
+      console.log("[Solana] Transaction sent:", signature);
+      console.log("[Solana] View on Solscan: https://solscan.io/tx/" + signature);
+
+      // Retry confirmation while blockhash is valid
+      let confirmed = false;
+      const startTime = Date.now();
+      const maxWaitTime = 60000; // 60 seconds max
+
+      while (!confirmed && Date.now() - startTime < maxWaitTime) {
+        try {
+          // Check current block height
+          const currentBlockHeight = await connection.getBlockHeight("confirmed");
+          
+          if (currentBlockHeight > lastValidBlockHeight) {
+            console.warn("[Solana] Block height exceeded, transaction may have expired");
+            break;
+          }
+
+          // Check transaction status
+          const status = await connection.getSignatureStatus(signature);
+          
+          if (status.value?.err) {
+            throw new Error("Transaction failed: " + JSON.stringify(status.value.err));
+          }
+          
+          if (status.value?.confirmationStatus === "confirmed" || status.value?.confirmationStatus === "finalized") {
+            console.log("[Solana] Transaction confirmed!", status.value.confirmationStatus);
+            confirmed = true;
+            break;
+          }
+
+          // Wait before retry
+          console.log("[Solana] Waiting for confirmation...", status.value?.confirmationStatus || "pending");
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        } catch (checkErr) {
+          console.warn("[Solana] Error checking status, retrying...", checkErr);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+
+      if (!confirmed) {
+        // Final check
+        const finalStatus = await connection.getSignatureStatus(signature);
+        if (finalStatus.value?.confirmationStatus) {
+          console.log("[Solana] Final status:", finalStatus.value.confirmationStatus);
+          confirmed = finalStatus.value.confirmationStatus === "confirmed" || finalStatus.value.confirmationStatus === "finalized";
+        }
+      }
+
+      if (!confirmed) {
+        throw new Error("Transaction not confirmed. Check Solscan: https://solscan.io/tx/" + signature);
+      }
+
       setPaymentStatus("complete");
       onPaymentComplete(signature);
     } catch (err) {
