@@ -32,7 +32,7 @@ export default defineConfig({
       },
       // Force @noble packages to be bundled (not externalized to .nf3/)
       // This ensures our alias is applied
-      noExternal: ["@noble/hashes", "@noble/curves", "@noble/ciphers"],
+      noExternals: true,
       // Rollup config to ensure alias is applied
       rollupConfig: {
         plugins: [
