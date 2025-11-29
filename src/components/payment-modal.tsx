@@ -1,14 +1,23 @@
 "use client";
 
 import { useState } from "react";
-import { PayEmbed } from "thirdweb/react";
-import { base } from "thirdweb/chains";
-import { thirdwebClient } from "~/lib/thirdweb/client";
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import {
+  useAccount,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useSwitchChain,
+  useChainId,
+} from "wagmi";
+import { parseUnits } from "viem";
+import type { PublicKey, Transaction } from "@solana/web3.js";
 import {
   PAYMENT_CONFIG,
-  isThirdwebConfigured,
+  isEvmConfigured,
+  isSolanaConfigured,
   isPaymentTestMode,
-} from "~/lib/thirdweb/config";
+  base,
+} from "~/lib/web3/config";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +26,29 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
+
+// Phantom wallet provider type
+interface PhantomProvider {
+  isPhantom?: boolean;
+  connect: () => Promise<{ publicKey: PublicKey }>;
+  signAndSendTransaction: (transaction: Transaction) => Promise<{ signature: string }>;
+}
+
+// ERC20 transfer ABI (minimal)
+const erc20Abi = [
+  {
+    name: "transfer",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "to", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ type: "bool" }],
+  },
+] as const;
+
+type PaymentStep = "select-method" | "select-crypto" | "pay-base" | "pay-solana";
 
 export interface PaymentModalProps {
   open: boolean;
@@ -33,142 +65,450 @@ export function PaymentModal({
   onPaymentComplete,
   callDetails,
 }: PaymentModalProps) {
+  const [step, setStep] = useState<PaymentStep>("select-method");
   const [paymentStatus, setPaymentStatus] = useState<
     "idle" | "processing" | "complete" | "error"
   >("idle");
 
-  const isConfigured = isThirdwebConfigured();
+  // EVM hooks
+  const { address, isConnected } = useAccount();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
+  const { writeContract, data: txHash, isPending, error } = useWriteContract();
+
+  // Wait for transaction confirmation
+  const { isLoading: isConfirming, isSuccess: isConfirmed } =
+    useWaitForTransactionReceipt({
+      hash: txHash,
+    });
+
+  // Handle successful transaction
+  if (isConfirmed && paymentStatus !== "complete" && txHash) {
+    setPaymentStatus("complete");
+    onPaymentComplete(txHash);
+  }
+
   const isTestMode = isPaymentTestMode();
 
-  // Test mode OR not configured - show a bypass button for development
-  if (isTestMode || !isConfigured || !thirdwebClient) {
-    const reason = isTestMode 
-      ? "Test mode is enabled" 
-      : "Payment gateway not configured";
-    
+  // Reset state when modal closes
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      setStep("select-method");
+      setPaymentStatus("idle");
+    }
+    onOpenChange(isOpen);
+  };
+
+  // Handle Base payment
+  const handleBasePayment = () => {
+    if (!isConnected || !address) return;
+
+    // Switch to Base if not on it
+    if (chainId !== base.id) {
+      switchChain({ chainId: base.id });
+      return;
+    }
+
+    setPaymentStatus("processing");
+
+    writeContract({
+      address: PAYMENT_CONFIG.baseUsdc,
+      abi: erc20Abi,
+      functionName: "transfer",
+      args: [
+        PAYMENT_CONFIG.evmAddress,
+        parseUnits("9", 6), // 9 USDC (6 decimals)
+      ],
+      chainId: base.id,
+    });
+  };
+
+  // Handle Solana payment (Phantom)
+  const handleSolanaPayment = async () => {
+    try {
+      // Check if Phantom is installed
+      const phantom = (window as unknown as { phantom?: { solana?: PhantomProvider } })?.phantom?.solana;
+      if (!phantom?.isPhantom) {
+        // Open Phantom website if not installed
+        window.open("https://phantom.app/", "_blank");
+        return;
+      }
+
+      setPaymentStatus("processing");
+
+      // Connect to Phantom
+      const resp = await phantom.connect();
+      const publicKey = resp.publicKey;
+      console.log("[Solana] Connected:", publicKey.toString());
+
+      // Import Solana libraries dynamically
+      const { Connection, PublicKey, Transaction } = await import(
+        "@solana/web3.js"
+      );
+      const {
+        getAssociatedTokenAddress,
+        createTransferInstruction,
+        TOKEN_PROGRAM_ID,
+      } = await import("@solana/spl-token");
+
+      // Set up connection (use public RPC)
+      const connection = new Connection(
+        "https://api.mainnet-beta.solana.com",
+        "confirmed"
+      );
+
+      // USDC token mint on Solana
+      const usdcMint = new PublicKey(PAYMENT_CONFIG.solanaUsdc);
+      const recipientPublicKey = new PublicKey(PAYMENT_CONFIG.solanaAddress);
+
+      // Get token accounts
+      const senderTokenAccount = await getAssociatedTokenAddress(
+        usdcMint,
+        publicKey
+      );
+      const recipientTokenAccount = await getAssociatedTokenAddress(
+        usdcMint,
+        recipientPublicKey
+      );
+
+      // Create transfer instruction (9 USDC = 9,000,000 with 6 decimals)
+      const transferInstruction = createTransferInstruction(
+        senderTokenAccount,
+        recipientTokenAccount,
+        publicKey,
+        9_000_000, // 9 USDC
+        [],
+        TOKEN_PROGRAM_ID
+      );
+
+      // Create transaction
+      const transaction = new Transaction().add(transferInstruction);
+      transaction.feePayer = publicKey;
+
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+
+      // Sign and send via Phantom
+      const { signature } = await phantom.signAndSendTransaction(transaction);
+
+      console.log("[Solana] Transaction sent:", signature);
+
+      // Wait for confirmation
+      await connection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight,
+      });
+
+      console.log("[Solana] Transaction confirmed!");
+      setPaymentStatus("complete");
+      onPaymentComplete(signature);
+    } catch (err) {
+      console.error("[Solana] Payment error:", err);
+      setPaymentStatus("error");
+    }
+  };
+
+  // Test mode bypass
+  if (isTestMode) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>🧪 Test Mode Payment</DialogTitle>
+            <DialogTitle>🧪 Test Mode</DialogTitle>
             <DialogDescription>
-              {reason}. Click below to simulate a successful payment.
+              Test mode enabled. Click to simulate payment.
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                <strong>{reason}</strong>
-                <br />
-                This will create a call without charging.
-              </p>
-            </div>
-
-            <div className="text-center">
-              <p className="text-2xl font-bold">${PAYMENT_CONFIG.priceUSD}</p>
-              <p className="text-sm text-muted-foreground">
-                AI Call to {callDetails.recipientName}
-              </p>
-            </div>
-
-            <Button
-              onClick={() => {
-                const testTxHash = `test_tx_${Date.now()}`;
-                console.log("[Payment] Test mode - simulating success:", testTxHash);
-                setPaymentStatus("complete");
-                onPaymentComplete(testTxHash);
-              }}
-              className="w-full h-12 text-lg"
-              size="lg"
-            >
-              🧪 Simulate Payment (Test)
-            </Button>
-
-            <p className="text-xs text-center text-muted-foreground">
-              Set VITE_PAYMENT_TEST_MODE=false to enable real payments
-            </p>
-          </div>
+          <Button
+            onClick={() => {
+              onPaymentComplete(`test_tx_${Date.now()}`);
+            }}
+            className="w-full"
+          >
+            Simulate Payment
+          </Button>
         </DialogContent>
       </Dialog>
     );
   }
 
-  // Real payment mode - only reached if thirdweb is configured and not in test mode
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Complete Payment</DialogTitle>
-          <DialogDescription>
-            Pay ${PAYMENT_CONFIG.priceUSD} to request a call to{" "}
-            {callDetails.recipientName}
-          </DialogDescription>
-        </DialogHeader>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        {/* Step 1: Select Payment Method */}
+        {step === "select-method" && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Pay ${PAYMENT_CONFIG.priceUSD}</DialogTitle>
+              <DialogDescription>
+                AI Call to {callDetails.recipientName}
+              </DialogDescription>
+            </DialogHeader>
 
-        <div className="mt-4">
-          {paymentStatus === "complete" ? (
-            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
-              <p className="text-green-800 dark:text-green-200 font-medium">
-                ✓ Payment Complete!
-              </p>
-              <p className="text-sm text-green-600 dark:text-green-300 mt-1">
-                Your call request is being processed.
-              </p>
-            </div>
-          ) : paymentStatus === "error" ? (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
-              <p className="text-red-800 dark:text-red-200 font-medium">
-                Payment Failed
-              </p>
-              <p className="text-sm text-red-600 dark:text-red-300 mt-1">
-                Please try again.
-              </p>
-            </div>
-          ) : (
-            <PayEmbed
-              client={thirdwebClient}
-              payOptions={{
-                mode: "direct_payment",
-                paymentInfo: {
-                  amount: PAYMENT_CONFIG.priceUSDC,
-                  chain: base, // Base has low fees
-                  token: {
-                    address: PAYMENT_CONFIG.tokens.base,
-                    name: "USD Coin",
-                    symbol: "USDC",
-                  },
-                  sellerAddress: PAYMENT_CONFIG.sellerAddress,
-                },
-                metadata: {
-                  name: `AI Call to ${callDetails.recipientName}`,
-                  description: "AI-powered phone call with video generation",
-                  image: "/favicon.ico",
-                },
-                purchaseData: {
-                  productType: "ai_call",
-                  recipientName: callDetails.recipientName,
-                },
-                // Crypto-only: disable fiat onramp (credit card redirects to MoonPay etc)
-                buyWithFiat: false,
-                onPurchaseSuccess: (info) => {
-                  console.log("[Payment] Success:", info);
-                  setPaymentStatus("complete");
-                  const txHash =
-                    (info as { transactionHash?: string })?.transactionHash ||
-                    "tx_" + Date.now();
-                  onPaymentComplete(txHash);
-                },
-              }}
-              theme="dark"
-            />
-          )}
-        </div>
+            <div className="mt-4 space-y-3">
+              {/* Credit Card - Disabled */}
+              <Button
+                variant="outline"
+                className="h-14 w-full justify-start gap-3 opacity-50"
+                disabled
+              >
+                <span className="text-xl">💳</span>
+                <div className="text-left">
+                  <div className="font-medium">Pay with Credit Card</div>
+                  <div className="text-xs text-muted-foreground">
+                    Coming soon
+                  </div>
+                </div>
+              </Button>
 
-        <div className="mt-4 text-center text-sm text-muted-foreground">
-          <p>Pay with crypto wallet</p>
-          <p className="text-xs mt-1">9 USDC on Base</p>
-        </div>
+              {/* Crypto */}
+              <Button
+                variant="outline"
+                className="h-14 w-full justify-start gap-3"
+                onClick={() => setStep("select-crypto")}
+              >
+                <span className="text-xl">🪙</span>
+                <div className="text-left">
+                  <div className="font-medium">Pay with Crypto</div>
+                  <div className="text-xs text-muted-foreground">
+                    USDC on Base or Solana
+                  </div>
+                </div>
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Step 2: Select Crypto Chain */}
+        {step === "select-crypto" && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Select Network</DialogTitle>
+              <DialogDescription>
+                Pay {PAYMENT_CONFIG.priceUSD} USDC
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4 space-y-3">
+              {/* Base */}
+              <Button
+                variant="outline"
+                className="h-14 w-full justify-start gap-3"
+                onClick={() => setStep("pay-base")}
+                disabled={!isEvmConfigured()}
+              >
+                <span className="text-xl">🔵</span>
+                <div className="text-left">
+                  <div className="font-medium">Pay on Base</div>
+                  <div className="text-xs text-muted-foreground">
+                    9 USDC • Low fees
+                  </div>
+                </div>
+              </Button>
+
+              {/* Solana */}
+              <Button
+                variant="outline"
+                className="h-14 w-full justify-start gap-3"
+                onClick={() => setStep("pay-solana")}
+                disabled={!isSolanaConfigured()}
+              >
+                <span className="text-xl">◎</span>
+                <div className="text-left">
+                  <div className="font-medium">Pay on Solana</div>
+                  <div className="text-xs text-muted-foreground">
+                    9 USDC • Phantom
+                  </div>
+                </div>
+              </Button>
+
+              {/* Starknet - Coming Soon */}
+              <Button
+                variant="outline"
+                className="h-14 w-full justify-start gap-3 opacity-50"
+                disabled
+              >
+                <span className="text-xl">⬡</span>
+                <div className="text-left">
+                  <div className="font-medium">Pay on Starknet</div>
+                  <div className="text-xs text-muted-foreground">
+                    Coming soon
+                  </div>
+                </div>
+              </Button>
+
+              {/* ZCash - Coming Soon */}
+              <Button
+                variant="outline"
+                className="h-14 w-full justify-start gap-3 opacity-50"
+                disabled
+              >
+                <span className="text-xl">🔒</span>
+                <div className="text-left">
+                  <div className="font-medium">Pay on ZCash</div>
+                  <div className="text-xs text-muted-foreground">
+                    Coming soon
+                  </div>
+                </div>
+              </Button>
+
+              <Button
+                variant="ghost"
+                className="w-full"
+                onClick={() => setStep("select-method")}
+              >
+                ← Back
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* Step 3a: Pay on Base */}
+        {step === "pay-base" && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Pay on Base</DialogTitle>
+              <DialogDescription>
+                Send {PAYMENT_CONFIG.priceUSD} USDC
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4 space-y-4">
+              {paymentStatus === "complete" ? (
+                <div className="rounded-lg bg-green-50 p-4 text-center dark:bg-green-900/20">
+                  <p className="font-medium text-green-800 dark:text-green-200">
+                    ✓ Payment Complete!
+                  </p>
+                </div>
+              ) : paymentStatus === "error" || error ? (
+                <div className="rounded-lg bg-red-50 p-4 text-center dark:bg-red-900/20">
+                  <p className="font-medium text-red-800 dark:text-red-200">
+                    Payment Failed
+                  </p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-300">
+                    {error?.message || "Please try again"}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Price */}
+                  <div className="rounded-lg border bg-muted/50 p-4 text-center">
+                    <p className="text-3xl font-bold">9 USDC</p>
+                    <p className="text-sm text-muted-foreground">on Base</p>
+                  </div>
+
+                  {/* Connect Wallet */}
+                  <div className="flex justify-center">
+                    <ConnectButton />
+                  </div>
+
+                  {/* Pay Button */}
+                  {isConnected && (
+                    <Button
+                      onClick={handleBasePayment}
+                      disabled={isPending || isConfirming}
+                      className="h-12 w-full text-lg"
+                    >
+                      {chainId !== base.id
+                        ? "Switch to Base"
+                        : isPending
+                          ? "Confirm in wallet..."
+                          : isConfirming
+                            ? "Confirming..."
+                            : "Pay 9 USDC"}
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {paymentStatus !== "complete" && (
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => {
+                    setStep("select-crypto");
+                    setPaymentStatus("idle");
+                  }}
+                >
+                  ← Back
+                </Button>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Step 3b: Pay on Solana */}
+        {step === "pay-solana" && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Pay on Solana</DialogTitle>
+              <DialogDescription>
+                Send {PAYMENT_CONFIG.priceUSD} USDC via Phantom
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4 space-y-4">
+              {paymentStatus === "complete" ? (
+                <div className="rounded-lg bg-green-50 p-4 text-center dark:bg-green-900/20">
+                  <p className="font-medium text-green-800 dark:text-green-200">
+                    ✓ Payment Complete!
+                  </p>
+                </div>
+              ) : paymentStatus === "error" ? (
+                <div className="rounded-lg bg-red-50 p-4 text-center dark:bg-red-900/20">
+                  <p className="font-medium text-red-800 dark:text-red-200">
+                    Payment Failed
+                  </p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-300">
+                    Please try again
+                  </p>
+                </div>
+              ) : (
+                <>
+                  {/* Price */}
+                  <div className="rounded-lg border bg-muted/50 p-4 text-center">
+                    <p className="text-3xl font-bold">9 USDC</p>
+                    <p className="text-sm text-muted-foreground">on Solana</p>
+                  </div>
+
+                  {/* Pay Button */}
+                  <Button
+                    onClick={handleSolanaPayment}
+                    disabled={paymentStatus === "processing"}
+                    className="h-12 w-full text-lg"
+                  >
+                    {paymentStatus === "processing" ? (
+                      "Processing..."
+                    ) : (
+                      <>
+                        <span className="mr-2">👻</span>
+                        Connect Phantom & Pay
+                      </>
+                    )}
+                  </Button>
+
+                  <p className="text-center text-xs text-muted-foreground">
+                    Requires Phantom wallet extension
+                  </p>
+                </>
+              )}
+
+              {paymentStatus !== "complete" && (
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => {
+                    setStep("select-crypto");
+                    setPaymentStatus("idle");
+                  }}
+                >
+                  ← Back
+                </Button>
+              )}
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

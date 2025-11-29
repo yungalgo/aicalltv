@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { authQueryOptions } from "~/lib/auth/queries";
 import { createCall } from "~/lib/calls/functions";
 import { VIDEO_STYLES } from "~/lib/constants/video-styles";
-import { PAYMENT_CONFIG } from "~/lib/thirdweb/config";
+import { PAYMENT_CONFIG } from "~/lib/web3/config";
 
 export const Route = createFileRoute("/")({
   component: HomePage,

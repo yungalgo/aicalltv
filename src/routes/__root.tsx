@@ -18,10 +18,10 @@ import appCss from "~/styles.css?url";
 import { ThemeProvider } from "~/components/theme-provider";
 import { Toaster } from "~/components/ui/sonner";
 
-// Lazy load ThirdwebProvider to avoid SSR bundling issues with @noble/hashes
-const ThirdwebProvider = lazy(() =>
-  import("~/components/thirdweb-provider").then((mod) => ({
-    default: mod.ThirdwebProvider,
+// Lazy load Web3Provider to avoid SSR bundling issues
+const Web3Provider = lazy(() =>
+  import("~/components/web3-provider").then((mod) => ({
+    default: mod.Web3Provider,
   })),
 );
 
@@ -80,12 +80,12 @@ function RootDocument({ children }: { readonly children: React.ReactNode }) {
       </head>
       <body>
         <Suspense fallback={null}>
-          <ThirdwebProvider>
-        <ThemeProvider>
-          {children}
-          <Toaster richColors />
-        </ThemeProvider>
-          </ThirdwebProvider>
+          <Web3Provider>
+            <ThemeProvider>
+              {children}
+              <Toaster richColors />
+            </ThemeProvider>
+          </Web3Provider>
         </Suspense>
 
         <TanStackDevtools
