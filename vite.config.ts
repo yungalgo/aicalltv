@@ -30,12 +30,11 @@ export default defineConfig({
       alias: {
         "@noble/hashes/crypto": nobleHashesShim,
       },
-      // Force these packages to be bundled (not externalized)
+      // Force @noble packages to be bundled (not externalized to .nf3/)
       // This ensures our alias is applied
-      inlineDynamicImports: false,
+      noExternal: ["@noble/hashes", "@noble/curves", "@noble/ciphers"],
       // Rollup config to ensure alias is applied
       rollupConfig: {
-        external: [],
         plugins: [
           {
             name: "noble-hashes-alias",
