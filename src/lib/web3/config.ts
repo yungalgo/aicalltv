@@ -5,7 +5,7 @@
 
 import { http, createConfig } from "wagmi";
 import { base } from "wagmi/chains";
-import { metaMaskWallet, coinbaseWallet } from "@rainbow-me/rainbowkit/wallets";
+import { metaMaskWallet } from "@rainbow-me/rainbowkit/wallets";
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 
 // Payment configuration
@@ -40,15 +40,10 @@ export const isEvmConfigured = () => true;
 export const isSolanaConfigured = () => true;
 
 // Wallet connectors - EVM wallets only (no Phantom which is for Solana)
-// Coinbase Wallet is listed first as it provides FREE gas on Base via Paymaster
 const connectors = connectorsForWallets(
   [
     {
-      groupName: "Recommended",
-      wallets: [coinbaseWallet], // Free gas on Base!
-    },
-    {
-      groupName: "Other Wallets",
+      groupName: "EVM Wallets",
       wallets: [metaMaskWallet],
     },
   ],
