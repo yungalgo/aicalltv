@@ -53,6 +53,42 @@ const erc20Abi = [
 
 type PaymentStep = "select-method" | "select-crypto" | "pay-base" | "pay-solana";
 
+// Helper to get user-friendly error message
+function getPaymentErrorMessage(error: Error | null | undefined): { title: string; message: string; isCancelled: boolean } {
+  const errorMsg = error?.message?.toLowerCase() || "";
+  
+  // User rejected/cancelled the transaction
+  if (
+    errorMsg.includes("user rejected") ||
+    errorMsg.includes("user denied") ||
+    errorMsg.includes("rejected the request") ||
+    errorMsg.includes("cancelled") ||
+    errorMsg.includes("canceled")
+  ) {
+    return {
+      title: "Transaction Cancelled",
+      message: "You cancelled the transaction. Click below to try again.",
+      isCancelled: true,
+    };
+  }
+  
+  // Insufficient funds
+  if (errorMsg.includes("insufficient") || errorMsg.includes("not enough")) {
+    return {
+      title: "Insufficient Balance",
+      message: "You don't have enough USDC or ETH for gas fees.",
+      isCancelled: false,
+    };
+  }
+  
+  // Generic error
+  return {
+    title: "Payment Failed",
+    message: "Something went wrong. Please try again.",
+    isCancelled: false,
+  };
+}
+
 export interface PaymentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -409,14 +445,26 @@ export function PaymentModal({
                   </p>
                 </div>
               ) : paymentStatus === "error" || error ? (
-                <div className="rounded-lg bg-red-50 p-4 text-center dark:bg-red-900/20">
-                  <p className="font-medium text-red-800 dark:text-red-200">
-                    Payment Failed
-                  </p>
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-300">
-                    {error?.message || "Please try again"}
-                  </p>
-                </div>
+                (() => {
+                  const errorInfo = getPaymentErrorMessage(error);
+                  return (
+                    <div className={`rounded-lg p-4 text-center ${errorInfo.isCancelled ? "bg-muted" : "bg-red-50 dark:bg-red-900/20"}`}>
+                      <p className={`font-medium ${errorInfo.isCancelled ? "text-foreground" : "text-red-800 dark:text-red-200"}`}>
+                        {errorInfo.title}
+                      </p>
+                      <p className={`mt-1 text-sm ${errorInfo.isCancelled ? "text-muted-foreground" : "text-red-600 dark:text-red-300"}`}>
+                        {errorInfo.message}
+                      </p>
+                      <Button
+                        variant={errorInfo.isCancelled ? "default" : "outline"}
+                        className="mt-3"
+                        onClick={() => setPaymentStatus("idle")}
+                      >
+                        Try Again
+                      </Button>
+                    </div>
+                  );
+                })()
               ) : (
                 <>
                   {/* Price */}
@@ -486,13 +534,19 @@ export function PaymentModal({
                   </p>
                 </div>
               ) : paymentStatus === "error" ? (
-                <div className="rounded-lg bg-red-50 p-4 text-center dark:bg-red-900/20">
-                  <p className="font-medium text-red-800 dark:text-red-200">
-                    Payment Failed
+                <div className="rounded-lg bg-muted p-4 text-center">
+                  <p className="font-medium text-foreground">
+                    Transaction Cancelled
                   </p>
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-300">
-                    Please try again
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    You cancelled the transaction. Click below to try again.
                   </p>
+                  <Button
+                    className="mt-3"
+                    onClick={() => setPaymentStatus("idle")}
+                  >
+                    Try Again
+                  </Button>
                 </div>
               ) : (
                 <>
