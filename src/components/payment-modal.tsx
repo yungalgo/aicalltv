@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CheckoutWidget } from "thirdweb/react";
-import { polygon } from "thirdweb/chains";
+import { PayEmbed } from "thirdweb/react";
+import { base } from "thirdweb/chains";
 import { thirdwebClient } from "~/lib/thirdweb/client";
 import {
   PAYMENT_CONFIG,
@@ -126,25 +126,39 @@ export function PaymentModal({
               </p>
             </div>
           ) : (
-            <CheckoutWidget
+            <PayEmbed
               client={thirdwebClient}
-              chain={polygon}
-              amount={PAYMENT_CONFIG.priceUSDC}
-              seller={PAYMENT_CONFIG.sellerAddress}
-              name={`AI Call to ${callDetails.recipientName}`}
-              description="AI-powered phone call with video generation"
-              image="/favicon.ico"
-              purchaseData={{
-                productType: "ai_call",
-                recipientName: callDetails.recipientName,
-              }}
-              onSuccess={(result) => {
-                console.log("[Payment] Success:", result);
-                setPaymentStatus("complete");
-                const txHash =
-                  result?.statuses?.[0]?.transactions?.[0]?.transactionHash ||
-                  "tx_" + Date.now();
-                onPaymentComplete(txHash);
+              payOptions={{
+                mode: "direct_payment",
+                paymentInfo: {
+                  amount: PAYMENT_CONFIG.priceUSDC,
+                  chain: base, // Base has low fees
+                  token: {
+                    address: PAYMENT_CONFIG.tokens.base,
+                    name: "USD Coin",
+                    symbol: "USDC",
+                  },
+                  sellerAddress: PAYMENT_CONFIG.sellerAddress,
+                },
+                metadata: {
+                  name: `AI Call to ${callDetails.recipientName}`,
+                  description: "AI-powered phone call with video generation",
+                  image: "/favicon.ico",
+                },
+                purchaseData: {
+                  productType: "ai_call",
+                  recipientName: callDetails.recipientName,
+                },
+                // Crypto-only: disable fiat onramp (credit card redirects to MoonPay etc)
+                buyWithFiat: false,
+                onPurchaseSuccess: (info) => {
+                  console.log("[Payment] Success:", info);
+                  setPaymentStatus("complete");
+                  const txHash =
+                    (info as { transactionHash?: string })?.transactionHash ||
+                    "tx_" + Date.now();
+                  onPaymentComplete(txHash);
+                },
               }}
               theme="dark"
             />
@@ -152,8 +166,8 @@ export function PaymentModal({
         </div>
 
         <div className="mt-4 text-center text-sm text-muted-foreground">
-          <p>Pay with credit card or crypto wallet</p>
-          <p className="text-xs mt-1">Powered by thirdweb</p>
+          <p>Pay with crypto wallet</p>
+          <p className="text-xs mt-1">9 USDC on Base</p>
         </div>
       </DialogContent>
     </Dialog>
