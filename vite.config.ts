@@ -11,11 +11,7 @@ import tsConfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
   plugins: [
     devtools(),
-    nitro({
-      // Mark @noble packages as external - let Node.js resolve them at runtime
-      // This avoids the ERR_PACKAGE_PATH_NOT_EXPORTED error
-      externals: ["@noble/hashes", "@noble/curves", "@noble/ciphers"],
-    }),
+    nitro(),
     tsConfigPaths({
       projects: ["./tsconfig.json"],
     }),
