@@ -207,16 +207,19 @@ export function PaymentModal({
         (tx) => appendTransactionMessageInstruction(transferIx, tx)
       );
 
-      // Compile transaction to bytes
+      // Compile transaction to wire format
       const compiledTx = compileTransaction(transactionMessage);
+      
+      // Encode to bytes that Phantom can understand
+      const { getTransactionEncoder } = await import("gill");
+      const encoder = getTransactionEncoder();
+      const txBytes = encoder.encode(compiledTx);
 
+      console.log("[Solana] Transaction size:", txBytes.length, "bytes");
       console.log("[Solana] Requesting signature from Phantom...");
 
-      // Phantom's signAndSendTransaction expects a versioned transaction
-      // We pass the compiled transaction bytes directly
-      const { signature } = await provider.signAndSendTransaction({
-        serialize: () => compiledTx.messageBytes,
-      });
+      // Phantom can sign and send versioned transaction bytes
+      const { signature } = await provider.signAndSendTransaction(txBytes);
 
       console.log("[Solana] Sent! Signature:", signature);
       console.log("[Solana] https://solscan.io/tx/" + signature);
