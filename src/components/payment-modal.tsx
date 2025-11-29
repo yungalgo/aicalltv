@@ -29,14 +29,11 @@ import { useWalletUi, useWalletUiSigner, WalletUiDropdown, type UiWalletAccount 
 import { useWalletUiGill } from "@wallet-ui/react-gill";
 import {
   address as toAddress,
-  createTransaction,
   getBase58Decoder,
   signAndSendTransactionMessageWithSigners,
 } from "gill";
 import {
-  getAssociatedTokenAccountAddress,
-  getTransferInstruction,
-  getCreateAssociatedTokenIdempotentInstruction,
+  buildTransferTokensTransaction,
   TOKEN_PROGRAM_ADDRESS,
 } from "gill/programs/token";
 
@@ -93,40 +90,22 @@ function SolanaPayButton({
       const recipientAddress = toAddress(PAYMENT_CONFIG.solanaAddress);
       const tokenProgram = TOKEN_PROGRAM_ADDRESS;
 
-      // Get associated token accounts
-      const sourceAta = await getAssociatedTokenAccountAddress(USDC_MINT, signer.address, tokenProgram);
-      const destinationAta = await getAssociatedTokenAccountAddress(USDC_MINT, recipientAddress, tokenProgram);
-
-      console.log("[Solana] From ATA:", sourceAta);
-      console.log("[Solana] To ATA:", destinationAta);
       console.log("[Solana] Recipient:", PAYMENT_CONFIG.solanaAddress);
 
       // Get latest blockhash
       const { value: latestBlockhash } = await client.rpc.getLatestBlockhash({ commitment: "confirmed" }).send();
       console.log("[Solana] Blockhash:", latestBlockhash.blockhash);
 
-      // Build transaction exactly like the gill token transfer example
-      const transaction = createTransaction({
+      // Build transaction using the gill builder (exactly like the example)
+      const transaction = await buildTransferTokensTransaction({
         feePayer: signer,
         version: "legacy",
-        instructions: [
-          // Create destination ATA if it doesn't exist (idempotent - won't fail if already exists)
-          getCreateAssociatedTokenIdempotentInstruction({
-            mint: USDC_MINT,
-            payer: signer,
-            tokenProgram,
-            owner: recipientAddress,
-            ata: destinationAta,
-          }),
-          // Transfer 9 USDC (9,000,000 with 6 decimals)
-          getTransferInstruction({
-            source: sourceAta,
-            authority: signer,
-            destination: destinationAta,
-            amount: BigInt(9_000_000),
-          }),
-        ],
         latestBlockhash,
+        amount: 9_000_000, // 9 USDC (6 decimals)
+        authority: signer,
+        destination: recipientAddress,
+        mint: USDC_MINT,
+        tokenProgram,
       });
 
       console.log("[Solana] Requesting signature...");
