@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Button } from "~/components/ui/button";
-import { useWalletUi, useWalletUiSigner, WalletUiList, type UiWalletAccount } from "@wallet-ui/react";
+import { useWalletUi, useWalletUiSigner, type UiWalletAccount } from "@wallet-ui/react";
 import { useWalletUiGill } from "@wallet-ui/react-gill";
 import {
   address as toAddress,
@@ -97,6 +97,57 @@ export interface PaymentModalProps {
   callDetails: {
     recipientName: string;
   };
+}
+
+// Phantom connect button component
+function PhantomConnectButton({
+  phantomWallets,
+  onConnect,
+}: {
+  phantomWallets: ReturnType<typeof useWalletUi>['wallets'];
+  onConnect: (account: UiWalletAccount) => void;
+}) {
+  const [isConnecting, setIsConnecting] = useState(false);
+
+  const handleConnect = async () => {
+    if (phantomWallets.length === 0) {
+      window.open("https://phantom.app/", "_blank");
+      return;
+    }
+
+    const phantom = phantomWallets[0];
+    setIsConnecting(true);
+    
+    try {
+      // Connect to Phantom and get accounts
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const connectFeature = (phantom.features as any)['standard:connect'];
+      if (connectFeature) {
+        const result = await connectFeature.connect();
+        if (result.accounts.length > 0) {
+          onConnect(result.accounts[0] as UiWalletAccount);
+        }
+      }
+    } catch (err) {
+      console.error("[Phantom] Connect error:", err);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  return (
+    <Button
+      onClick={handleConnect}
+      disabled={isConnecting}
+      className="h-12 w-full text-lg"
+    >
+      {isConnecting 
+        ? "Connecting..." 
+        : phantomWallets.length > 0 
+          ? "Connect Phantom" 
+          : "Install Phantom Wallet"}
+    </Button>
+  );
 }
 
 // Separate component for Solana payment button that uses the signer hook
@@ -632,20 +683,10 @@ export function PaymentModal({
 
                   {/* Connect or Pay Button */}
                   {!solanaAccount ? (
-                    phantomWallets.length > 0 ? (
-                      <WalletUiList 
-                        wallets={phantomWallets} 
-                        select={async (account) => connect(account)}
-                        className="flex justify-center"
-                      />
-                    ) : (
-                      <Button
-                        onClick={() => window.open("https://phantom.app/", "_blank")}
-                        className="h-12 w-full text-lg"
-                      >
-                        Install Phantom Wallet
-                      </Button>
-                    )
+                    <PhantomConnectButton 
+                      phantomWallets={phantomWallets}
+                      onConnect={connect}
+                    />
                   ) : (
                     <SolanaPayButton
                       account={solanaAccount}
