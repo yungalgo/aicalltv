@@ -211,7 +211,7 @@ export function PaymentModal({
   const { address, isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChainAsync } = useSwitchChain();
-  const { writeContract, data: txHash, isPending, error } = useWriteContract();
+  const { writeContract, data: txHash, isPending, error, reset: resetWriteContract } = useWriteContract();
 
   // Wait for transaction confirmation
   const { isLoading: isConfirming, isSuccess: isConfirmed } =
@@ -232,6 +232,7 @@ export function PaymentModal({
     if (!isOpen) {
       setStep("select-method");
       setPaymentStatus("idle");
+      resetWriteContract(); // Reset wagmi error state
     }
     onOpenChange(isOpen);
   };
