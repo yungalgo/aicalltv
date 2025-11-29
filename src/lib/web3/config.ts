@@ -6,7 +6,6 @@
 import { http, createConfig } from "wagmi";
 import { base } from "wagmi/chains";
 import {
-  injectedWallet,
   metaMaskWallet,
   coinbaseWallet,
   rabbyWallet,
@@ -44,12 +43,12 @@ export const isPaymentTestMode = () =>
 export const isEvmConfigured = () => true;
 export const isSolanaConfigured = () => true;
 
-// Wallet connectors - browser extension wallets only (no WalletConnect needed)
+// Wallet connectors - EVM wallets only (no Phantom which is for Solana)
 const connectors = connectorsForWallets(
   [
     {
-      groupName: "Popular",
-      wallets: [metaMaskWallet, coinbaseWallet, rabbyWallet, injectedWallet],
+      groupName: "EVM Wallets",
+      wallets: [metaMaskWallet, coinbaseWallet, rabbyWallet],
     },
   ],
   {
