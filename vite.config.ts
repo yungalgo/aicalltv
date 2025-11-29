@@ -8,6 +8,11 @@ import tsConfigPaths from "vite-tsconfig-paths";
 
 import path from "node:path";
 
+const nobleHashesShim = path.resolve(
+  __dirname,
+  "src/lib/shims/noble-hashes-crypto.ts",
+);
+
 // Plugin order matches official TanStack Start template
 // https://tanstack.com/start/latest/docs/framework/react/guide/hosting
 export default defineConfig({
@@ -15,21 +20,29 @@ export default defineConfig({
     alias: {
       // Fix @noble/hashes/crypto ESM subpath export issue
       // Some versions don't export ./crypto, so we provide a shim
-      "@noble/hashes/crypto": path.resolve(
-        __dirname,
-        "src/lib/shims/noble-hashes-crypto.ts",
-      ),
+      "@noble/hashes/crypto": nobleHashesShim,
     },
   },
   plugins: [
     devtools(),
     nitro({
-      // Also add alias to Nitro bundler
+      // Alias for Nitro bundler
       alias: {
-        "@noble/hashes/crypto": path.resolve(
-          __dirname,
-          "src/lib/shims/noble-hashes-crypto.ts",
-        ),
+        "@noble/hashes/crypto": nobleHashesShim,
+      },
+      // Rollup config to ensure alias is applied
+      rollupConfig: {
+        plugins: [
+          {
+            name: "noble-hashes-alias",
+            resolveId(source) {
+              if (source === "@noble/hashes/crypto") {
+                return nobleHashesShim;
+              }
+              return null;
+            },
+          },
+        ],
       },
     }),
     tsConfigPaths({

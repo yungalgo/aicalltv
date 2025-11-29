@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "postinstall": "node scripts/patch-noble-hashes.mjs",
     "dev": "vite dev --port 3000",
     "dev:ws": "bun run server-ws.ts",
     "worker": "bun run src/worker.ts",
