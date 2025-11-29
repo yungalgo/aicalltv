@@ -25,24 +25,10 @@ export default defineConfig({
   },
   plugins: [
     devtools(),
+    // Nitro without rollup plugin to avoid pg bundling issues
     nitro({
-      // Alias for Nitro bundler
       alias: {
         "@noble/hashes/crypto": nobleHashesShim,
-      },
-      // Rollup config to ensure alias is applied
-      rollupConfig: {
-        plugins: [
-          {
-            name: "noble-hashes-alias",
-            resolveId(source) {
-              if (source === "@noble/hashes/crypto") {
-                return nobleHashesShim;
-              }
-              return null;
-            },
-          },
-        ],
       },
     }),
     tsConfigPaths({
