@@ -459,7 +459,10 @@ export function PaymentModal({
                       <Button
                         variant={errorInfo.isCancelled ? "default" : "outline"}
                         className="mt-3"
-                        onClick={() => setPaymentStatus("idle")}
+                        onClick={() => {
+                          setPaymentStatus("idle");
+                          resetWriteContract();
+                        }}
                       >
                         Try Again
                       </Button>
@@ -508,6 +511,7 @@ export function PaymentModal({
                   onClick={() => {
                     setStep("select-crypto");
                     setPaymentStatus("idle");
+                    resetWriteContract();
                   }}
                 >
                   ← Back
