@@ -2,6 +2,9 @@
   "name": "tanstarter",
   "private": true,
   "type": "module",
+  "overrides": {
+    "@noble/hashes": "1.8.0"
+  },
   "scripts": {
     "dev": "vite dev --port 3000",
     "dev:ws": "bun run server-ws.ts",
@@ -28,6 +31,9 @@
     "@aws-sdk/s3-request-presigner": "^3.937.0",
     "@coinbase/wallet-sdk": "^4.3.7",
     "@metamask/sdk": "^0.34.0",
+    "@noble/ciphers": "^2.0.1",
+    "@noble/curves": "^2.0.1",
+    "@noble/hashes": "^2.0.1",
     "@phantom/wallet-sdk": "^0.1.2",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
