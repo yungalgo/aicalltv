@@ -125,13 +125,58 @@ app.get('/check-payment', async (req, res) => {
   try {
     // Get all notes
     const output = await runZingo('notes');
-    const notes = parseZingoOutput(output);
+    let notes = parseZingoOutput(output);
+    
+    // zingo-cli outputs log messages with JSON - extract JSON if needed
+    if (typeof notes === 'string') {
+      const jsonMatch = notes.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          notes = JSON.parse(jsonMatch[0]);
+        } catch (e) {
+          console.error('[check-payment] Failed to parse JSON from output');
+        }
+      }
+    }
+    
+    console.log('[check-payment] Looking for memo:', memo);
     
     // Search for a note with matching memo
-    // Note format varies, this handles common cases
+    // zingo-cli returns: { orchard_notes: { note_summaries: [...] }, sapling_notes: { note_summaries: [...] } }
     let found = null;
     
-    if (notes.pending_notes) {
+    // Check Orchard notes
+    if (notes.orchard_notes?.note_summaries) {
+      for (const note of notes.orchard_notes.note_summaries) {
+        if (note.memo && note.memo.includes(memo)) {
+          found = { 
+            ...note, 
+            status: note.status?.includes('confirmed') ? 'confirmed' : 'pending',
+            pool: 'orchard'
+          };
+          console.log('[check-payment] Found in Orchard:', found);
+          break;
+        }
+      }
+    }
+    
+    // Check Sapling notes if not found in Orchard
+    if (!found && notes.sapling_notes?.note_summaries) {
+      for (const note of notes.sapling_notes.note_summaries) {
+        if (note.memo && note.memo.includes(memo)) {
+          found = { 
+            ...note, 
+            status: note.status?.includes('confirmed') ? 'confirmed' : 'pending',
+            pool: 'sapling'
+          };
+          console.log('[check-payment] Found in Sapling:', found);
+          break;
+        }
+      }
+    }
+    
+    // Legacy format fallback (pending_notes, unspent_notes)
+    if (!found && notes.pending_notes) {
       for (const note of notes.pending_notes) {
         if (note.memo && note.memo.includes(memo)) {
           found = { ...note, status: 'pending' };

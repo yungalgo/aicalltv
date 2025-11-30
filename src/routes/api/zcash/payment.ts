@@ -55,17 +55,15 @@ export const Route = createFileRoute("/api/zcash/payment")({
         // Check payment status
         if (action === "check" && orderId) {
           const pending = pendingPayments.get(orderId);
-          if (!pending) {
-            return new Response(
-              JSON.stringify({ error: "Order not found" }),
-              { status: 404, headers: { "Content-Type": "application/json" } }
-            );
-          }
+          
+          // Reconstruct memo even if not in map (handles server restarts)
+          const memo = pending?.memo || `AICALLTV:${orderId}`;
+          console.log("[ZCash] Checking payment for memo:", memo);
 
           try {
             // Check with zcash service
             const response = await fetch(
-              `${ZCASH_SERVICE_URL}/check-payment?memo=${encodeURIComponent(pending.memo)}`
+              `${ZCASH_SERVICE_URL}/check-payment?memo=${encodeURIComponent(memo)}`
             );
             
             if (!response.ok) {
