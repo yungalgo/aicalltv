@@ -130,13 +130,48 @@ export const Route = createFileRoute("/api/zcash/payment")({
           if (!addressResponse.ok) {
             throw new Error("Failed to get ZCash address");
           }
-          const addresses = await addressResponse.json();
+          let addresses = await addressResponse.json();
+          console.log("[ZCash] Raw addresses response type:", typeof addresses);
           
-          // Get the unified or shielded address
-          const address = addresses.z_address || addresses.unified_address || addresses[0];
+          // zingo-cli outputs log messages along with JSON - need to extract the JSON
+          if (typeof addresses === 'string') {
+            // Try to find JSON array or object in the string
+            const jsonMatch = addresses.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
+            if (jsonMatch) {
+              try {
+                addresses = JSON.parse(jsonMatch[0]);
+                console.log("[ZCash] Extracted JSON from string:", JSON.stringify(addresses));
+              } catch {
+                console.log("[ZCash] Failed to parse extracted JSON");
+              }
+            }
+          }
           
-          if (!address) {
-            throw new Error("No ZCash address available");
+          // Extract address from various zingo-cli output formats
+          let address: string | undefined;
+          
+          if (typeof addresses === 'string') {
+            // Simple string address (shouldn't happen after above parsing)
+            address = addresses;
+          } else if (Array.isArray(addresses)) {
+            // Array format: [{encoded_address: "u1...", ...}, ...] or ["u1...", ...]
+            const first = addresses[0];
+            if (typeof first === 'string') {
+              address = first;
+            } else if (first && typeof first === 'object') {
+              // zingo-cli returns {encoded_address: "...", ...}
+              address = first.encoded_address || first.address || first.ua || first.z_address;
+            }
+          } else if (typeof addresses === 'object') {
+            // Object format: {encoded_address: "u1...", z_address: "zs...", ua: "u1..."}
+            address = addresses.encoded_address || addresses.ua || addresses.unified_address || addresses.z_address || addresses.address;
+          }
+          
+          console.log("[ZCash] Extracted address:", address);
+          
+          if (!address || typeof address !== 'string') {
+            console.error("[ZCash] Could not extract valid address from:", addresses);
+            throw new Error("No valid ZCash address available");
           }
 
           // Calculate ZEC amount (using CoinGecko or hardcoded for hackathon)
