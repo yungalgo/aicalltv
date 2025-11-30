@@ -164,13 +164,21 @@ export const Route = createFileRoute("/api/zcash/payment")({
           }
 
           // Return payment details for QR code
+          // ZIP-321: memo must be base64url-encoded (not URL-encoded)
+          // Convert memo string to bytes, then base64url encode
+          const memoBytes = new TextEncoder().encode(memo);
+          const base64Memo = btoa(String.fromCharCode(...memoBytes))
+            .replace(/\+/g, '-')  // base64url uses - instead of +
+            .replace(/\//g, '_')  // base64url uses _ instead of /
+            .replace(/=+$/, '');  // remove padding
+          
           return new Response(JSON.stringify({
             orderId,
             address,
             amount: zecAmount,
             memo,
-            // ZCash URI format for wallet scanning
-            uri: `zcash:${address}?amount=${zecAmount}&memo=${encodeURIComponent(memo)}`,
+            // ZCash URI format (ZIP-321) for wallet scanning
+            uri: `zcash:${address}?amount=${zecAmount}&memo=${base64Memo}`,
           }), { headers: { "Content-Type": "application/json" } });
         } catch (error) {
           console.error("[ZCash] Error creating payment:", error);
