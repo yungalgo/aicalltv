@@ -9,7 +9,6 @@ import {
   useSwitchChain,
   useChainId,
 } from "wagmi";
-import { parseUnits } from "viem";
 import {
   PAYMENT_CONFIG,
   isEvmConfigured,
@@ -189,7 +188,7 @@ function SolanaPayButton({
         feePayer: signer,
         version: "legacy",
         latestBlockhash,
-        amount: 9_000_000, // 9 USDC (6 decimals)
+        amount: PAYMENT_CONFIG.priceUsdcAtomic,
         authority: signer,
         destination: recipientAddress,
         mint: USDC_MINT,
@@ -240,7 +239,7 @@ function SolanaPayButton({
             paymentMethod: "sol",
             paymentRef: signature,
             network: "solana",
-            amountCents: 900, // $9.00
+            amountCents: PAYMENT_CONFIG.priceCents,
           },
         });
         console.log("[Solana] Credit created successfully");
@@ -263,7 +262,7 @@ function SolanaPayButton({
       disabled={paymentStatus === "processing"}
       className="h-12 w-full text-lg"
     >
-      {paymentStatus === "processing" ? "Processing..." : "Pay 9 USDC"}
+      {paymentStatus === "processing" ? "Processing..." : `Pay ${PAYMENT_CONFIG.priceDisplay} USDC`}
     </Button>
   );
 }
@@ -309,7 +308,7 @@ export function PaymentModal({
               paymentMethod: "web3_wallet",
               paymentRef: txHash,
               network: "base",
-              amountCents: 900, // $9.00
+              amountCents: PAYMENT_CONFIG.priceCents,
             },
           });
           console.log("[Base] Credit created successfully");
@@ -361,7 +360,7 @@ export function PaymentModal({
         functionName: "transfer",
         args: [
           PAYMENT_CONFIG.evmAddress,
-          parseUnits("9", 6), // 9 USDC (6 decimals)
+          BigInt(PAYMENT_CONFIG.priceUsdcAtomic),
         ],
         chain: base, // Pass chain object instead of chainId
       });
@@ -399,7 +398,7 @@ export function PaymentModal({
                     paymentMethod: "free",
                     paymentRef: testTxHash,
                     network: "test",
-                    amountCents: 900,
+                    amountCents: PAYMENT_CONFIG.priceCents,
                   },
                 });
                 console.log("[Test] Credit created");
@@ -486,7 +485,7 @@ export function PaymentModal({
                 <div className="text-left">
                   <div className="font-medium">Pay on Base</div>
                   <div className="text-xs text-muted-foreground">
-                    9 USDC • Low fees
+                    {PAYMENT_CONFIG.priceDisplay} USDC • Low fees
                   </div>
                 </div>
               </Button>
@@ -502,7 +501,7 @@ export function PaymentModal({
                 <div className="text-left">
                   <div className="font-medium">Pay on Solana</div>
                   <div className="text-xs text-muted-foreground">
-                    9 USDC • Phantom
+                    {PAYMENT_CONFIG.priceDisplay} USDC • Phantom
                   </div>
                 </div>
               </Button>
@@ -593,7 +592,7 @@ export function PaymentModal({
                 <>
                   {/* Price */}
                   <div className="rounded-lg border bg-muted/50 p-4 text-center">
-                    <p className="text-3xl font-bold">9 USDC</p>
+                    <p className="text-3xl font-bold">{PAYMENT_CONFIG.priceDisplay} USDC</p>
                     <p className="text-sm text-muted-foreground">on Base</p>
                   </div>
 
@@ -616,7 +615,7 @@ export function PaymentModal({
                                 ? "Confirm in wallet..."
                                 : isConfirming
                                   ? "Confirming..."
-                                  : "Pay 9 USDC"}
+                                  : `Pay ${PAYMENT_CONFIG.priceDisplay} USDC`}
                         </Button>
                       );
                     }}
@@ -677,7 +676,7 @@ export function PaymentModal({
                 <>
                   {/* Price */}
                   <div className="rounded-lg border bg-muted/50 p-4 text-center">
-                    <p className="text-3xl font-bold">9 USDC</p>
+                    <p className="text-3xl font-bold">{PAYMENT_CONFIG.priceDisplay} USDC</p>
                     <p className="text-sm text-muted-foreground">on Solana</p>
                   </div>
 

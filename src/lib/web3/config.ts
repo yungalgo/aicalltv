@@ -9,10 +9,23 @@ import { metaMaskWallet } from "@rainbow-me/rainbowkit/wallets";
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 
 // Payment configuration
+// SINGLE SOURCE OF TRUTH for pricing - all other values are derived from priceUSD
 export const PAYMENT_CONFIG = {
-  priceUSD: 9,
-  priceUSDC: "9000000", // 9 USDC (6 decimals for EVM)
-  priceUSDCSolana: "9000000", // 9 USDC (6 decimals for Solana)
+  // TODO: Change back to 9 for production ($9.00 per call)
+  priceUSD: 0.09, // $0.09 for testing
+
+  // Derived values - computed from priceUSD
+  get priceCents(): number {
+    return Math.round(this.priceUSD * 100);
+  },
+  get priceUsdcAtomic(): number {
+    // USDC has 6 decimals on both Base and Solana
+    return Math.round(this.priceUSD * 1_000_000);
+  },
+  get priceDisplay(): string {
+    // Format for display (e.g., "0.09" or "9")
+    return this.priceUSD % 1 === 0 ? String(this.priceUSD) : this.priceUSD.toFixed(2);
+  },
 
   // EVM seller address (Base) - from env var
   get evmAddress(): `0x${string}` {
