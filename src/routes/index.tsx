@@ -96,8 +96,8 @@ function CallRequestForm() {
       toast.success("🎉 Payment successful! Your AI call is being processed.", {
         duration: 5000,
       });
-      // Refresh calls table
-      queryClient.invalidateQueries({ queryKey: ["calls"] });
+      // Force immediate refetch of calls table
+      queryClient.refetchQueries({ queryKey: ["calls"] });
       // Clean up URL (remove ?payment=success)
       window.history.replaceState({}, "", "/");
     } else if (search.payment === "cancelled") {
@@ -196,8 +196,8 @@ function CallRequestForm() {
         }
       );
 
-      // Invalidate calls query to refresh the table
-      queryClient.invalidateQueries({ queryKey: ["calls"] });
+      // Force immediate refetch of calls table
+      await queryClient.refetchQueries({ queryKey: ["calls"] });
 
       // Reset form
       setFormData({
