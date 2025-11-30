@@ -51,7 +51,7 @@ const erc20Abi = [
   },
 ] as const;
 
-type PaymentStep = "select-method" | "select-crypto" | "pay-base" | "pay-solana" | "pay-stripe";
+type PaymentStep = "select-method" | "select-crypto" | "pay-base" | "pay-solana" | "pay-stripe" | "pay-zcash";
 
 // Helper to get user-friendly error message
 function getPaymentErrorMessage(error: Error | null | undefined): { title: string; message: string; isCancelled: boolean } {
@@ -528,17 +528,17 @@ export function PaymentModal({
                 </div>
               </Button>
 
-              {/* ZCash - Coming Soon */}
+              {/* ZCash - Shielded Payments */}
               <Button
                 variant="outline"
-                className="h-14 w-full justify-start gap-3 opacity-50"
-                disabled
+                className="h-14 w-full justify-start gap-3"
+                onClick={() => setStep("pay-zcash")}
               >
                 <span className="text-xl">🔒</span>
                 <div className="text-left">
                   <div className="font-medium">Pay on ZCash</div>
                   <div className="text-xs text-muted-foreground">
-                    Coming soon
+                    Shielded • Private
                   </div>
                 </div>
               </Button>
@@ -835,7 +835,225 @@ export function PaymentModal({
             </div>
           </>
         )}
+
+        {/* Step: Pay with ZCash */}
+        {step === "pay-zcash" && (
+          <ZCashPaymentStep
+            callDetails={callDetails}
+            onPaymentComplete={async (txRef) => {
+              // Create credit
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await (createCredit as any)({
+                  data: {
+                    paymentMethod: "zcash",
+                    paymentRef: txRef,
+                    network: "zcash",
+                    amountCents: PAYMENT_CONFIG.priceCents,
+                  },
+                });
+                onPaymentComplete(txRef);
+              } catch (err) {
+                console.error("[ZCash] Failed to create credit:", err);
+              }
+            }}
+            onBack={() => {
+              setStep("select-crypto");
+              setPaymentStatus("idle");
+            }}
+          />
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ZCash Payment Step Component
+function ZCashPaymentStep({
+  callDetails,
+  onPaymentComplete,
+  onBack,
+}: {
+  callDetails: PaymentModalProps["callDetails"];
+  onPaymentComplete: (txRef: string) => void;
+  onBack: () => void;
+}) {
+  const [status, setStatus] = useState<"loading" | "ready" | "polling" | "confirmed" | "error">("loading");
+  const [paymentData, setPaymentData] = useState<{
+    orderId: string;
+    address: string;
+    amount: string;
+    memo: string;
+    uri: string;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Create payment request on mount
+  useEffect(() => {
+    async function createPayment() {
+      try {
+        const response = await fetch("/api/zcash/payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            formData: {
+              recipientName: callDetails.recipientName,
+              phoneNumber: callDetails.phoneNumber,
+              targetGender: callDetails.targetGender,
+              targetGenderCustom: callDetails.targetGenderCustom,
+              targetAgeRange: callDetails.targetAgeRange,
+              interestingPiece: callDetails.interestingPiece,
+              videoStyle: callDetails.videoStyle,
+              anythingElse: callDetails.anythingElse,
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to create payment request");
+        }
+
+        const data = await response.json();
+        setPaymentData(data);
+        setStatus("ready");
+      } catch (err) {
+        console.error("[ZCash] Error creating payment:", err);
+        setError(err instanceof Error ? err.message : "Failed to create payment");
+        setStatus("error");
+      }
+    }
+
+    createPayment();
+
+    // Cleanup polling on unmount
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, [callDetails]);
+
+  // Start polling for payment
+  const startPolling = () => {
+    if (!paymentData) return;
+    
+    setStatus("polling");
+
+    pollIntervalRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(
+          `/api/zcash/payment?action=check&orderId=${paymentData.orderId}`
+        );
+        
+        if (!response.ok) return;
+        
+        const result = await response.json();
+        
+        if (result.status === "confirmed") {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+          }
+          setStatus("confirmed");
+          onPaymentComplete(paymentData.orderId);
+        }
+      } catch (err) {
+        console.error("[ZCash] Polling error:", err);
+      }
+    }, 5000); // Poll every 5 seconds
+  };
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle>Pay with ZCash</DialogTitle>
+        <DialogDescription>
+          Scan with Zashi, YWallet, or any ZCash wallet
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="mt-4 space-y-4">
+        {status === "loading" && (
+          <div className="flex items-center justify-center py-8">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          </div>
+        )}
+
+        {status === "error" && (
+          <div className="rounded-lg bg-red-50 p-4 text-center dark:bg-red-900/20">
+            <p className="font-medium text-red-800 dark:text-red-200">
+              {error || "Failed to create payment"}
+            </p>
+            <Button variant="outline" className="mt-3" onClick={onBack}>
+              Go Back
+            </Button>
+          </div>
+        )}
+
+        {status === "confirmed" && (
+          <div className="rounded-lg bg-green-50 p-4 text-center dark:bg-green-900/20">
+            <p className="font-medium text-green-800 dark:text-green-200">
+              ✓ Payment Confirmed!
+            </p>
+          </div>
+        )}
+
+        {(status === "ready" || status === "polling") && paymentData && (
+          <>
+            {/* QR Code */}
+            <div className="flex flex-col items-center gap-4">
+              <div className="rounded-lg border-2 border-dashed border-muted-foreground/30 p-4">
+                {/* QR Code - using a simple placeholder, you can add qrcode.react */}
+                <div className="flex h-48 w-48 items-center justify-center bg-white">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(paymentData.uri)}`}
+                    alt="ZCash Payment QR Code"
+                    className="h-full w-full"
+                  />
+                </div>
+              </div>
+
+              {/* Amount */}
+              <div className="text-center">
+                <p className="text-2xl font-bold">{paymentData.amount} ZEC</p>
+                <p className="text-sm text-muted-foreground">≈ ${PAYMENT_CONFIG.priceDisplay} USD</p>
+              </div>
+
+              {/* Address (truncated) */}
+              <div className="w-full rounded-lg bg-muted/50 p-3">
+                <p className="text-xs text-muted-foreground">Send to:</p>
+                <p className="break-all font-mono text-xs">
+                  {paymentData.address.slice(0, 20)}...{paymentData.address.slice(-20)}
+                </p>
+              </div>
+
+              {/* Memo */}
+              <div className="w-full rounded-lg bg-muted/50 p-3">
+                <p className="text-xs text-muted-foreground">Memo (required):</p>
+                <p className="font-mono text-sm">{paymentData.memo}</p>
+              </div>
+            </div>
+
+            {/* Status */}
+            {status === "polling" ? (
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                Waiting for payment confirmation...
+              </div>
+            ) : (
+              <Button onClick={startPolling} className="w-full">
+                I&apos;ve Sent the Payment
+              </Button>
+            )}
+          </>
+        )}
+
+        {status !== "confirmed" && (
+          <Button variant="ghost" className="w-full" onClick={onBack}>
+            ← Back
+          </Button>
+        )}
+      </div>
+    </>
   );
 }

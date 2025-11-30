@@ -47,6 +47,9 @@ export const env = createEnv({
     // Stripe configuration (for credit card payments)
     STRIPE_SECRET_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
+
+    // ZCash service URL (for ZCash payments via zingolib)
+    ZCASH_SERVICE_URL: z.string().optional(),
   },
   runtimeEnv: process.env,
 });

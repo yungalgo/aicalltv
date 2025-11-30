@@ -1,0 +1,16 @@
+{
+  "name": "zcash-payment-service",
+  "version": "1.0.0",
+  "description": "ZCash payment detection service using zingo-cli",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  }
+}
+
