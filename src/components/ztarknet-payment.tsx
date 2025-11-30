@@ -292,6 +292,20 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
               </p>
             </div>
 
+            {/* Network warning */}
+            <div className="rounded-lg border border-orange-300 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-700 p-3">
+              <p className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                ⚠️ Make sure you're on Ztarknet network!
+              </p>
+              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                In Ready Wallet → Settings → Networks → Add:
+              </p>
+              <ul className="text-xs text-orange-600 dark:text-orange-400 mt-1 space-y-0.5 font-mono">
+                <li>RPC: {ZTARKNET_CONFIG.rpcUrl}</li>
+                <li>Fee Token: {ZTARKNET_CONFIG.ztfTokenAddress.slice(0, 12)}...</li>
+              </ul>
+            </div>
+
             <Button
               onClick={handlePayment}
               className="h-12 w-full text-lg"
