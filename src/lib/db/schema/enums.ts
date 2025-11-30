@@ -14,6 +14,7 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "sol",
   "mina",
   "zcash",
+  "ztarknet",
   "web3_wallet",
   "stripe",
 ]);
