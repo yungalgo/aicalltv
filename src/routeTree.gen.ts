@@ -16,8 +16,6 @@ import { Route as authPagesRouteRouteImport } from './routes/(auth-pages)/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as authPagesSignupRouteImport } from './routes/(auth-pages)/signup'
 import { Route as authPagesLoginRouteImport } from './routes/(auth-pages)/login'
-import { Route as authenticatedDashboardRouteRouteImport } from './routes/(authenticated)/dashboard/route'
-import { Route as authenticatedDashboardIndexRouteImport } from './routes/(authenticated)/dashboard/index'
 import { Route as ApiTwilioVoiceRouteImport } from './routes/api/twilio/voice'
 import { Route as ApiTwilioStreamRouteImport } from './routes/api/twilio/stream'
 import { Route as ApiTestCallSimpleRouteImport } from './routes/api/test/call-simple'
@@ -61,18 +59,6 @@ const authPagesLoginRoute = authPagesLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => authPagesRouteRoute,
 } as any)
-const authenticatedDashboardRouteRoute =
-  authenticatedDashboardRouteRouteImport.update({
-    id: '/dashboard',
-    path: '/dashboard',
-    getParentRoute: () => authenticatedRouteRoute,
-  } as any)
-const authenticatedDashboardIndexRoute =
-  authenticatedDashboardIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => authenticatedDashboardRouteRoute,
-  } as any)
 const ApiTwilioVoiceRoute = ApiTwilioVoiceRouteImport.update({
   id: '/api/twilio/voice',
   path: '/api/twilio/voice',
@@ -125,7 +111,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
-  '/dashboard': typeof authenticatedDashboardRouteRouteWithChildren
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -135,7 +120,6 @@ export interface FileRoutesByFullPath {
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
   '/api/twilio/stream': typeof ApiTwilioStreamRoute
   '/api/twilio/voice': typeof ApiTwilioVoiceRoute
-  '/dashboard/': typeof authenticatedDashboardIndexRoute
   '/api/webhooks/twilio/call-status': typeof ApiWebhooksTwilioCallStatusRoute
   '/api/webhooks/twilio/recording-status': typeof ApiWebhooksTwilioRecordingStatusRoute
 }
@@ -152,7 +136,6 @@ export interface FileRoutesByTo {
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
   '/api/twilio/stream': typeof ApiTwilioStreamRoute
   '/api/twilio/voice': typeof ApiTwilioVoiceRoute
-  '/dashboard': typeof authenticatedDashboardIndexRoute
   '/api/webhooks/twilio/call-status': typeof ApiWebhooksTwilioCallStatusRoute
   '/api/webhooks/twilio/recording-status': typeof ApiWebhooksTwilioRecordingStatusRoute
 }
@@ -160,10 +143,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/(auth-pages)': typeof authPagesRouteRouteWithChildren
-  '/(authenticated)': typeof authenticatedRouteRouteWithChildren
+  '/(authenticated)': typeof authenticatedRouteRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
-  '/(authenticated)/dashboard': typeof authenticatedDashboardRouteRouteWithChildren
   '/(auth-pages)/login': typeof authPagesLoginRoute
   '/(auth-pages)/signup': typeof authPagesSignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -173,7 +155,6 @@ export interface FileRoutesById {
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
   '/api/twilio/stream': typeof ApiTwilioStreamRoute
   '/api/twilio/voice': typeof ApiTwilioVoiceRoute
-  '/(authenticated)/dashboard/': typeof authenticatedDashboardIndexRoute
   '/api/webhooks/twilio/call-status': typeof ApiWebhooksTwilioCallStatusRoute
   '/api/webhooks/twilio/recording-status': typeof ApiWebhooksTwilioRecordingStatusRoute
 }
@@ -183,7 +164,6 @@ export interface FileRouteTypes {
     | '/'
     | '/privacy'
     | '/terms'
-    | '/dashboard'
     | '/login'
     | '/signup'
     | '/api/auth/$'
@@ -193,7 +173,6 @@ export interface FileRouteTypes {
     | '/api/test/call-simple'
     | '/api/twilio/stream'
     | '/api/twilio/voice'
-    | '/dashboard/'
     | '/api/webhooks/twilio/call-status'
     | '/api/webhooks/twilio/recording-status'
   fileRoutesByTo: FileRoutesByTo
@@ -210,7 +189,6 @@ export interface FileRouteTypes {
     | '/api/test/call-simple'
     | '/api/twilio/stream'
     | '/api/twilio/voice'
-    | '/dashboard'
     | '/api/webhooks/twilio/call-status'
     | '/api/webhooks/twilio/recording-status'
   id:
@@ -220,7 +198,6 @@ export interface FileRouteTypes {
     | '/(authenticated)'
     | '/privacy'
     | '/terms'
-    | '/(authenticated)/dashboard'
     | '/(auth-pages)/login'
     | '/(auth-pages)/signup'
     | '/api/auth/$'
@@ -230,7 +207,6 @@ export interface FileRouteTypes {
     | '/api/test/call-simple'
     | '/api/twilio/stream'
     | '/api/twilio/voice'
-    | '/(authenticated)/dashboard/'
     | '/api/webhooks/twilio/call-status'
     | '/api/webhooks/twilio/recording-status'
   fileRoutesById: FileRoutesById
@@ -238,7 +214,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   authPagesRouteRoute: typeof authPagesRouteRouteWithChildren
-  authenticatedRouteRoute: typeof authenticatedRouteRouteWithChildren
+  authenticatedRouteRoute: typeof authenticatedRouteRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -302,20 +278,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/login'
       preLoaderRoute: typeof authPagesLoginRouteImport
       parentRoute: typeof authPagesRouteRoute
-    }
-    '/(authenticated)/dashboard': {
-      id: '/(authenticated)/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof authenticatedDashboardRouteRouteImport
-      parentRoute: typeof authenticatedRouteRoute
-    }
-    '/(authenticated)/dashboard/': {
-      id: '/(authenticated)/dashboard/'
-      path: '/'
-      fullPath: '/dashboard/'
-      preLoaderRoute: typeof authenticatedDashboardIndexRouteImport
-      parentRoute: typeof authenticatedDashboardRouteRoute
     }
     '/api/twilio/voice': {
       id: '/api/twilio/voice'
@@ -397,36 +359,10 @@ const authPagesRouteRouteWithChildren = authPagesRouteRoute._addFileChildren(
   authPagesRouteRouteChildren,
 )
 
-interface authenticatedDashboardRouteRouteChildren {
-  authenticatedDashboardIndexRoute: typeof authenticatedDashboardIndexRoute
-}
-
-const authenticatedDashboardRouteRouteChildren: authenticatedDashboardRouteRouteChildren =
-  {
-    authenticatedDashboardIndexRoute: authenticatedDashboardIndexRoute,
-  }
-
-const authenticatedDashboardRouteRouteWithChildren =
-  authenticatedDashboardRouteRoute._addFileChildren(
-    authenticatedDashboardRouteRouteChildren,
-  )
-
-interface authenticatedRouteRouteChildren {
-  authenticatedDashboardRouteRoute: typeof authenticatedDashboardRouteRouteWithChildren
-}
-
-const authenticatedRouteRouteChildren: authenticatedRouteRouteChildren = {
-  authenticatedDashboardRouteRoute:
-    authenticatedDashboardRouteRouteWithChildren,
-}
-
-const authenticatedRouteRouteWithChildren =
-  authenticatedRouteRoute._addFileChildren(authenticatedRouteRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   authPagesRouteRoute: authPagesRouteRouteWithChildren,
-  authenticatedRouteRoute: authenticatedRouteRouteWithChildren,
+  authenticatedRouteRoute: authenticatedRouteRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
