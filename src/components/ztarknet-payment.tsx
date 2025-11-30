@@ -15,15 +15,25 @@ interface ZtarknetPaymentProps {
   onBack: () => void;
 }
 
-// Type for Starknet wallet window object
+// Type for Starknet wallet window object (get-starknet standard)
 interface StarknetWallet {
   id: string;
   name: string;
   icon: string;
-  request: (params: { type: string; params?: unknown }) => Promise<unknown>;
   enable: () => Promise<string[]>;
   isConnected: boolean;
   selectedAddress?: string;
+  // The account object follows starknet.js Account interface
+  account?: {
+    address: string;
+    execute: (
+      calls: Array<{
+        contractAddress: string;
+        entrypoint: string;
+        calldata: string[];
+      }>
+    ) => Promise<{ transaction_hash: string }>;
+  };
 }
 
 export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentProps) {
@@ -90,6 +100,11 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
       return;
     }
 
+    if (!wallet.account) {
+      setError("Wallet account not available. Please reconnect.");
+      return;
+    }
+
     setStatus("sending");
     setError(null);
 
@@ -99,14 +114,17 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
         nodeUrl: ZTARKNET_CONFIG.rpcUrl,
       });
 
-      // Prepare the transfer call using wallet_addInvokeTransaction format
+      // Prepare calldata for ERC20 transfer
+      const calldata = CallData.compile({
+        recipient: ZTARKNET_CONFIG.receivingAddress,
+        amount: uint256.bnToUint256(ZTARKNET_CONFIG.paymentAmount),
+      });
+
+      // Prepare the transfer call using starknet.js Account.execute format
       const transferCall = {
-        contract_address: ZTARKNET_CONFIG.ztfTokenAddress,
-        entry_point: "transfer",
-        calldata: CallData.compile({
-          recipient: ZTARKNET_CONFIG.receivingAddress,
-          amount: uint256.bnToUint256(ZTARKNET_CONFIG.paymentAmount),
-        }),
+        contractAddress: ZTARKNET_CONFIG.ztfTokenAddress,
+        entrypoint: "transfer",
+        calldata: calldata,
       };
 
       console.log("[Ztarknet] Sending payment...");
@@ -115,13 +133,8 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
       console.log("[Ztarknet] Amount:", ZTARKNET_CONFIG.paymentAmountDisplay, "ZTF");
       console.log("[Ztarknet] Token:", ZTARKNET_CONFIG.ztfTokenAddress);
 
-      // Execute transaction through wallet
-      const result = await wallet.request({
-        type: "starknet_addInvokeTransaction",
-        params: {
-          calls: [transferCall],
-        },
-      }) as { transaction_hash: string };
+      // Execute transaction through wallet.account.execute (starknet.js standard)
+      const result = await wallet.account.execute([transferCall]);
 
       const txHashResult = result.transaction_hash;
       console.log("[Ztarknet] Transaction sent:", txHashResult);
