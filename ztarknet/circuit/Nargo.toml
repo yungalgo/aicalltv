@@ -1,0 +1,8 @@
+[package]
+name = "payment_proof"
+type = "bin"
+authors = ["AI Call TV"]
+compiler_version = ">=0.36.0"
+
+[dependencies]
+

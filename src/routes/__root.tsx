@@ -32,6 +32,13 @@ const SolanaProvider = lazy(() =>
   })),
 );
 
+// Lazy load StarknetProvider for Ztarknet privacy-preserving payments
+const StarknetProvider = lazy(() =>
+  import("~/components/starknet-provider").then((mod) => ({
+    default: mod.StarknetProvider,
+  })),
+);
+
 // Note: Workers are initialized separately via `bun run worker` command
 // This avoids bundling server-only dependencies (pg-boss, etc.) into the client
 
@@ -89,10 +96,12 @@ function RootDocument({ children }: { readonly children: React.ReactNode }) {
         <Suspense fallback={null}>
           <Web3Provider>
             <SolanaProvider>
+              <StarknetProvider>
               <ThemeProvider>
                 {children}
                 <Toaster richColors />
               </ThemeProvider>
+              </StarknetProvider>
             </SolanaProvider>
           </Web3Provider>
         </Suspense>

@@ -43,6 +43,14 @@ export const PAYMENT_CONFIG = {
 
   // Solana USDC token address (public, not sensitive)
   solanaUsdc: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+
+  // Starknet/Ztarknet payment address - from env var
+  get starknetAddress(): string {
+    return import.meta.env.VITE_STARKNET_PAYMENT_ADDRESS || "";
+  },
+
+  // Starknet verifier contract (ZK proof verification)
+  starknetVerifier: "0x02048def58e122c910f80619ebab076b0ef5513550d38afdfdf2d8a1710fa7c6" as const,
 };
 
 // Test mode - bypasses real payment for development

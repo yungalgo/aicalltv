@@ -23,6 +23,7 @@ import { Route as ApiTestCallSimpleRouteImport } from './routes/api/test/call-si
 import { Route as ApiTestCallRouteImport } from './routes/api/test/call'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as ApiStripeCheckoutRouteImport } from './routes/api/stripe/checkout'
+import { Route as ApiStarknetPaymentRouteImport } from './routes/api/starknet/payment'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiWebhooksTwilioRecordingStatusRouteImport } from './routes/api/webhooks/twilio/recording-status'
 import { Route as ApiWebhooksTwilioCallStatusRouteImport } from './routes/api/webhooks/twilio/call-status'
@@ -95,6 +96,11 @@ const ApiStripeCheckoutRoute = ApiStripeCheckoutRouteImport.update({
   path: '/api/stripe/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStarknetPaymentRoute = ApiStarknetPaymentRouteImport.update({
+  id: '/api/starknet/payment',
+  path: '/api/starknet/payment',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/starknet/payment': typeof ApiStarknetPaymentRoute
   '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/test/call': typeof ApiTestCallRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/starknet/payment': typeof ApiStarknetPaymentRoute
   '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/test/call': typeof ApiTestCallRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/(auth-pages)/login': typeof authPagesLoginRoute
   '/(auth-pages)/signup': typeof authPagesSignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/starknet/payment': typeof ApiStarknetPaymentRoute
   '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/test/call': typeof ApiTestCallRoute
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/api/auth/$'
+    | '/api/starknet/payment'
     | '/api/stripe/checkout'
     | '/api/stripe/webhook'
     | '/api/test/call'
@@ -193,6 +203,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/api/auth/$'
+    | '/api/starknet/payment'
     | '/api/stripe/checkout'
     | '/api/stripe/webhook'
     | '/api/test/call'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/(auth-pages)/login'
     | '/(auth-pages)/signup'
     | '/api/auth/$'
+    | '/api/starknet/payment'
     | '/api/stripe/checkout'
     | '/api/stripe/webhook'
     | '/api/test/call'
@@ -230,6 +242,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiStarknetPaymentRoute: typeof ApiStarknetPaymentRoute
   ApiStripeCheckoutRoute: typeof ApiStripeCheckoutRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiTestCallRoute: typeof ApiTestCallRoute
@@ -341,6 +354,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStripeCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/starknet/payment': {
+      id: '/api/starknet/payment'
+      path: '/api/starknet/payment'
+      fullPath: '/api/starknet/payment'
+      preLoaderRoute: typeof ApiStarknetPaymentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -386,6 +406,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiStarknetPaymentRoute: ApiStarknetPaymentRoute,
   ApiStripeCheckoutRoute: ApiStripeCheckoutRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiTestCallRoute: ApiTestCallRoute,

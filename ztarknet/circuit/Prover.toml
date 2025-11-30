@@ -1,0 +1,11 @@
+# Payment proof inputs
+# These are example values - in production, these would be generated per-payment
+
+# Private inputs (not revealed)
+payment_secret = "12345"
+amount = "50"
+
+# Public inputs (revealed to verifier)
+payment_hash = "0x1234" # Will be computed from payment_secret
+order_id = "1"
+
