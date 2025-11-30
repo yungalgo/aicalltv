@@ -6,9 +6,7 @@ import { eq } from "drizzle-orm";
 import { env } from "~/env/server";
 import { callCredits } from "~/lib/db/schema/credits";
 import * as schema from "~/lib/db/schema";
-
-// Price in cents - must match checkout.ts
-const PRICE_CENTS = 50; // TODO: Change back to 900 for production ($9.00 per call) - Stripe minimum is $0.50
+import { PAYMENT_CONFIG } from "~/lib/web3/config";
 
 /**
  * POST /api/stripe/webhook
@@ -91,7 +89,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                 paymentMethod: "stripe",
                 paymentRef: session.id,
                 network: "stripe",
-                amountCents: PRICE_CENTS,
+                amountCents: PAYMENT_CONFIG.priceCents,
               })
               .returning();
 
