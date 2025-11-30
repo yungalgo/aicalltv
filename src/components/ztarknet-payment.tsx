@@ -1,12 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  useAccount,
-  useConnect,
-  useDisconnect,
-  useSendTransaction,
-} from "@starknet-react/core";
+import { useState } from "react";
+import { connect, disconnect, type StarknetWindowObject } from "starknetkit";
 import { RpcProvider, uint256, CallData } from "starknet";
 import { Button } from "~/components/ui/button";
 import {
@@ -27,29 +22,33 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
   >("idle");
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [walletName, setWalletName] = useState<string | null>(null);
+  const [wallet, setWallet] = useState<StarknetWindowObject | null>(null);
 
-  // Starknet React hooks
-  const { address, isConnected, connector } = useAccount();
-  const { connect, connectors } = useConnect();
-  const { disconnect } = useDisconnect();
-
-  // Transaction hook
-  const { sendAsync, isPending } = useSendTransaction({});
-
-  // Update status when connected
-  useEffect(() => {
-    if (isConnected && address && status === "connecting") {
-      setStatus("connected");
-    }
-  }, [isConnected, address, status]);
-
-  // Handle wallet connection
-  const handleConnect = async (connectorToUse: typeof connectors[0]) => {
+  // Handle wallet connection via StarknetKit
+  const handleConnect = async () => {
     setStatus("connecting");
     setError(null);
     
     try {
-      await connect({ connector: connectorToUse });
+      // StarknetKit connect - shows modal with Ready, Braavos, WebWallet options
+      const result = await connect({
+        modalMode: "alwaysAsk",
+        modalTheme: "dark",
+      });
+
+      if (!result.wallet || !result.connectorData?.account) {
+        throw new Error("Failed to connect wallet");
+      }
+
+      console.log("[Ztarknet] Wallet connected:", result.wallet.name);
+      console.log("[Ztarknet] Address:", result.connectorData.account);
+
+      setWalletAddress(result.connectorData.account);
+      setWalletName(result.wallet.name);
+      setWallet(result.wallet);
+      setStatus("connected");
     } catch (err) {
       console.error("[Ztarknet] Connect error:", err);
       setError(err instanceof Error ? err.message : "Failed to connect wallet");
@@ -57,9 +56,18 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
     }
   };
 
+  // Handle disconnect
+  const handleDisconnect = async () => {
+    await disconnect();
+    setWalletAddress(null);
+    setWalletName(null);
+    setWallet(null);
+    setStatus("idle");
+  };
+
   // Handle ZTF payment
   const handlePayment = async () => {
-    if (!address || !isConnected) {
+    if (!walletAddress || !wallet) {
       setError("Wallet not connected");
       return;
     }
@@ -73,11 +81,10 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
         nodeUrl: ZTARKNET_CONFIG.rpcUrl,
       });
 
-      // Prepare the transfer call
-      // ZTF is an ERC20, we call transfer(recipient, amount)
+      // Prepare the transfer call using wallet_addInvokeTransaction format
       const transferCall = {
-        contractAddress: ZTARKNET_CONFIG.ztfTokenAddress,
-        entrypoint: "transfer",
+        contract_address: ZTARKNET_CONFIG.ztfTokenAddress,
+        entry_point: "transfer",
         calldata: CallData.compile({
           recipient: ZTARKNET_CONFIG.receivingAddress,
           amount: uint256.bnToUint256(ZTARKNET_CONFIG.paymentAmount),
@@ -85,24 +92,30 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
       };
 
       console.log("[Ztarknet] Sending payment...");
-      console.log("[Ztarknet] From:", address);
+      console.log("[Ztarknet] From:", walletAddress);
       console.log("[Ztarknet] To:", ZTARKNET_CONFIG.receivingAddress);
       console.log("[Ztarknet] Amount:", ZTARKNET_CONFIG.paymentAmountDisplay, "ZTF");
       console.log("[Ztarknet] Token:", ZTARKNET_CONFIG.ztfTokenAddress);
 
-      // Send the transaction
-      const result = await sendAsync([transferCall]);
+      // Execute transaction through wallet
+      const result = await wallet.request({
+        type: "wallet_addInvokeTransaction",
+        params: {
+          calls: [transferCall],
+        },
+      });
 
-      console.log("[Ztarknet] Transaction sent:", result.transaction_hash);
+      const txHashResult = (result as { transaction_hash: string }).transaction_hash;
+      console.log("[Ztarknet] Transaction sent:", txHashResult);
 
-      setTxHash(result.transaction_hash);
+      setTxHash(txHashResult);
       setStatus("confirming");
 
       // Wait for confirmation (poll the transaction status)
       let confirmed = false;
       for (let i = 0; i < 60; i++) {
         try {
-          const receipt = await ztarknetProvider.getTransactionReceipt(result.transaction_hash);
+          const receipt = await ztarknetProvider.getTransactionReceipt(txHashResult);
           // Cast to access execution_status property
           const receiptData = receipt as { execution_status?: string };
           if (receiptData.execution_status === "SUCCEEDED") {
@@ -124,7 +137,7 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
 
       console.log("[Ztarknet] Payment complete!");
       setStatus("complete");
-      onPaymentComplete(result.transaction_hash);
+      onPaymentComplete(txHashResult);
     } catch (err) {
       console.error("[Ztarknet] Payment error:", err);
       setError(err instanceof Error ? err.message : "Payment failed");
@@ -177,7 +190,7 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
               className="mt-3"
               onClick={() => {
                 setError(null);
-                setStatus(isConnected ? "connected" : "idle");
+                setStatus(walletAddress ? "connected" : "idle");
               }}
             >
               Try Again
@@ -204,31 +217,18 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
           </div>
         )}
 
-        {/* Idle - Show connect buttons */}
+        {/* Idle - Show connect button */}
         {status === "idle" && (
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground text-center mb-3">
-              Connect your Starknet wallet (configured for Ztarknet)
+          <div className="space-y-3">
+            <Button
+              onClick={handleConnect}
+              className="w-full h-12 text-lg"
+            >
+              Connect Wallet
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">
+              Supports Ready Wallet, Braavos, and Web Wallet
             </p>
-            {connectors.map((connector) => (
-              <Button
-                key={connector.id}
-                onClick={() => handleConnect(connector)}
-                className="w-full h-12"
-                variant="outline"
-              >
-                <span className="flex items-center gap-2">
-                  {connector.icon && (
-                    <img
-                      src={typeof connector.icon === 'string' ? connector.icon : connector.icon.dark}
-                      alt={connector.name}
-                      className="w-6 h-6"
-                    />
-                  )}
-                  Connect {connector.name}
-                </span>
-              </Button>
-            ))}
           </div>
         )}
 
@@ -244,33 +244,29 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
         )}
 
         {/* Connected - Show pay button */}
-        {status === "connected" && address && (
+        {status === "connected" && walletAddress && (
           <>
             <div className="rounded-lg bg-muted/50 p-3">
               <p className="text-xs text-muted-foreground">Connected wallet:</p>
               <p className="font-mono text-sm truncate">
-                {address.slice(0, 10)}...{address.slice(-8)}
+                {walletAddress.slice(0, 10)}...{walletAddress.slice(-8)}
               </p>
-              {connector && (
-                <p className="text-xs text-muted-foreground mt-1">via {connector.name}</p>
+              {walletName && (
+                <p className="text-xs text-muted-foreground mt-1">via {walletName}</p>
               )}
             </div>
 
             <Button
               onClick={handlePayment}
-              disabled={isPending}
               className="h-12 w-full text-lg"
             >
-              {isPending ? "Confirm in wallet..." : `Pay ${ZTARKNET_CONFIG.paymentAmountDisplay} ZTF`}
+              Pay {ZTARKNET_CONFIG.paymentAmountDisplay} ZTF
             </Button>
 
             <Button
               variant="ghost"
               className="w-full"
-              onClick={() => {
-                disconnect();
-                setStatus("idle");
-              }}
+              onClick={handleDisconnect}
             >
               Disconnect
             </Button>
