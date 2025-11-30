@@ -8,10 +8,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { auth } from "~/lib/auth/auth";
 import { env } from "~/env/server";
-import { PAYMENT_CONFIG } from "~/lib/web3/config";
 
-// ZCash service URL (set in Railway env)
+// ZCash service URL (set in Railway env) - only used for payment verification
 const ZCASH_SERVICE_URL = env.ZCASH_SERVICE_URL || "http://localhost:8080";
+
+// Fixed YWallet receiving address - payments go directly here
+const ZCASH_RECEIVING_ADDRESS = "u1t9jazuuepq6asej3danuvnewgvqvtgpmg3686m4825gkknttm3d94sla8t9daa70tgr35u7w5xp2m90gglu4qtt7nyzjznk873vgrpcsl33wz2amau3p96g5vjmlxtezhc06jhqqyth3ghdd45n9x4ekeqkszz3hv2mez52v452krsne";
 
 // In-memory store for pending payments (use Redis in production)
 const pendingPayments = new Map<string, {
@@ -123,60 +125,13 @@ export const Route = createFileRoute("/api/zcash/payment")({
           // Create memo that includes order ID (truncated to fit ZCash memo limit)
           const memo = `AICALLTV:${orderId}`;
 
-          // Get address from zcash service
-          const addressResponse = await fetch(`${ZCASH_SERVICE_URL}/address`);
-          if (!addressResponse.ok) {
-            throw new Error("Failed to get ZCash address");
-          }
-          let addresses = await addressResponse.json();
-          console.log("[ZCash] Raw addresses response type:", typeof addresses);
-          
-          // zingo-cli outputs log messages along with JSON - need to extract the JSON
-          if (typeof addresses === 'string') {
-            // Try to find JSON array or object in the string
-            const jsonMatch = addresses.match(/\[[\s\S]*\]|\{[\s\S]*\}/);
-            if (jsonMatch) {
-              try {
-                addresses = JSON.parse(jsonMatch[0]);
-                console.log("[ZCash] Extracted JSON from string:", JSON.stringify(addresses));
-              } catch {
-                console.log("[ZCash] Failed to parse extracted JSON");
-              }
-            }
-          }
-          
-          // Extract address from various zingo-cli output formats
-          let address: string | undefined;
-          
-          if (typeof addresses === 'string') {
-            // Simple string address (shouldn't happen after above parsing)
-            address = addresses;
-          } else if (Array.isArray(addresses)) {
-            // Array format: [{encoded_address: "u1...", ...}, ...] or ["u1...", ...]
-            const first = addresses[0];
-            if (typeof first === 'string') {
-              address = first;
-            } else if (first && typeof first === 'object') {
-              // zingo-cli returns {encoded_address: "...", ...}
-              address = first.encoded_address || first.address || first.ua || first.z_address;
-            }
-          } else if (typeof addresses === 'object') {
-            // Object format: {encoded_address: "u1...", z_address: "zs...", ua: "u1..."}
-            address = addresses.encoded_address || addresses.ua || addresses.unified_address || addresses.z_address || addresses.address;
-          }
-          
-          console.log("[ZCash] Extracted address:", address);
-          
-          if (!address || typeof address !== 'string') {
-            console.error("[ZCash] Could not extract valid address from:", addresses);
-            throw new Error("No valid ZCash address available");
-          }
+          // Use fixed YWallet receiving address
+          const address = ZCASH_RECEIVING_ADDRESS;
+          console.log("[ZCash] Using fixed receiving address:", address.slice(0, 20) + "...");
 
-          // Calculate ZEC amount (using CoinGecko or hardcoded for hackathon)
-          // For hackathon: 1 ZEC ≈ $50, so $0.50 = 0.01 ZEC
-          const usdAmount = PAYMENT_CONFIG.priceUSD;
-          const zecPrice = 50; // Approximate ZEC price in USD
-          const zecAmount = (usdAmount / zecPrice).toFixed(4);
+          // Hardcoded ZEC amount for hackathon demo (10x cheaper)
+          // 0.001 ZEC ≈ $0.05 at current prices
+          const zecAmount = "0.0010";
 
           // Store pending payment
           pendingPayments.set(orderId, {
