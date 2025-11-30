@@ -36,6 +36,8 @@ import {
   TOKEN_PROGRAM_ADDRESS,
 } from "gill/programs/token";
 import { createCredit } from "~/lib/credits/functions";
+import { ZtarknetProvider } from "./ztarknet-provider";
+import { ZtarknetPayment } from "./ztarknet-payment";
 
 // ERC20 transfer ABI (minimal)
 const erc20Abi = [
@@ -51,7 +53,7 @@ const erc20Abi = [
   },
 ] as const;
 
-type PaymentStep = "select-method" | "select-crypto" | "pay-base" | "pay-solana" | "pay-stripe" | "pay-zcash";
+type PaymentStep = "select-method" | "select-crypto" | "pay-base" | "pay-solana" | "pay-stripe" | "pay-zcash" | "pay-starknet";
 
 // Helper to get user-friendly error message
 function getPaymentErrorMessage(error: Error | null | undefined): { title: string; message: string; isCancelled: boolean } {
@@ -513,17 +515,17 @@ export function PaymentModal({
                 </div>
               </Button>
 
-              {/* Starknet - Coming Soon */}
+              {/* Ztarknet - Pay on Ztarknet L2 */}
               <Button
                 variant="outline"
-                className="h-14 w-full justify-start gap-3 opacity-50"
-                disabled
+                className="h-14 w-full justify-start gap-3"
+                onClick={() => setStep("pay-starknet")}
               >
                 <span className="text-xl">⬡</span>
                 <div className="text-left">
-                  <div className="font-medium">Pay on Starknet</div>
+                  <div className="font-medium">Pay on Ztarknet</div>
                   <div className="text-xs text-muted-foreground">
-                    Coming soon
+                    0.01 ZTF • Settles to Zcash
                   </div>
                 </div>
               </Button>
@@ -863,10 +865,44 @@ export function PaymentModal({
             }}
           />
         )}
+
+        {/* Step: Pay with Ztarknet (ZTF on L2 that settles to Zcash) */}
+        {step === "pay-starknet" && (
+          <ZtarknetProvider>
+            <ZtarknetPayment
+              onPaymentComplete={async (txRef) => {
+                // Create credit
+                try {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  await (createCredit as any)({
+                    data: {
+                      paymentMethod: "ztarknet",
+                      paymentRef: txRef,
+                      network: "ztarknet",
+                      amountCents: PAYMENT_CONFIG.priceCents,
+                    },
+                  });
+                  onPaymentComplete(txRef);
+                } catch (err) {
+                  console.error("[Ztarknet] Failed to create credit:", err);
+                  // Still complete - tx is on chain
+                  onPaymentComplete(txRef);
+                }
+              }}
+              onBack={() => {
+                setStep("select-crypto");
+                setPaymentStatus("idle");
+              }}
+            />
+          </ZtarknetProvider>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
+
+// Note: StarknetPaymentStep has been replaced by ZtarknetPayment component
+// which uses @starknet-react/core for proper wallet integration
 
 // ZCash Payment Step Component
 function ZCashPaymentStep({
