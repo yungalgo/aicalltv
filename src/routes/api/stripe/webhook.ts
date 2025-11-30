@@ -8,7 +8,7 @@ import { callCredits } from "~/lib/db/schema/credits";
 import * as schema from "~/lib/db/schema";
 
 // Price in cents - must match checkout.ts
-const PRICE_CENTS = 9; // TODO: Change back to 900 for production ($9.00 per call)
+const PRICE_CENTS = 50; // TODO: Change back to 900 for production ($9.00 per call) - Stripe minimum is $0.50
 
 /**
  * POST /api/stripe/webhook

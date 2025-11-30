@@ -12,7 +12,8 @@ import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 // SINGLE SOURCE OF TRUTH for pricing - all other values are derived from priceUSD
 export const PAYMENT_CONFIG = {
   // TODO: Change back to 9 for production ($9.00 per call)
-  priceUSD: 0.09, // $0.09 for testing
+  // Note: Stripe minimum is $0.50, so using 0.50 for testing
+  priceUSD: 0.50, // $0.50 for testing
 
   // Derived values - computed from priceUSD
   get priceCents(): number {
