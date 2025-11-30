@@ -95,6 +95,13 @@ export interface PaymentModalProps {
   onPaymentComplete: (transactionHash: string) => void;
   callDetails: {
     recipientName: string;
+    phoneNumber?: string;
+    targetGender?: string;
+    targetGenderCustom?: string;
+    targetAgeRange?: string;
+    interestingPiece?: string;
+    videoStyle?: string;
+    anythingElse?: string;
   };
 }
 
@@ -769,9 +776,22 @@ export function PaymentModal({
                     onClick={async () => {
                       setPaymentStatus("processing");
                       try {
+                        // Send call data to Stripe checkout so webhook can create the call
                         const response = await fetch("/api/stripe/checkout", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            callData: {
+                              recipientName: callDetails.recipientName,
+                              phoneNumber: callDetails.phoneNumber,
+                              targetGender: callDetails.targetGender,
+                              targetGenderCustom: callDetails.targetGenderCustom,
+                              targetAgeRange: callDetails.targetAgeRange,
+                              interestingPiece: callDetails.interestingPiece,
+                              videoStyle: callDetails.videoStyle,
+                              anythingElse: callDetails.anythingElse,
+                            },
+                          }),
                         });
                         
                         if (!response.ok) {

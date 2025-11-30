@@ -7,6 +7,7 @@ import { PAYMENT_CONFIG } from "~/lib/web3/config";
 /**
  * POST /api/stripe/checkout
  * Creates a Stripe Checkout Session and returns the URL
+ * Accepts call form data in body to pass to webhook
  */
 export const Route = createFileRoute("/api/stripe/checkout")({
   server: {
@@ -34,12 +35,17 @@ export const Route = createFileRoute("/api/stripe/checkout")({
             );
           }
 
+          // Parse form data from request body
+          const body = await request.json().catch(() => ({}));
+          const callData = body.callData || {};
+
           const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
           // Get base URL for redirects
           const baseUrl = env.VITE_BASE_URL || "http://localhost:3000";
 
-          // Create Checkout Session
+          // Create Checkout Session with form data in metadata
+          // Stripe metadata values must be strings and max 500 chars each
           const checkoutSession = await stripe.checkout.sessions.create({
             mode: "payment",
             payment_method_types: ["card"],
@@ -49,20 +55,29 @@ export const Route = createFileRoute("/api/stripe/checkout")({
                   currency: "usd",
                   product_data: {
                     name: "AI Call Credit",
-                    description: "1 AI-powered phone call",
+                    description: `AI call to ${callData.recipientName || "recipient"}`,
                   },
-                  unit_amount: PAYMENT_CONFIG.priceCents, // Amount in cents - single source of truth
+                  unit_amount: PAYMENT_CONFIG.priceCents,
                 },
                 quantity: 1,
               },
             ],
-            // Store user ID in metadata for webhook
+            // Store user ID and call data in metadata for webhook
             metadata: {
               userId: session.user.id,
+              // Call data (truncated to fit Stripe's 500 char limit per field)
+              recipientName: String(callData.recipientName || "").slice(0, 500),
+              phoneNumber: String(callData.phoneNumber || "").slice(0, 500),
+              targetGender: String(callData.targetGender || "male").slice(0, 500),
+              targetGenderCustom: String(callData.targetGenderCustom || "").slice(0, 500),
+              targetAgeRange: String(callData.targetAgeRange || "").slice(0, 500),
+              interestingPiece: String(callData.interestingPiece || "").slice(0, 500),
+              videoStyle: String(callData.videoStyle || "anime").slice(0, 500),
+              anythingElse: String(callData.anythingElse || "").slice(0, 500),
             },
-            // Redirect URLs
-            success_url: `${baseUrl}/dashboard?payment=success`,
-            cancel_url: `${baseUrl}/dashboard?payment=cancelled`,
+            // Redirect URLs - go back to home page where the calls table is
+            success_url: `${baseUrl}/?payment=success`,
+            cancel_url: `${baseUrl}/?payment=cancelled`,
           });
 
           console.log(`[Stripe] Created checkout session ${checkoutSession.id} for user ${session.user.id}`);

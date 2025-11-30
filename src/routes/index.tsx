@@ -1,6 +1,6 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Suspense, useState } from "react";
+import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import { Suspense, useState, useEffect } from "react";
 import { AuthModal } from "~/components/auth-modal";
 import { CallsTable } from "~/components/calls-table";
 import { Header } from "~/components/header";
@@ -14,9 +14,15 @@ import { authQueryOptions } from "~/lib/auth/queries";
 import { createCall } from "~/lib/calls/functions";
 import { VIDEO_STYLES } from "~/lib/constants/video-styles";
 import { PAYMENT_CONFIG } from "~/lib/web3/config";
+import { z } from "zod";
+
+const searchSchema = z.object({
+  payment: z.enum(["success", "cancelled"]).optional(),
+});
 
 export const Route = createFileRoute("/")({
   component: HomePage,
+  validateSearch: searchSchema,
 });
 
 function HomePage() {
@@ -68,6 +74,7 @@ function PageContent() {
 function CallRequestForm() {
   const { data: user } = useSuspenseQuery(authQueryOptions());
   const queryClient = useQueryClient();
+  const search = useSearch({ from: "/" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -82,6 +89,22 @@ function CallRequestForm() {
     interestingPiece: "",
     videoStyle: "anime",
   });
+
+  // Handle Stripe payment return - show toast and refresh calls
+  useEffect(() => {
+    if (search.payment === "success") {
+      toast.success("🎉 Payment successful! Your AI call is being processed.", {
+        duration: 5000,
+      });
+      // Refresh calls table
+      queryClient.invalidateQueries({ queryKey: ["calls"] });
+      // Clean up URL (remove ?payment=success)
+      window.history.replaceState({}, "", "/");
+    } else if (search.payment === "cancelled") {
+      toast.info("Payment was cancelled.", { duration: 3000 });
+      window.history.replaceState({}, "", "/");
+    }
+  }, [search.payment, queryClient]);
 
   // Form validation
   const validateForm = (): boolean => {
@@ -411,7 +434,16 @@ function CallRequestForm() {
         open={showPaymentModal}
         onOpenChange={setShowPaymentModal}
         onPaymentComplete={handlePaymentComplete}
-        callDetails={{ recipientName: formData.recipientName }}
+        callDetails={{
+          recipientName: formData.recipientName,
+          phoneNumber: formData.phoneNumber,
+          targetGender: formData.targetGender,
+          targetGenderCustom: formData.targetGenderCustom,
+          targetAgeRange: formData.targetAgeRange,
+          interestingPiece: formData.interestingPiece,
+          videoStyle: formData.videoStyle,
+          anythingElse: formData.anythingElse,
+        }}
       />
     </>
   );

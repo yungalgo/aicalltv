@@ -5,12 +5,14 @@ import postgres from "postgres";
 import { eq } from "drizzle-orm";
 import { env } from "~/env/server";
 import { callCredits } from "~/lib/db/schema/credits";
+import { calls } from "~/lib/db/schema/calls";
 import * as schema from "~/lib/db/schema";
 import { PAYMENT_CONFIG } from "~/lib/web3/config";
 
 /**
  * POST /api/stripe/webhook
  * Handles Stripe webhook events (checkout.session.completed)
+ * Creates credit AND call from metadata in one go
  */
 export const Route = createFileRoute("/api/stripe/webhook")({
   server: {
@@ -57,9 +59,10 @@ export const Route = createFileRoute("/api/stripe/webhook")({
           // Handle the checkout.session.completed event
           if (event.type === "checkout.session.completed") {
             const session = event.data.object as Stripe.Checkout.Session;
+            const metadata = session.metadata || {};
 
             // Get user ID from metadata
-            const userId = session.metadata?.userId;
+            const userId = metadata.userId;
             if (!userId) {
               console.error("[Stripe Webhook] No userId in session metadata");
               return new Response("Missing userId in metadata", { status: 400 });
@@ -80,20 +83,120 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               return new Response("Already processed", { status: 200 });
             }
 
-            // Create the credit
+            // Extract call data from metadata
+            const recipientName = metadata.recipientName || "";
+            const phoneNumber = metadata.phoneNumber || "";
+            const targetGender = (metadata.targetGender || "male") as "male" | "female" | "prefer_not_to_say" | "other";
+            const targetGenderCustom = metadata.targetGenderCustom || null;
+            const targetAgeRange = metadata.targetAgeRange || null;
+            const interestingPiece = metadata.interestingPiece || null;
+            const videoStyle = metadata.videoStyle || "anime";
+            const anythingElse = metadata.anythingElse || null;
+
+            // Validate required fields
+            if (!recipientName || !phoneNumber) {
+              console.error("[Stripe Webhook] Missing required call data in metadata");
+              // Still create credit so user can manually create call
+              const [credit] = await db
+                .insert(callCredits)
+                .values({
+                  userId,
+                  state: "unused",
+                  paymentMethod: "stripe",
+                  paymentRef: session.id,
+                  network: "stripe",
+                  amountCents: PAYMENT_CONFIG.priceCents,
+                })
+                .returning();
+              console.log(`[Stripe Webhook] ✅ Created credit ${credit.id} (no call data)`);
+              return new Response("OK - Credit created, no call data", { status: 200 });
+            }
+
+            // Generate OpenAI prompt
+            console.log(`[Stripe Webhook] 🕐 Generating OpenAI prompt...`);
+            let openaiPrompt: string;
+            try {
+              const { generateOpenAIPrompt } = await import("~/lib/prompts/groq-generator");
+              openaiPrompt = await generateOpenAIPrompt({
+                targetPerson: {
+                  name: recipientName,
+                  gender: targetGender,
+                  genderCustom: targetGenderCustom || undefined,
+                  ageRange: targetAgeRange || undefined,
+                  interestingPiece: interestingPiece || undefined,
+                },
+                videoStyle,
+                anythingElse: anythingElse || undefined,
+              });
+              console.log(`[Stripe Webhook] ✅ Generated OpenAI prompt`);
+            } catch (error) {
+              console.error(`[Stripe Webhook] ❌ Failed to generate prompt:`, error);
+              // Create credit only - user can retry
+              const [credit] = await db
+                .insert(callCredits)
+                .values({
+                  userId,
+                  state: "unused",
+                  paymentMethod: "stripe",
+                  paymentRef: session.id,
+                  network: "stripe",
+                  amountCents: PAYMENT_CONFIG.priceCents,
+                })
+                .returning();
+              console.log(`[Stripe Webhook] ✅ Created credit ${credit.id} (prompt failed)`);
+              return new Response("OK - Credit created, prompt failed", { status: 200 });
+            }
+
+            // Create the call
+            const encryptedHandle = `encrypted_${phoneNumber}`;
+            const [newCall] = await db
+              .insert(calls)
+              .values({
+                userId,
+                recipientName,
+                anythingElse,
+                targetGender,
+                targetGenderCustom,
+                targetAgeRange,
+                interestingPiece,
+                videoStyle,
+                openaiPrompt,
+                encryptedHandle,
+                paymentMethod: "stripe",
+                isFree: false,
+                status: "prompt_ready",
+              })
+              .returning();
+
+            console.log(`[Stripe Webhook] ✅ Created call ${newCall.id}`);
+
+            // Create credit and mark it as consumed
             const [credit] = await db
               .insert(callCredits)
               .values({
                 userId,
-                state: "unused",
+                state: "consumed",
                 paymentMethod: "stripe",
                 paymentRef: session.id,
                 network: "stripe",
                 amountCents: PAYMENT_CONFIG.priceCents,
+                callId: newCall.id,
+                consumedAt: new Date(),
               })
               .returning();
 
-            console.log(`[Stripe Webhook] ✅ Created credit ${credit.id} for user ${userId} (session: ${session.id})`);
+            console.log(`[Stripe Webhook] ✅ Created & consumed credit ${credit.id} for call ${newCall.id}`);
+
+            // Enqueue call for processing
+            try {
+              const { getBoss, JOB_TYPES } = await import("~/lib/queue/boss");
+              const boss = await getBoss();
+              await boss.send(JOB_TYPES.PROCESS_CALL, { callId: newCall.id });
+              console.log(`[Stripe Webhook] ✅ Enqueued call ${newCall.id} for processing`);
+            } catch (queueError) {
+              console.error(`[Stripe Webhook] ❌ Failed to enqueue call:`, queueError);
+              // Call was created, just not queued - will need manual intervention
+            }
           }
 
           return new Response("OK", { status: 200 });
