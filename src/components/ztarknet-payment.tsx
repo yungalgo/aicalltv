@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { connect, disconnect, type StarknetWindowObject } from "starknetkit";
 import { RpcProvider, uint256, CallData } from "starknet";
 import { Button } from "~/components/ui/button";
 import {
@@ -16,6 +15,17 @@ interface ZtarknetPaymentProps {
   onBack: () => void;
 }
 
+// Type for Starknet wallet window object
+interface StarknetWallet {
+  id: string;
+  name: string;
+  icon: string;
+  request: (params: { type: string; params?: unknown }) => Promise<unknown>;
+  enable: () => Promise<string[]>;
+  isConnected: boolean;
+  selectedAddress?: string;
+}
+
 export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentProps) {
   const [status, setStatus] = useState<
     "idle" | "connecting" | "connected" | "sending" | "confirming" | "complete" | "error"
@@ -23,31 +33,41 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [walletName, setWalletName] = useState<string | null>(null);
-  const [wallet, setWallet] = useState<StarknetWindowObject | null>(null);
+  const [wallet, setWallet] = useState<StarknetWallet | null>(null);
 
-  // Handle wallet connection via StarknetKit
+  // Handle direct Ready Wallet connection (no modal)
   const handleConnect = async () => {
     setStatus("connecting");
     setError(null);
     
     try {
-      // StarknetKit connect - shows modal with Ready, Braavos, WebWallet options
-      const result = await connect({
-        modalMode: "alwaysAsk",
-        modalTheme: "dark",
-      });
-
-      if (!result.wallet || !result.connectorData?.account) {
-        throw new Error("Failed to connect wallet");
+      // Check for Ready/Argent wallet in window
+      const starknetWindow = window as unknown as { 
+        starknet?: StarknetWallet;
+        starknet_argentX?: StarknetWallet;
+      };
+      
+      // Try Ready/Argent wallet
+      const readyWallet = starknetWindow.starknet_argentX || starknetWindow.starknet;
+      
+      if (!readyWallet) {
+        throw new Error("Ready Wallet not found. Please install it from ready.gg");
       }
 
-      console.log("[Ztarknet] Wallet connected:", result.wallet.name);
-      console.log("[Ztarknet] Address:", result.connectorData.account);
+      console.log("[Ztarknet] Connecting to Ready Wallet...");
+      
+      // Enable the wallet (request connection)
+      const accounts = await readyWallet.enable();
+      
+      if (!accounts || accounts.length === 0) {
+        throw new Error("No accounts found. Please unlock your wallet.");
+      }
 
-      setWalletAddress(result.connectorData.account);
-      setWalletName(result.wallet.name);
-      setWallet(result.wallet);
+      const address = accounts[0];
+      console.log("[Ztarknet] Connected:", address);
+
+      setWalletAddress(address);
+      setWallet(readyWallet);
       setStatus("connected");
     } catch (err) {
       console.error("[Ztarknet] Connect error:", err);
@@ -57,10 +77,8 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
   };
 
   // Handle disconnect
-  const handleDisconnect = async () => {
-    await disconnect();
+  const handleDisconnect = () => {
     setWalletAddress(null);
-    setWalletName(null);
     setWallet(null);
     setStatus("idle");
   };
@@ -99,13 +117,13 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
 
       // Execute transaction through wallet
       const result = await wallet.request({
-        type: "wallet_addInvokeTransaction",
+        type: "starknet_addInvokeTransaction",
         params: {
           calls: [transferCall],
         },
-      });
+      }) as { transaction_hash: string };
 
-      const txHashResult = (result as { transaction_hash: string }).transaction_hash;
+      const txHashResult = result.transaction_hash;
       console.log("[Ztarknet] Transaction sent:", txHashResult);
 
       setTxHash(txHashResult);
@@ -222,12 +240,20 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
           <div className="space-y-3">
             <Button
               onClick={handleConnect}
-              className="w-full h-12 text-lg"
+              className="w-full h-12 text-lg flex items-center justify-center gap-2"
             >
-              Connect Wallet
+              <span>Connect Ready Wallet</span>
             </Button>
             <p className="text-xs text-muted-foreground text-center">
-              Supports Ready Wallet, Braavos, and Web Wallet
+              Don't have Ready Wallet?{" "}
+              <a 
+                href="https://ready.gg" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                Get it here →
+              </a>
             </p>
           </div>
         )}
@@ -247,13 +273,10 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
         {status === "connected" && walletAddress && (
           <>
             <div className="rounded-lg bg-muted/50 p-3">
-              <p className="text-xs text-muted-foreground">Connected wallet:</p>
+              <p className="text-xs text-muted-foreground">Connected via Ready Wallet:</p>
               <p className="font-mono text-sm truncate">
                 {walletAddress.slice(0, 10)}...{walletAddress.slice(-8)}
               </p>
-              {walletName && (
-                <p className="text-xs text-muted-foreground mt-1">via {walletName}</p>
-              )}
             </div>
 
             <Button
