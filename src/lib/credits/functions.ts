@@ -14,9 +14,9 @@ import { getRequest } from "@tanstack/react-start/server";
  * Called by frontend after crypto tx confirms, or by webhook for Lemon Squeezy
  */
 const createCreditSchema = z.object({
-  paymentMethod: z.enum(["web3_wallet", "sol", "lemon_squeezy", "free", "near_ai", "mina", "zcash"]),
-  paymentRef: z.string().optional(), // tx hash, order ID, etc.
-  network: z.string().optional(), // "base", "solana", "lemon_squeezy"
+  paymentMethod: z.enum(["web3_wallet", "sol", "stripe", "free", "near_ai", "mina", "zcash"]),
+  paymentRef: z.string().optional(), // tx hash, Stripe session ID, etc.
+  network: z.string().optional(), // "base", "solana", "stripe"
   amountCents: z.number().int().positive(), // e.g., 900 = $9.00
 });
 

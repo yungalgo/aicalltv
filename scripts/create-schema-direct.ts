@@ -14,19 +14,25 @@ async function createSchema() {
     console.log("📦 Creating enums...");
     await driver.unsafe(`
       DO $$ BEGIN
-        CREATE TYPE call_status AS ENUM ('call_created', 'call_attempted', 'call_complete', 'call_failed');
+        CREATE TYPE call_status AS ENUM ('call_created', 'prompt_ready', 'call_attempted', 'call_complete', 'call_failed');
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
       
       DO $$ BEGIN
-        CREATE TYPE payment_method AS ENUM ('free', 'near_ai', 'sol', 'mina', 'zcash', 'web3_wallet');
+        CREATE TYPE payment_method AS ENUM ('free', 'near_ai', 'sol', 'mina', 'zcash', 'web3_wallet', 'stripe');
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
       
       DO $$ BEGIN
         CREATE TYPE video_status AS ENUM ('pending', 'generating', 'completed', 'failed');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+      
+      DO $$ BEGIN
+        CREATE TYPE credit_state AS ENUM ('unused', 'consumed', 'expired');
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
@@ -113,8 +119,8 @@ async function createSchema() {
         user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
         status call_status NOT NULL DEFAULT 'call_created',
         recipient_name TEXT NOT NULL,
-        recipient_context TEXT NOT NULL,
-        target_gender TEXT,
+        anything_else TEXT,
+        target_gender TEXT NOT NULL,
         target_gender_custom TEXT,
         target_age_range TEXT,
         target_physical_description TEXT,
@@ -145,6 +151,27 @@ async function createSchema() {
         created_at TIMESTAMP NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMP NOT NULL DEFAULT NOW()
       );
+    `);
+    
+    // Create call_credits table
+    await driver.unsafe(`
+      CREATE TABLE IF NOT EXISTS call_credits (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+        state credit_state NOT NULL DEFAULT 'unused',
+        payment_method payment_method NOT NULL,
+        payment_ref TEXT,
+        network TEXT,
+        amount_cents INTEGER NOT NULL,
+        call_id UUID REFERENCES calls(id),
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        consumed_at TIMESTAMP
+      );
+      
+      -- Unique index to prevent duplicate credits from same payment
+      CREATE UNIQUE INDEX IF NOT EXISTS unique_payment_ref 
+      ON call_credits(payment_ref) 
+      WHERE payment_ref IS NOT NULL;
     `);
 
     // Create updated_at trigger function

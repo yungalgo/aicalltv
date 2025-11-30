@@ -51,7 +51,7 @@ const erc20Abi = [
   },
 ] as const;
 
-type PaymentStep = "select-method" | "select-crypto" | "pay-base" | "pay-solana";
+type PaymentStep = "select-method" | "select-crypto" | "pay-base" | "pay-solana" | "pay-stripe";
 
 // Helper to get user-friendly error message
 function getPaymentErrorMessage(error: Error | null | undefined): { title: string; message: string; isCancelled: boolean } {
@@ -430,17 +430,17 @@ export function PaymentModal({
             </DialogHeader>
 
             <div className="mt-4 space-y-3">
-              {/* Credit Card - Disabled */}
+              {/* Credit Card - Stripe */}
               <Button
                 variant="outline"
-                className="h-14 w-full justify-start gap-3 opacity-50"
-                disabled
+                className="h-14 w-full justify-start gap-3"
+                onClick={() => setStep("pay-stripe")}
               >
                 <span className="text-xl">💳</span>
                 <div className="text-left">
                   <div className="font-medium">Pay with Credit Card</div>
                   <div className="text-xs text-muted-foreground">
-                    Coming soon
+                    Visa, Mastercard, Amex
                   </div>
                 </div>
               </Button>
@@ -713,6 +713,99 @@ export function PaymentModal({
                   className="w-full"
                   onClick={() => {
                     setStep("select-crypto");
+                    setPaymentStatus("idle");
+                  }}
+                >
+                  ← Back
+                </Button>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Step: Pay with Stripe (Credit Card) */}
+        {step === "pay-stripe" && (
+          <>
+            <DialogHeader>
+              <DialogTitle>Pay with Credit Card</DialogTitle>
+              <DialogDescription>
+                Pay ${PAYMENT_CONFIG.priceDisplay} via Stripe
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4 space-y-4">
+              {paymentStatus === "complete" ? (
+                <div className="rounded-lg bg-green-50 p-4 text-center dark:bg-green-900/20">
+                  <p className="font-medium text-green-800 dark:text-green-200">
+                    ✓ Payment Complete!
+                  </p>
+                </div>
+              ) : paymentStatus === "error" ? (
+                <div className="rounded-lg bg-red-50 p-4 text-center dark:bg-red-900/20">
+                  <p className="font-medium text-red-800 dark:text-red-200">
+                    Payment Failed
+                  </p>
+                  <p className="mt-1 text-sm text-red-600 dark:text-red-300">
+                    Something went wrong. Please try again.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="mt-3"
+                    onClick={() => setPaymentStatus("idle")}
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  {/* Price */}
+                  <div className="rounded-lg border bg-muted/50 p-4 text-center">
+                    <p className="text-3xl font-bold">${PAYMENT_CONFIG.priceDisplay}</p>
+                    <p className="text-sm text-muted-foreground">via Credit Card</p>
+                  </div>
+
+                  {/* Pay Button */}
+                  <Button
+                    onClick={async () => {
+                      setPaymentStatus("processing");
+                      try {
+                        const response = await fetch("/api/stripe/checkout", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                        });
+                        
+                        if (!response.ok) {
+                          const error = await response.json();
+                          throw new Error(error.error || "Failed to create checkout");
+                        }
+                        
+                        const { checkoutUrl } = await response.json();
+                        
+                        // Redirect to Stripe Checkout
+                        window.location.href = checkoutUrl;
+                      } catch (err) {
+                        console.error("[Stripe] Error:", err);
+                        setPaymentStatus("error");
+                      }
+                    }}
+                    disabled={paymentStatus === "processing"}
+                    className="h-12 w-full text-lg"
+                  >
+                    {paymentStatus === "processing" ? "Redirecting to Stripe..." : `Pay $${PAYMENT_CONFIG.priceDisplay}`}
+                  </Button>
+
+                  <p className="text-center text-xs text-muted-foreground">
+                    Secure payment powered by Stripe
+                  </p>
+                </>
+              )}
+
+              {paymentStatus !== "complete" && (
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => {
+                    setStep("select-method");
                     setPaymentStatus("idle");
                   }}
                 >

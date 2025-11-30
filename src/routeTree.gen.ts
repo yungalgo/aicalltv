@@ -22,6 +22,8 @@ import { Route as ApiTwilioVoiceRouteImport } from './routes/api/twilio/voice'
 import { Route as ApiTwilioStreamRouteImport } from './routes/api/twilio/stream'
 import { Route as ApiTestCallSimpleRouteImport } from './routes/api/test/call-simple'
 import { Route as ApiTestCallRouteImport } from './routes/api/test/call'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
+import { Route as ApiStripeCheckoutRouteImport } from './routes/api/stripe/checkout'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiWebhooksTwilioRecordingStatusRouteImport } from './routes/api/webhooks/twilio/recording-status'
 import { Route as ApiWebhooksTwilioCallStatusRouteImport } from './routes/api/webhooks/twilio/call-status'
@@ -91,6 +93,16 @@ const ApiTestCallRoute = ApiTestCallRouteImport.update({
   path: '/api/test/call',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiStripeCheckoutRoute = ApiStripeCheckoutRouteImport.update({
+  id: '/api/stripe/checkout',
+  path: '/api/stripe/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -117,6 +129,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/test/call': typeof ApiTestCallRoute
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
   '/api/twilio/stream': typeof ApiTwilioStreamRoute
@@ -132,6 +146,8 @@ export interface FileRoutesByTo {
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/test/call': typeof ApiTestCallRoute
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
   '/api/twilio/stream': typeof ApiTwilioStreamRoute
@@ -151,6 +167,8 @@ export interface FileRoutesById {
   '/(auth-pages)/login': typeof authPagesLoginRoute
   '/(auth-pages)/signup': typeof authPagesSignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/test/call': typeof ApiTestCallRoute
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
   '/api/twilio/stream': typeof ApiTwilioStreamRoute
@@ -169,6 +187,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/api/auth/$'
+    | '/api/stripe/checkout'
+    | '/api/stripe/webhook'
     | '/api/test/call'
     | '/api/test/call-simple'
     | '/api/twilio/stream'
@@ -184,6 +204,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/api/auth/$'
+    | '/api/stripe/checkout'
+    | '/api/stripe/webhook'
     | '/api/test/call'
     | '/api/test/call-simple'
     | '/api/twilio/stream'
@@ -202,6 +224,8 @@ export interface FileRouteTypes {
     | '/(auth-pages)/login'
     | '/(auth-pages)/signup'
     | '/api/auth/$'
+    | '/api/stripe/checkout'
+    | '/api/stripe/webhook'
     | '/api/test/call'
     | '/api/test/call-simple'
     | '/api/twilio/stream'
@@ -218,6 +242,8 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiStripeCheckoutRoute: typeof ApiStripeCheckoutRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiTestCallRoute: typeof ApiTestCallRoute
   ApiTestCallSimpleRoute: typeof ApiTestCallSimpleRoute
   ApiTwilioStreamRoute: typeof ApiTwilioStreamRoute
@@ -319,6 +345,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTestCallRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/stripe/checkout': {
+      id: '/api/stripe/checkout'
+      path: '/api/stripe/checkout'
+      fullPath: '/api/stripe/checkout'
+      preLoaderRoute: typeof ApiStripeCheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -390,6 +430,8 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiStripeCheckoutRoute: ApiStripeCheckoutRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiTestCallRoute: ApiTestCallRoute,
   ApiTestCallSimpleRoute: ApiTestCallSimpleRoute,
   ApiTwilioStreamRoute: ApiTwilioStreamRoute,

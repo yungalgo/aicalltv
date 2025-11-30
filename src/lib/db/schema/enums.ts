@@ -15,7 +15,7 @@ export const paymentMethodEnum = pgEnum("payment_method", [
   "mina",
   "zcash",
   "web3_wallet",
-  "lemon_squeezy",
+  "stripe",
 ]);
 
 export const creditStateEnum = pgEnum("credit_state", [
