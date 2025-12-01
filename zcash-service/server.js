@@ -7,13 +7,14 @@
  * Environment Variables:
  * - PORT: HTTP port (default: 8080)
  * - SEED_PHRASE: 24-word seed phrase for the wallet (REQUIRED)
+ * - BIRTHDAY: Block height when wallet was created (default: 0)
  * - CHAIN: mainnet or testnet (default: mainnet)
  * - SERVER: lightwalletd server URL
  */
 
 import express from 'express';
 import cors from 'cors';
-import { execSync, exec } from 'child_process';
+import { exec } from 'child_process';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
@@ -24,7 +25,7 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 8080;
 const CHAIN = process.env.CHAIN || 'mainnet';
-const SERVER = process.env.SERVER || 'https://mainnet.lightwalletd.com:9067';
+const SERVER = process.env.SERVER || 'https://zec.rocks:443';
 const WALLET_DIR = process.env.WALLET_DIR || '/data/wallets';
 
 // Cache for addresses
@@ -47,56 +48,54 @@ async function runZingo(command) {
   }
 }
 
-// Parse JSON output from zingo-cli
+// Parse JSON output from zingo-cli (handles log messages mixed with JSON)
 function parseZingoOutput(output) {
   try {
-    // zingo-cli outputs JSON, try to parse it
     return JSON.parse(output);
   } catch {
-    // If not JSON, return as-is
+    // zingo-cli sometimes includes log messages before JSON
+    const jsonMatch = output.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+    if (jsonMatch) {
+      try {
+        return JSON.parse(jsonMatch[0]);
+      } catch {
+        return output;
+      }
+    }
     return output;
   }
 }
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', chain: CHAIN, lastSync });
+  res.json({ status: 'ok', chain: CHAIN, lastSync, isInitialized });
 });
 
-// Reset wallet - forces reinitialization from VIEWING_KEY or SEED_PHRASE
+// Reset wallet - forces reinitialization from SEED_PHRASE
 app.post('/reset-wallet', async (req, res) => {
   try {
     console.log('[Zingo] Resetting wallet...');
-    
-    // Mark as not initialized during reset
     isInitialized = false;
     
-    // Delete wallet directory contents
     const fs = await import('fs/promises');
-    const path = await import('path');
     
     try {
-      // Remove entire wallet directory
       await fs.rm(WALLET_DIR, { recursive: true, force: true });
       console.log('[Zingo] Wallet directory removed');
-      // Recreate empty directory
       await fs.mkdir(WALLET_DIR, { recursive: true });
       console.log('[Zingo] Empty wallet directory created');
     } catch (e) {
       console.log('[Zingo] Could not reset wallet dir:', e.message);
     }
     
-    // Clear cached addresses
     cachedAddresses = null;
-    
-    // Reinitialize wallet
     await initializeWallet();
     
-    // Get the new address to confirm
-    const addressOutput = await runZingo('addresses');
-    console.log('[Zingo] New wallet addresses:', addressOutput.substring(0, 200));
-    
-    res.json({ status: 'reset', message: 'Wallet reinitialized', addressPreview: addressOutput.substring(0, 500) });
+    res.json({ 
+      status: 'reset', 
+      message: 'Wallet reinitialized',
+      address: cachedAddresses?.[0]?.encoded_address || 'unknown'
+    });
   } catch (error) {
     console.error('[Zingo] Reset error:', error);
     res.status(500).json({ error: error.message });
@@ -147,8 +146,7 @@ app.post('/sync', async (req, res) => {
 app.get('/notes', async (req, res) => {
   try {
     const output = await runZingo('notes');
-    const notes = parseZingoOutput(output);
-    res.json(notes);
+    res.json(parseZingoOutput(output));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -158,15 +156,13 @@ app.get('/notes', async (req, res) => {
 app.get('/balance', async (req, res) => {
   try {
     const output = await runZingo('balance');
-    const balance = parseZingoOutput(output);
-    res.json(balance);
+    res.json(parseZingoOutput(output));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // Check for payment with specific memo
-// This is the main endpoint we'll use for payment detection
 app.get('/check-payment', async (req, res) => {
   const { memo } = req.query;
   
@@ -175,26 +171,11 @@ app.get('/check-payment', async (req, res) => {
   }
   
   try {
-    // Get all notes
     const output = await runZingo('notes');
-    let notes = parseZingoOutput(output);
-    
-    // zingo-cli outputs log messages with JSON - extract JSON if needed
-    if (typeof notes === 'string') {
-      const jsonMatch = notes.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          notes = JSON.parse(jsonMatch[0]);
-        } catch (e) {
-          console.error('[check-payment] Failed to parse JSON from output');
-        }
-      }
-    }
+    const notes = parseZingoOutput(output);
     
     console.log('[check-payment] Looking for memo:', memo);
     
-    // Search for a note with matching memo
-    // zingo-cli returns: { orchard_notes: { note_summaries: [...] }, sapling_notes: { note_summaries: [...] } }
     let found = null;
     
     // Check Orchard notes
@@ -212,7 +193,7 @@ app.get('/check-payment', async (req, res) => {
       }
     }
     
-    // Check Sapling notes if not found in Orchard
+    // Check Sapling notes
     if (!found && notes.sapling_notes?.note_summaries) {
       for (const note of notes.sapling_notes.note_summaries) {
         if (note.memo && note.memo.includes(memo)) {
@@ -227,31 +208,8 @@ app.get('/check-payment', async (req, res) => {
       }
     }
     
-    // Legacy format fallback (pending_notes, unspent_notes)
-    if (!found && notes.pending_notes) {
-      for (const note of notes.pending_notes) {
-        if (note.memo && note.memo.includes(memo)) {
-          found = { ...note, status: 'pending' };
-          break;
-        }
-      }
-    }
-    
-    if (!found && notes.unspent_notes) {
-      for (const note of notes.unspent_notes) {
-        if (note.memo && note.memo.includes(memo)) {
-          found = { ...note, status: 'confirmed' };
-          break;
-        }
-      }
-    }
-    
     if (found) {
-      res.json({ 
-        found: true, 
-        payment: found,
-        memo 
-      });
+      res.json({ found: true, payment: found, memo });
     } else {
       res.json({ found: false, memo });
     }
@@ -264,8 +222,7 @@ app.get('/check-payment', async (req, res) => {
 app.get('/transactions', async (req, res) => {
   try {
     const output = await runZingo('list');
-    const transactions = parseZingoOutput(output);
-    res.json(transactions);
+    res.json(parseZingoOutput(output));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -274,55 +231,32 @@ app.get('/transactions', async (req, res) => {
 // Initialize wallet on startup
 async function initializeWallet() {
   const seedPhrase = process.env.SEED_PHRASE;
-  const viewingKey = process.env.VIEWING_KEY;
   
-  if (!seedPhrase && !viewingKey) {
-    console.error('ERROR: Either SEED_PHRASE or VIEWING_KEY environment variable is required');
+  if (!seedPhrase) {
+    console.error('ERROR: SEED_PHRASE environment variable is required');
     process.exit(1);
   }
   
   try {
     const fs = await import('fs/promises');
-    const path = await import('path');
     
-    // Check if wallet files exist (don't use 'addresses' as it auto-creates a wallet)
+    // Check if wallet files exist
     let walletExists = false;
     try {
       const files = await fs.readdir(WALLET_DIR);
       walletExists = files.length > 0;
       console.log(`[Zingo] Wallet directory has ${files.length} files`);
     } catch {
-      console.log('[Zingo] Wallet directory does not exist or is empty');
+      console.log('[Zingo] Wallet directory does not exist');
+      await fs.mkdir(WALLET_DIR, { recursive: true });
     }
     
     if (!walletExists) {
-      // Initialize wallet based on what's configured
-      if (viewingKey) {
-        // Initialize with viewing key (read-only - can see transactions but not spend)
-        console.log('[Zingo] Initializing wallet from VIEWING KEY (read-only)...');
-        const birthday = process.env.BIRTHDAY || '0';
-        console.log(`[Zingo] Using birthday: ${birthday}`);
-        // zingo-cli command to import unified full viewing key
-        try {
-          await runZingo(`importufvk "${viewingKey}" ${birthday}`);
-          console.log('[Zingo] Wallet initialized from viewing key (read-only mode)');
-        } catch (e) {
-          console.error('[Zingo] importufvk failed:', e.message);
-          // Try alternate command format
-          try {
-            await runZingo(`import_ufvk "${viewingKey}" ${birthday}`);
-            console.log('[Zingo] Wallet initialized with import_ufvk');
-          } catch (e2) {
-            console.error('[Zingo] import_ufvk also failed:', e2.message);
-          }
-        }
-      } else if (seedPhrase) {
-        // Initialize from seed phrase (full access)
       console.log('[Zingo] Initializing wallet from seed...');
       const birthday = process.env.BIRTHDAY || '0';
+      console.log(`[Zingo] Using birthday: ${birthday}`);
       await runZingo(`init-from-seed "${seedPhrase}" ${birthday}`);
-        console.log('[Zingo] Wallet initialized from seed');
-      }
+      console.log('[Zingo] Wallet initialized from seed');
     } else {
       console.log('[Zingo] Using existing wallet');
     }
@@ -338,18 +272,22 @@ async function initializeWallet() {
     cachedAddresses = parseZingoOutput(addresses);
     console.log('[Zingo] Addresses cached');
     
-    // Mark initialization complete
+    // Log the address for verification
+    if (Array.isArray(cachedAddresses) && cachedAddresses[0]?.encoded_address) {
+      console.log('[Zingo] Receiving address:', cachedAddresses[0].encoded_address.slice(0, 50) + '...');
+    }
+    
     isInitialized = true;
     console.log('[Zingo] ✅ Wallet initialization complete!');
     
   } catch (error) {
     console.error('[Zingo] Initialization failed:', error.message);
-    // Don't exit, let the server start anyway for debugging
   }
 }
 
 // Background sync every 30 seconds
 setInterval(async () => {
+  if (!isInitialized) return;
   try {
     console.log('[Zingo] Background sync...');
     await runZingo('sync');

@@ -123,7 +123,7 @@ export const Route = createFileRoute("/api/zcash/payment")({
           // Create memo that includes order ID (truncated to fit ZCash memo limit)
           const memo = `AICALLTV:${orderId}`;
 
-          // Fetch address from zcash-service (derived from viewing key)
+          // Fetch address from zcash-service (derived from seed phrase)
           let address: string;
           try {
             const addressRes = await fetch(`${ZCASH_SERVICE_URL}/address`);

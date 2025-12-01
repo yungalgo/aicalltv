@@ -4,23 +4,36 @@
  * Usage: bun run scripts/test-zcash-address.ts
  */
 
-// Fixed YWallet receiving address
-const ZCASH_RECEIVING_ADDRESS = "u1t9jazuuepq6asej3danuvnewgvqvtgpmg3686m4825gkknttm3d94sla8t9daa70tgr35u7w5xp2m90gglu4qtt7nyzjznk873vgrpcsl33wz2amau3p96g5vjmlxtezhc06jhqqyth3ghdd45n9x4ekeqkszz3hv2mez52v452krsne";
+const ZCASH_SERVICE = process.env.ZCASH_SERVICE_URL || "http://localhost:8080";
 
-function testZcashAddress() {
-  console.log("Testing ZCash QR code generation with FIXED address");
+async function testZcashAddress() {
+  console.log("Testing ZCash QR code generation");
+  console.log("zcash-service URL:", ZCASH_SERVICE);
   console.log("---");
 
-  // Use the fixed YWallet address
-  const address = ZCASH_RECEIVING_ADDRESS;
-  
-  console.log("FIXED ADDRESS:", address);
-  console.log("Address length:", address.length);
-  console.log("Address prefix:", address.slice(0, 10));
+  // Fetch address from zcash-service
+  let address: string;
+  try {
+    const res = await fetch(`${ZCASH_SERVICE}/address`);
+    const data = await res.json();
+    
+    if (Array.isArray(data) && data[0]?.encoded_address) {
+      address = data[0].encoded_address;
+    } else {
+      throw new Error("Unexpected address format: " + JSON.stringify(data));
+    }
+    
+    console.log("Address from zcash-service:", address);
+    console.log("Address length:", address.length);
+    console.log("Address prefix:", address.slice(0, 10));
+  } catch (err) {
+    console.error("Failed to fetch address:", err);
+    process.exit(1);
+  }
   
   // Generate a sample URI like the payment API does
   const memo = "AICALLTV:ZEC-TEST-123";
-  const amount = "0.0010"; // Updated to match new price
+  const amount = "0.0010";
   
   const memoBytes = new TextEncoder().encode(memo);
   const base64Memo = btoa(String.fromCharCode(...memoBytes))
