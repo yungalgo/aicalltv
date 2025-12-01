@@ -1,9 +1,10 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, useCallback } from "react";
 import { AuthModal } from "~/components/auth-modal";
 import { CallsTable } from "~/components/calls-table";
 import { Header } from "~/components/header";
+import { NearAiChat } from "~/components/near-ai-chat";
 import { PaymentModal } from "~/components/payment-modal";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -14,6 +15,7 @@ import { authQueryOptions } from "~/lib/auth/queries";
 import { createCall } from "~/lib/calls/functions";
 import { VIDEO_STYLES } from "~/lib/constants/video-styles";
 import { PAYMENT_CONFIG } from "~/lib/web3/config";
+import { validateCallFormData } from "~/lib/validation/call-form";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -71,6 +73,93 @@ function PageContent() {
   return <CallRequestForm />;
 }
 
+type InputMode = "form" | "ai-chat";
+
+// Flashy Tab Component
+function InputModeTab({
+  mode,
+  currentMode,
+  onClick,
+  icon,
+  label,
+  sublabel,
+  badge,
+  isAi,
+}: {
+  mode: InputMode;
+  currentMode: InputMode;
+  onClick: () => void;
+  icon: string;
+  label: string;
+  sublabel: string;
+  badge?: string;
+  isAi?: boolean;
+}) {
+  const isActive = mode === currentMode;
+  
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`
+        relative flex-1 flex flex-col items-center justify-center py-4 px-6 rounded-xl
+        transition-all duration-300 overflow-hidden group
+        ${isActive 
+          ? isAi 
+            ? "bg-gradient-to-br from-violet-600 via-purple-600 to-cyan-500 text-white shadow-lg near-ai-glow" 
+            : "bg-primary text-primary-foreground shadow-md"
+          : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
+        }
+      `}
+    >
+      {/* Shimmer effect for AI tab when active */}
+      {isAi && isActive && (
+        <div className="absolute inset-0 near-ai-shimmer pointer-events-none" />
+      )}
+      
+      {/* Icon with float animation for AI */}
+      <span className={`text-2xl mb-1 ${isAi && isActive ? "near-ai-float" : ""}`}>
+        {icon}
+      </span>
+      
+      {/* Label */}
+      <span className="font-semibold text-sm">{label}</span>
+      
+      {/* Sublabel */}
+      <span className={`text-xs mt-0.5 ${isActive ? "opacity-80" : "opacity-60"}`}>
+        {sublabel}
+      </span>
+      
+      {/* Badge */}
+      {badge && (
+        <span className={`
+          absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full
+          ${isActive 
+            ? "bg-white/20 text-white" 
+            : "bg-gradient-to-r from-violet-500 to-cyan-500 text-white"
+          }
+        `}>
+          {badge}
+        </span>
+      )}
+      
+      {/* TEE Badge for AI tab */}
+      {isAi && (
+        <span className={`
+          absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] font-medium px-2 py-0.5 rounded-full
+          flex items-center gap-1
+          ${isActive 
+            ? "bg-green-400/20 text-green-100 tee-badge" 
+            : "bg-green-500/10 text-green-600 dark:text-green-400"
+          }
+        `}>
+          🔒 TEE Secured
+        </span>
+      )}
+    </button>
+  );
+}
+
 function CallRequestForm() {
   const { data: user } = useSuspenseQuery(authQueryOptions());
   const queryClient = useQueryClient();
@@ -78,6 +167,7 @@ function CallRequestForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [inputMode, setInputMode] = useState<InputMode>("form");
   const [formData, setFormData] = useState({
     recipientName: "",
     phoneNumber: "",
@@ -89,6 +179,29 @@ function CallRequestForm() {
     interestingPiece: "",
     videoStyle: "anime",
   });
+
+  // Handle data from NEAR AI chat
+  const handleAiFormFill = useCallback((data: Partial<typeof formData>) => {
+    setFormData((prev) => ({
+      ...prev,
+      recipientName: data.recipientName || prev.recipientName,
+      phoneNumber: data.phoneNumber || prev.phoneNumber,
+      targetGender: data.targetGender || prev.targetGender,
+      targetGenderCustom: data.targetGenderCustom || prev.targetGenderCustom,
+      targetAgeRange: data.targetAgeRange || prev.targetAgeRange,
+      interestingPiece: data.interestingPiece || prev.interestingPiece,
+      videoStyle: data.videoStyle || prev.videoStyle,
+      anythingElse: data.anythingElse || prev.anythingElse,
+    }));
+  }, []);
+
+  // Handle completion from NEAR AI chat - switch to form view and trigger payment
+  const handleAiComplete = useCallback((data: Partial<typeof formData>) => {
+    handleAiFormFill(data);
+    // Switch to form view so user can review
+    setInputMode("form");
+    toast.success("Form filled from AI! Review and click 'Buy a Call' to proceed.");
+  }, [handleAiFormFill]);
 
   // Handle Stripe payment return - show toast and refresh calls
   useEffect(() => {
@@ -106,31 +219,25 @@ function CallRequestForm() {
     }
   }, [search.payment, queryClient]);
 
-  // Form validation
+  // Form validation using the same validation logic as API
   const validateForm = (): boolean => {
-    if (!formData.recipientName.trim()) {
-      toast.error("Recipient name is required");
+    const validationResult = validateCallFormData(formData);
+    
+    if (!validationResult.isValid) {
+      // Show first error to user
+      const firstError = validationResult.errors[0];
+      toast.error(`${firstError.field}: ${firstError.message}`);
       return false;
     }
-    if (!formData.phoneNumber.trim()) {
-      toast.error("Phone number is required");
-      return false;
+    
+    // Update form data with normalized values (especially phone number)
+    if (validationResult.normalizedData.phoneNumber) {
+      setFormData((prev) => ({
+        ...prev,
+        phoneNumber: validationResult.normalizedData.phoneNumber!,
+      }));
     }
-    if (formData.anythingElse && formData.anythingElse.length > 1000) {
-      toast.error("'Anything Else' must be 1000 characters or less");
-      return false;
-    }
-    if (
-      formData.targetGender === "other" &&
-      !formData.targetGenderCustom.trim()
-    ) {
-      toast.error("Please specify custom gender");
-      return false;
-    }
-    if (!formData.videoStyle) {
-      toast.error("Video style is required");
-      return false;
-    }
+    
     return true;
   };
 
@@ -224,6 +331,99 @@ function CallRequestForm() {
 
   return (
     <>
+      {/* Flashy Input Mode Tabs */}
+      <div className="mb-8">
+        {/* Tab Header */}
+        <div className="text-center mb-4">
+          <p className="text-sm text-muted-foreground">
+            Choose how you want to create your call
+          </p>
+        </div>
+        
+        {/* Tabs Container */}
+        <div className="flex gap-3 p-1.5 bg-muted/30 rounded-2xl border">
+          <InputModeTab
+            mode="form"
+            currentMode={inputMode}
+            onClick={() => setInputMode("form")}
+            icon="📝"
+            label="Manual Form"
+            sublabel="Fill in details yourself"
+          />
+          <InputModeTab
+            mode="ai-chat"
+            currentMode={inputMode}
+            onClick={() => setInputMode("ai-chat")}
+            icon="✨"
+            label="AI Assistant"
+            sublabel="Describe in natural language"
+            badge="NEW"
+            isAi
+          />
+        </div>
+      </div>
+
+      {/* AI Chat Mode */}
+      {inputMode === "ai-chat" && (
+        <div className="relative mb-8">
+          {/* Animated border wrapper */}
+          <div className="absolute -inset-[2px] rounded-2xl near-ai-border opacity-70" />
+          
+          {/* Content */}
+          <div className="relative rounded-xl bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 p-6 border border-violet-500/20">
+            {/* Header Banner */}
+            <div className="flex items-center justify-between mb-4 pb-4 border-b border-violet-500/20">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full blur-md opacity-50" />
+                  <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500">
+                    <span className="text-lg">🤖</span>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-bold text-white flex items-center gap-2">
+                    <span className="near-ai-gradient-text">NEAR AI</span>
+                    <span className="text-white/60">Assistant</span>
+                  </h3>
+                  <p className="text-xs text-violet-300/70">
+                    Private inference powered by Trusted Execution Environment
+                  </p>
+                </div>
+              </div>
+              
+              {/* TEE Verified Badge */}
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30 tee-badge">
+                <span className="text-green-400 text-xs">🔐</span>
+                <span className="text-green-400 text-xs font-medium">TEE Verified</span>
+              </div>
+            </div>
+            
+            {/* Chat Component */}
+            <NearAiChat
+              onFormFill={handleAiFormFill}
+              onComplete={handleAiComplete}
+            />
+            
+            {/* Footer Info */}
+            <div className="mt-4 pt-4 border-t border-violet-500/20">
+              <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-violet-300/60">
+                <span className="flex items-center gap-1">
+                  <span>🔒</span> End-to-end private
+                </span>
+                <span className="flex items-center gap-1">
+                  <span>⚡</span> DeepSeek V3.1
+                </span>
+                <span className="flex items-center gap-1">
+                  <span>✓</span> Verifiable inference
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Form Mode - Only shown when form mode is active */}
+      {inputMode === "form" && (
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="recipientName">Who should we call? *</Label>
@@ -240,20 +440,32 @@ function CallRequestForm() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="phoneNumber">Their phone number *</Label>
-          <Input
-            id="phoneNumber"
-            type="tel"
-            value={formData.phoneNumber}
-            onChange={(e) =>
-              setFormData({ ...formData, phoneNumber: e.target.value })
-            }
-            placeholder="+1 (555) 123-4567"
-            required
-            disabled={isSubmitting}
-          />
+          <Label htmlFor="phoneNumber">Their phone number (US) *</Label>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground font-medium">+1</span>
+            <Input
+              id="phoneNumber"
+              type="tel"
+              value={formData.phoneNumber?.replace(/^\+1\s?/, "") || ""}
+              onChange={(e) => {
+                // Auto-add +1 prefix, remove non-digits
+                let value = e.target.value.replace(/[^\d]/g, "");
+                // Limit to 10 digits (US phone number)
+                if (value.length > 10) {
+                  value = value.substring(0, 10);
+                }
+                // Always add +1 prefix
+                setFormData({ ...formData, phoneNumber: value ? `+1${value}` : "" });
+              }}
+              placeholder="(555) 123-4567"
+              required
+              disabled={isSubmitting}
+              className="flex-1"
+              maxLength={14} // (555) 123-4567 = 14 chars
+            />
+          </div>
           <p className="text-xs text-muted-foreground">
-            🔒 Encrypted before storage
+            🔒 Encrypted before storage • US numbers only (10 digits)
           </p>
         </div>
 
@@ -421,6 +633,7 @@ function CallRequestForm() {
           Secure payment via credit card or crypto
         </p>
       </form>
+      )}
 
       {/* Auth Modal - shown when not logged in */}
       <AuthModal
