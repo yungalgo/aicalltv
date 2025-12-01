@@ -72,13 +72,14 @@ app.post('/reset-wallet', async (req, res) => {
     const path = await import('path');
     
     try {
-      const files = await fs.readdir(WALLET_DIR);
-      for (const file of files) {
-        await fs.rm(path.join(WALLET_DIR, file), { recursive: true, force: true });
-      }
-      console.log('[Zingo] Wallet directory cleared');
+      // Remove entire wallet directory
+      await fs.rm(WALLET_DIR, { recursive: true, force: true });
+      console.log('[Zingo] Wallet directory removed');
+      // Recreate empty directory
+      await fs.mkdir(WALLET_DIR, { recursive: true });
+      console.log('[Zingo] Empty wallet directory created');
     } catch (e) {
-      console.log('[Zingo] Could not clear wallet dir:', e.message);
+      console.log('[Zingo] Could not reset wallet dir:', e.message);
     }
     
     // Clear cached addresses
@@ -87,7 +88,11 @@ app.post('/reset-wallet', async (req, res) => {
     // Reinitialize wallet
     await initializeWallet();
     
-    res.json({ status: 'reset', message: 'Wallet reinitialized' });
+    // Get the new address to confirm
+    const addressOutput = await runZingo('addresses');
+    console.log('[Zingo] New wallet addresses:', addressOutput.substring(0, 200));
+    
+    res.json({ status: 'reset', message: 'Wallet reinitialized', addressPreview: addressOutput.substring(0, 500) });
   } catch (error) {
     console.error('[Zingo] Reset error:', error);
     res.status(500).json({ error: error.message });
@@ -262,20 +267,40 @@ async function initializeWallet() {
   }
   
   try {
-    // Check if wallet already exists by trying to get addresses
-    console.log('[Zingo] Checking for existing wallet...');
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    
+    // Check if wallet files exist (don't use 'addresses' as it auto-creates a wallet)
+    let walletExists = false;
     try {
-      await runZingo('addresses');
-      console.log('[Zingo] Wallet already exists');
+      const files = await fs.readdir(WALLET_DIR);
+      walletExists = files.length > 0;
+      console.log(`[Zingo] Wallet directory has ${files.length} files`);
     } catch {
-      // Wallet doesn't exist, initialize
+      console.log('[Zingo] Wallet directory does not exist or is empty');
+    }
+    
+    if (!walletExists) {
+      // Initialize wallet based on what's configured
       if (viewingKey) {
         // Initialize with viewing key (read-only - can see transactions but not spend)
         console.log('[Zingo] Initializing wallet from VIEWING KEY (read-only)...');
         const birthday = process.env.BIRTHDAY || '0';
+        console.log(`[Zingo] Using birthday: ${birthday}`);
         // zingo-cli command to import unified full viewing key
-        await runZingo(`importufvk "${viewingKey}" ${birthday} false`);
-        console.log('[Zingo] Wallet initialized from viewing key (read-only mode)');
+        try {
+          await runZingo(`importufvk "${viewingKey}" ${birthday}`);
+          console.log('[Zingo] Wallet initialized from viewing key (read-only mode)');
+        } catch (e) {
+          console.error('[Zingo] importufvk failed:', e.message);
+          // Try alternate command format
+          try {
+            await runZingo(`import_ufvk "${viewingKey}" ${birthday}`);
+            console.log('[Zingo] Wallet initialized with import_ufvk');
+          } catch (e2) {
+            console.error('[Zingo] import_ufvk also failed:', e2.message);
+          }
+        }
       } else if (seedPhrase) {
         // Initialize from seed phrase (full access)
         console.log('[Zingo] Initializing wallet from seed...');
@@ -283,6 +308,8 @@ async function initializeWallet() {
         await runZingo(`init-from-seed "${seedPhrase}" ${birthday}`);
         console.log('[Zingo] Wallet initialized from seed');
       }
+    } else {
+      console.log('[Zingo] Using existing wallet');
     }
     
     // Initial sync
