@@ -9,10 +9,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { auth } from "~/lib/auth/auth";
 import { env } from "~/env/server";
 
-// ZCash service URL (set in Railway env) - only used for payment verification
+// ZCash service URL - source of truth for address AND payment verification
+// Address is derived from SEED_PHRASE in zcash-service
 const ZCASH_SERVICE_URL = env.ZCASH_SERVICE_URL || "http://localhost:8080";
-
-// Address will be fetched dynamically from zcash-service to ensure it matches the viewing key
 
 // In-memory store for pending payments (use Redis in production)
 const pendingPayments = new Map<string, {
