@@ -1,68 +1,72 @@
 # ZCash Payment Service
 
-A microservice that wraps zingo-cli to provide HTTP APIs for ZCash payment detection.
+A microservice that wraps zingo-cli to verify ZCash shielded payments using a viewing key.
+
+## How It Works
+
+1. Main app shows QR code with your wallet's receiving address
+2. User pays with any Zcash wallet (YWallet, Zashi, etc.)
+3. This service monitors incoming transactions using your viewing key
+4. Main app polls this service to confirm payment
 
 ## Deployment on Railway
 
-1. Create a new Railway project
-2. Deploy from this directory
+1. Create a new Railway project from `zcash-service/` directory
+2. Add a Volume mounted at `/data/wallets` (for wallet data persistence)
 3. Set environment variables:
-   - `SEED_PHRASE` (required): Your 24-word Zcash wallet seed phrase
-   - `BIRTHDAY` (optional): Block height when wallet was created (speeds up sync)
-   - `CHAIN`: `mainnet` or `testnet` (default: mainnet)
-   - `SERVER`: lightwalletd server URL (default: https://mainnet.lightwalletd.com:9067)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VIEWING_KEY` | Yes | Unified Full Viewing Key (`uview1...`) from your wallet |
+| `BIRTHDAY` | Yes | Block height when wallet was created (e.g., `3150000`) |
+| `CHAIN` | No | `mainnet` or `testnet` (default: mainnet) |
+| `SERVER` | No | lightwalletd server (default: https://zec.rocks:443) |
+
+## Getting Your Viewing Key
+
+**From YWallet:**
+1. Settings → Backup → Show Unified Viewing Key
+2. Copy the key starting with `uview1...`
+
+**Birthday:** Use a recent block height before any transactions (check zcash block explorer)
 
 ## API Endpoints
 
 ### GET /health
-Health check endpoint.
-
-### GET /address
-Returns the wallet's receiving addresses (z-address for shielded).
-
-### POST /sync
-Triggers a wallet sync with the blockchain.
-
-### GET /notes
-Returns all incoming notes (shielded transactions).
+Health check. Returns `{ status: "ok", isInitialized: true }`
 
 ### GET /balance
-Returns wallet balance.
+Returns wallet balance in zatoshis.
 
-### GET /check-payment?memo=ORDER-123
+### GET /notes
+Returns all incoming notes (shielded transactions with memos).
+
+### POST /sync
+Triggers a full sync with the blockchain.
+
+### GET /check-payment?memo=AICALLTV:ZEC-xxx
 Checks if a payment with the specified memo has been received.
+Returns `{ found: true, payment: {...} }` or `{ found: false }`
 
-### GET /transactions
-Returns transaction history.
-
-## Payment Flow
-
-1. Main app calls `/address` to get z-address
-2. Main app shows QR code: `zcash:${address}?amount=${amount}&memo=${orderId}`
-3. User scans QR with Zashi/YWallet
-4. Main app polls `/check-payment?memo=${orderId}`
-5. When found, create credit and process call
-
-## Environment Variables for Main App
+## Main App Configuration
 
 Add to your `.env`:
 ```
 ZCASH_SERVICE_URL=https://your-zcash-service.railway.app
 ```
 
+The receiving address is hardcoded in `src/routes/api/zcash/payment.ts`.
+
 ## Local Development
 
 ```bash
-# Install dependencies
+# Requires zingo-cli installed and in PATH
 npm install
-
-# Run (requires zingo-cli in PATH and SEED_PHRASE set)
-SEED_PHRASE="your 24 words here" npm start
+VIEWING_KEY="uview1..." BIRTHDAY="3150000" npm start
 ```
 
 ## Security Notes
 
-- NEVER commit your seed phrase
+- The viewing key is **read-only** - it cannot spend funds
 - Use Railway's encrypted environment variables
-- The service should be internal/private, not publicly exposed
-
+- Keep the service internal/private

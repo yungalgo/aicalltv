@@ -1,24 +1,27 @@
 /**
  * ZCash Payment API
  * 
- * Endpoints for generating payment requests and checking payment status.
- * Communicates with the zcash-service running on Railway.
+ * Generates payment requests with QR codes and verifies payments
+ * via the zcash-service (which monitors transactions with a viewing key).
  */
 
 import { createFileRoute } from "@tanstack/react-router";
 import { auth } from "~/lib/auth/auth";
 import { env } from "~/env/server";
 
-// ZCash service URL - source of truth for address AND payment verification
-// Address is derived from SEED_PHRASE in zcash-service
+// zcash-service URL for payment verification
 const ZCASH_SERVICE_URL = env.ZCASH_SERVICE_URL || "http://localhost:8080";
 
-// In-memory store for pending payments (use Redis in production)
+// YWallet receiving address (funds go here)
+const RECEIVING_ADDRESS = "u1smm22fj85e68exdv77vnxds8agpd2kq0fc0lj2aft0mkkjzffe55t8acyzntq8yqr5dun47drcf0kgusyekdvuy0f0cpcyp357ny6v7jla3cde0hzmjzgy8m72k2p6uk680vxde4cryqv02t3h0he0jn2js43czswsnypuzedq5d3tynevg9paa95pzscw4nxxh2s9wtkdvhk3h7ey4";
+
+// Payment amount in ZEC
+const ZEC_AMOUNT = "0.0010";
+
+// Pending payments (in production, use Redis or database)
 const pendingPayments = new Map<string, {
-  orderId: string;
-  userId: string;
-  amount: number;
   memo: string;
+  userId: string;
   createdAt: number;
   formData: Record<string, unknown>;
 }>();
@@ -26,182 +29,118 @@ const pendingPayments = new Map<string, {
 export const Route = createFileRoute("/api/zcash/payment")({
   server: {
     handlers: {
-      // GET: Check payment status or get address
+      /**
+       * GET: Check payment status
+       * ?action=check&orderId=ZEC-xxx
+       */
       GET: async ({ request }: { request: Request }) => {
         const url = new URL(request.url);
         const action = url.searchParams.get("action");
         const orderId = url.searchParams.get("orderId");
 
-        // Get wallet address
-        if (action === "address") {
-          try {
-            const response = await fetch(`${ZCASH_SERVICE_URL}/address`);
-            if (!response.ok) {
-              throw new Error("Failed to get ZCash address");
-            }
-            const addresses = await response.json();
-            return new Response(JSON.stringify(addresses), {
-              headers: { "Content-Type": "application/json" },
-            });
-          } catch (error) {
-            console.error("[ZCash] Error getting address:", error);
-            return new Response(
-              JSON.stringify({ error: "Failed to get ZCash address" }),
-              { status: 500, headers: { "Content-Type": "application/json" } }
-            );
-          }
-        }
-
-        // Check payment status
         if (action === "check" && orderId) {
-          const pending = pendingPayments.get(orderId);
-          
-          // Reconstruct memo even if not in map (handles server restarts)
-          const memo = pending?.memo || `AICALLTV:${orderId}`;
-          console.log("[ZCash] Checking payment for memo:", memo);
+          // Reconstruct memo from orderId (handles server restarts)
+          const memo = `AICALLTV:${orderId}`;
+          console.log("[ZCash] Checking payment for:", memo);
 
           try {
-            // Check with zcash service
             const response = await fetch(
               `${ZCASH_SERVICE_URL}/check-payment?memo=${encodeURIComponent(memo)}`
             );
             
             if (!response.ok) {
-              throw new Error("Failed to check payment");
+              throw new Error(`zcash-service error: ${response.status}`);
             }
             
             const result = await response.json();
             
             if (result.found) {
-              return new Response(JSON.stringify({
+              return Response.json({
                 status: "confirmed",
                 payment: result.payment,
                 orderId,
-              }), { headers: { "Content-Type": "application/json" } });
-            } else {
-              return new Response(JSON.stringify({
-                status: "pending",
-                orderId,
-              }), { headers: { "Content-Type": "application/json" } });
+              });
             }
+            
+            return Response.json({ status: "pending", orderId });
           } catch (error) {
-            console.error("[ZCash] Error checking payment:", error);
-            return new Response(
-              JSON.stringify({ error: "Failed to check payment" }),
-              { status: 500, headers: { "Content-Type": "application/json" } }
+            console.error("[ZCash] Check error:", error);
+            return Response.json(
+              { error: "Payment check failed" },
+              { status: 500 }
             );
           }
         }
 
-        return new Response(
-          JSON.stringify({ error: "Invalid action" }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
+        return Response.json({ error: "Invalid request" }, { status: 400 });
       },
 
-      // POST: Create a new payment request
+      /**
+       * POST: Create new payment request
+       * Returns QR code data (ZIP-321 URI)
+       */
       POST: async ({ request }: { request: Request }) => {
         try {
-          // Verify user is authenticated
+          // Require authentication
           const session = await auth.api.getSession({
             headers: request.headers,
           });
           
           if (!session?.user?.id) {
-            return new Response(
-              JSON.stringify({ error: "Unauthorized" }),
-              { status: 401, headers: { "Content-Type": "application/json" } }
-            );
+            return Response.json({ error: "Unauthorized" }, { status: 401 });
           }
 
-          const body = await request.json();
-          const { formData } = body;
+          const { formData } = await request.json();
 
           // Generate unique order ID
-          const orderId = `ZEC-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+          const orderId = `ZEC-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
           
-          // Create memo that includes order ID (truncated to fit ZCash memo limit)
+          // Memo identifies this payment (included in shielded transaction)
           const memo = `AICALLTV:${orderId}`;
-
-          // Fetch address from zcash-service (derived from seed phrase)
-          let address: string;
-          try {
-            const addressRes = await fetch(`${ZCASH_SERVICE_URL}/address`);
-            if (!addressRes.ok) throw new Error("Failed to get address");
-            const addressData = await addressRes.json();
-            
-            // Parse the zingo-cli output to get the address
-            if (typeof addressData === 'string') {
-              const jsonMatch = addressData.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-              if (jsonMatch) {
-                const parsed = JSON.parse(jsonMatch[0]);
-                if (Array.isArray(parsed) && parsed[0]?.encoded_address) {
-                  address = parsed[0].encoded_address;
-                } else {
-                  throw new Error("Could not parse address from response");
-                }
-              } else {
-                throw new Error("No JSON in response");
-              }
-            } else if (Array.isArray(addressData) && addressData[0]?.encoded_address) {
-              address = addressData[0].encoded_address;
-            } else {
-              throw new Error("Unexpected address format");
-            }
-            console.log("[ZCash] Using zcash-service address:", address.slice(0, 20) + "...");
-          } catch (err) {
-            console.error("[ZCash] Failed to get address from zcash-service:", err);
-            throw new Error("ZCash service unavailable");
-          }
-
-          // Hardcoded ZEC amount for hackathon demo (10x cheaper)
-          // 0.001 ZEC ≈ $0.05 at current prices
-          const zecAmount = "0.0010";
 
           // Store pending payment
           pendingPayments.set(orderId, {
-            orderId,
-            userId: session.user.id,
-            amount: parseFloat(zecAmount),
             memo,
+            userId: session.user.id,
             createdAt: Date.now(),
             formData,
           });
 
-          // Clean up old pending payments (older than 1 hour)
+          // Clean up old payments (>1 hour)
           const oneHourAgo = Date.now() - 3600000;
-          for (const [key, value] of pendingPayments.entries()) {
+          for (const [key, value] of pendingPayments) {
             if (value.createdAt < oneHourAgo) {
               pendingPayments.delete(key);
             }
           }
 
-          // Return payment details for QR code
-          // ZIP-321: memo must be base64url-encoded (not URL-encoded)
-          // Convert memo string to bytes, then base64url encode
+          // Build ZIP-321 URI for QR code
+          // Memo must be base64url encoded per spec
           const memoBytes = new TextEncoder().encode(memo);
           const base64Memo = btoa(String.fromCharCode(...memoBytes))
-            .replace(/\+/g, '-')  // base64url uses - instead of +
-            .replace(/\//g, '_')  // base64url uses _ instead of /
-            .replace(/=+$/, '');  // remove padding
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=+$/, '');
           
-          return new Response(JSON.stringify({
+          const uri = `zcash:${RECEIVING_ADDRESS}?amount=${ZEC_AMOUNT}&memo=${base64Memo}`;
+
+          console.log("[ZCash] Created payment:", orderId);
+
+          return Response.json({
             orderId,
-            address,
-            amount: zecAmount,
+            address: RECEIVING_ADDRESS,
+            amount: ZEC_AMOUNT,
             memo,
-            // ZCash URI format (ZIP-321) for wallet scanning
-            uri: `zcash:${address}?amount=${zecAmount}&memo=${base64Memo}`,
-          }), { headers: { "Content-Type": "application/json" } });
+            uri,
+          });
         } catch (error) {
-          console.error("[ZCash] Error creating payment:", error);
-          return new Response(
-            JSON.stringify({ error: "Failed to create payment request" }),
-            { status: 500, headers: { "Content-Type": "application/json" } }
+          console.error("[ZCash] Create error:", error);
+          return Response.json(
+            { error: "Failed to create payment" },
+            { status: 500 }
           );
         }
       },
     },
   },
 });
-

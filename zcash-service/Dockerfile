@@ -2,7 +2,7 @@
 # Deployed on Railway as a sidecar service
 #
 # Build: docker build -t zcash-service .
-# Run: docker run -e SEED_PHRASE="your 24 word seed" -p 8080:8080 zcash-service
+# Run: docker run -e VIEWING_KEY="uview1..." -e BIRTHDAY="3150000" -p 8080:8080 zcash-service
 
 # Stage 1: Build zingo-cli from source
 FROM rust:1.85-bullseye AS rust-builder
