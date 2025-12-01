@@ -62,6 +62,38 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', chain: CHAIN, lastSync });
 });
 
+// Reset wallet - forces reinitialization from VIEWING_KEY or SEED_PHRASE
+app.post('/reset-wallet', async (req, res) => {
+  try {
+    console.log('[Zingo] Resetting wallet...');
+    
+    // Delete wallet directory contents
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    
+    try {
+      const files = await fs.readdir(WALLET_DIR);
+      for (const file of files) {
+        await fs.rm(path.join(WALLET_DIR, file), { recursive: true, force: true });
+      }
+      console.log('[Zingo] Wallet directory cleared');
+    } catch (e) {
+      console.log('[Zingo] Could not clear wallet dir:', e.message);
+    }
+    
+    // Clear cached addresses
+    cachedAddresses = null;
+    
+    // Reinitialize wallet
+    await initializeWallet();
+    
+    res.json({ status: 'reset', message: 'Wallet reinitialized' });
+  } catch (error) {
+    console.error('[Zingo] Reset error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get wallet address (for QR code)
 app.get('/address', async (req, res) => {
   try {
