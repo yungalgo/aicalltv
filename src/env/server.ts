@@ -50,6 +50,10 @@ export const env = createEnv({
 
     // ZCash service URL (for ZCash payments via zingolib)
     ZCASH_SERVICE_URL: z.string().optional(),
+
+    // NEAR AI configuration (for natural language call requests - TEE private inference)
+    // Get your API key from https://cloud.near.ai
+    NEAR_AI_API_KEY: z.string().optional(),
   },
   runtimeEnv: process.env,
 });
