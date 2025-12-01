@@ -222,9 +222,10 @@ app.get('/transactions', async (req, res) => {
 // Initialize wallet on startup
 async function initializeWallet() {
   const seedPhrase = process.env.SEED_PHRASE;
+  const viewingKey = process.env.VIEWING_KEY;
   
-  if (!seedPhrase) {
-    console.error('ERROR: SEED_PHRASE environment variable is required');
+  if (!seedPhrase && !viewingKey) {
+    console.error('ERROR: Either SEED_PHRASE or VIEWING_KEY environment variable is required');
     process.exit(1);
   }
   
@@ -235,11 +236,21 @@ async function initializeWallet() {
       await runZingo('addresses');
       console.log('[Zingo] Wallet already exists');
     } catch {
-      // Wallet doesn't exist, initialize from seed
-      console.log('[Zingo] Initializing wallet from seed...');
-      const birthday = process.env.BIRTHDAY || '0';
-      await runZingo(`init-from-seed "${seedPhrase}" ${birthday}`);
-      console.log('[Zingo] Wallet initialized');
+      // Wallet doesn't exist, initialize
+      if (viewingKey) {
+        // Initialize with viewing key (read-only - can see transactions but not spend)
+        console.log('[Zingo] Initializing wallet from VIEWING KEY (read-only)...');
+        const birthday = process.env.BIRTHDAY || '0';
+        // zingo-cli command to import unified full viewing key
+        await runZingo(`importufvk "${viewingKey}" ${birthday} false`);
+        console.log('[Zingo] Wallet initialized from viewing key (read-only mode)');
+      } else if (seedPhrase) {
+        // Initialize from seed phrase (full access)
+        console.log('[Zingo] Initializing wallet from seed...');
+        const birthday = process.env.BIRTHDAY || '0';
+        await runZingo(`init-from-seed "${seedPhrase}" ${birthday}`);
+        console.log('[Zingo] Wallet initialized from seed');
+      }
     }
     
     // Initial sync

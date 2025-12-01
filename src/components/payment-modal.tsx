@@ -914,7 +914,7 @@ function ZCashPaymentStep({
   onPaymentComplete: (txRef: string) => void;
   onBack: () => void;
 }) {
-  const [status, setStatus] = useState<"loading" | "ready" | "polling" | "confirmed" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "polling" | "confirmed" | "timeout" | "error">("loading");
   const [paymentData, setPaymentData] = useState<{
     orderId: string;
     address: string;
@@ -923,7 +923,10 @@ function ZCashPaymentStep({
     uri: string;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pollCount, setPollCount] = useState(0);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollStartRef = useRef<number | null>(null);
+  const MAX_POLL_TIME = 90000; // 90 seconds max polling
 
   // Create payment request on mount
   useEffect(() => {
@@ -975,9 +978,23 @@ function ZCashPaymentStep({
     if (!paymentData) return;
     
     setStatus("polling");
+    setPollCount(0);
+    pollStartRef.current = Date.now();
 
     pollIntervalRef.current = setInterval(async () => {
       try {
+        // Check timeout
+        const elapsed = Date.now() - (pollStartRef.current || Date.now());
+        if (elapsed > MAX_POLL_TIME) {
+          if (pollIntervalRef.current) {
+            clearInterval(pollIntervalRef.current);
+          }
+          setStatus("timeout");
+          return;
+        }
+        
+        setPollCount(prev => prev + 1);
+        
         const response = await fetch(
           `/api/zcash/payment?action=check&orderId=${paymentData.orderId}`
         );
@@ -1034,6 +1051,29 @@ function ZCashPaymentStep({
           </div>
         )}
 
+        {status === "timeout" && paymentData && (
+          <div className="rounded-lg bg-amber-50 p-4 text-center dark:bg-amber-900/20">
+            <p className="font-medium text-amber-800 dark:text-amber-200">
+              ⏱ Confirmation Timeout
+            </p>
+            <p className="mt-1 text-sm text-amber-600 dark:text-amber-300">
+              Payment not detected yet. ZCash transactions can take 1-2 minutes to confirm.
+            </p>
+            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 font-mono">
+              Memo: {paymentData.memo}
+            </p>
+            <Button 
+              className="mt-3" 
+              onClick={() => {
+                setStatus("ready");
+                setPollCount(0);
+              }}
+            >
+              Check Again
+            </Button>
+          </div>
+        )}
+
         {(status === "ready" || status === "polling") && paymentData && (
           <>
             {/* QR Code */}
@@ -1072,9 +1112,17 @@ function ZCashPaymentStep({
 
             {/* Status */}
             {status === "polling" ? (
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                Waiting for payment confirmation...
+              <div className="space-y-2">
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  Waiting for payment confirmation...
+                </div>
+                <p className="text-xs text-center text-muted-foreground">
+                  Checking... ({pollCount} checks, ~{Math.round((Date.now() - (pollStartRef.current || Date.now())) / 1000)}s elapsed)
+                </p>
+                <p className="text-xs text-center text-muted-foreground">
+                  ZCash transactions typically confirm in 30-90 seconds
+                </p>
               </div>
             ) : (
               <Button onClick={startPolling} className="w-full">
