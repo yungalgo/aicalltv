@@ -30,6 +30,7 @@ const WALLET_DIR = process.env.WALLET_DIR || '/data/wallets';
 // Cache for addresses
 let cachedAddresses = null;
 let lastSync = 0;
+let isInitialized = false; // Track if wallet is ready
 
 // Run zingo-cli command
 async function runZingo(command) {
@@ -67,6 +68,9 @@ app.post('/reset-wallet', async (req, res) => {
   try {
     console.log('[Zingo] Resetting wallet...');
     
+    // Mark as not initialized during reset
+    isInitialized = false;
+    
     // Delete wallet directory contents
     const fs = await import('fs/promises');
     const path = await import('path');
@@ -102,6 +106,17 @@ app.post('/reset-wallet', async (req, res) => {
 // Get wallet address (for QR code)
 app.get('/address', async (req, res) => {
   try {
+    // Wait for initialization to complete (max 60 seconds)
+    let waitCount = 0;
+    while (!isInitialized && waitCount < 60) {
+      await new Promise(r => setTimeout(r, 1000));
+      waitCount++;
+    }
+    
+    if (!isInitialized) {
+      return res.status(503).json({ error: 'Wallet still initializing' });
+    }
+    
     if (cachedAddresses) {
       return res.json(cachedAddresses);
     }
@@ -322,6 +337,10 @@ async function initializeWallet() {
     const addresses = await runZingo('addresses');
     cachedAddresses = parseZingoOutput(addresses);
     console.log('[Zingo] Addresses cached');
+    
+    // Mark initialization complete
+    isInitialized = true;
+    console.log('[Zingo] ✅ Wallet initialization complete!');
     
   } catch (error) {
     console.error('[Zingo] Initialization failed:', error.message);
