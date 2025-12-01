@@ -1113,9 +1113,9 @@ function ZCashPaymentStep({
             {/* Status */}
             {status === "polling" ? (
               <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                  Waiting for payment confirmation...
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                Waiting for payment confirmation...
                 </div>
                 <p className="text-xs text-center text-muted-foreground">
                   Checking... ({pollCount} checks, ~{Math.round((Date.now() - (pollStartRef.current || Date.now())) / 1000)}s elapsed)

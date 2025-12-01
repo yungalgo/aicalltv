@@ -12,8 +12,7 @@ import { env } from "~/env/server";
 // ZCash service URL (set in Railway env) - only used for payment verification
 const ZCASH_SERVICE_URL = env.ZCASH_SERVICE_URL || "http://localhost:8080";
 
-// Fixed YWallet receiving address - payments go directly here
-const ZCASH_RECEIVING_ADDRESS = "u1t9jazuuepq6asej3danuvnewgvqvtgpmg3686m4825gkknttm3d94sla8t9daa70tgr35u7w5xp2m90gglu4qtt7nyzjznk873vgrpcsl33wz2amau3p96g5vjmlxtezhc06jhqqyth3ghdd45n9x4ekeqkszz3hv2mez52v452krsne";
+// Address will be fetched dynamically from zcash-service to ensure it matches the viewing key
 
 // In-memory store for pending payments (use Redis in production)
 const pendingPayments = new Map<string, {
@@ -125,9 +124,36 @@ export const Route = createFileRoute("/api/zcash/payment")({
           // Create memo that includes order ID (truncated to fit ZCash memo limit)
           const memo = `AICALLTV:${orderId}`;
 
-          // Use fixed YWallet receiving address
-          const address = ZCASH_RECEIVING_ADDRESS;
-          console.log("[ZCash] Using fixed receiving address:", address.slice(0, 20) + "...");
+          // Fetch address from zcash-service (derived from viewing key)
+          let address: string;
+          try {
+            const addressRes = await fetch(`${ZCASH_SERVICE_URL}/address`);
+            if (!addressRes.ok) throw new Error("Failed to get address");
+            const addressData = await addressRes.json();
+            
+            // Parse the zingo-cli output to get the address
+            if (typeof addressData === 'string') {
+              const jsonMatch = addressData.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+              if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                if (Array.isArray(parsed) && parsed[0]?.encoded_address) {
+                  address = parsed[0].encoded_address;
+                } else {
+                  throw new Error("Could not parse address from response");
+                }
+              } else {
+                throw new Error("No JSON in response");
+              }
+            } else if (Array.isArray(addressData) && addressData[0]?.encoded_address) {
+              address = addressData[0].encoded_address;
+            } else {
+              throw new Error("Unexpected address format");
+            }
+            console.log("[ZCash] Using zcash-service address:", address.slice(0, 20) + "...");
+          } catch (err) {
+            console.error("[ZCash] Failed to get address from zcash-service:", err);
+            throw new Error("ZCash service unavailable");
+          }
 
           // Hardcoded ZEC amount for hackathon demo (10x cheaper)
           // 0.001 ZEC ≈ $0.05 at current prices

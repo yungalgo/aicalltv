@@ -303,9 +303,9 @@ async function initializeWallet() {
         }
       } else if (seedPhrase) {
         // Initialize from seed phrase (full access)
-        console.log('[Zingo] Initializing wallet from seed...');
-        const birthday = process.env.BIRTHDAY || '0';
-        await runZingo(`init-from-seed "${seedPhrase}" ${birthday}`);
+      console.log('[Zingo] Initializing wallet from seed...');
+      const birthday = process.env.BIRTHDAY || '0';
+      await runZingo(`init-from-seed "${seedPhrase}" ${birthday}`);
         console.log('[Zingo] Wallet initialized from seed');
       }
     } else {
