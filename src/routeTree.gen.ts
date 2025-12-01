@@ -24,6 +24,7 @@ import { Route as ApiTestCallRouteImport } from './routes/api/test/call'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as ApiStripeCheckoutRouteImport } from './routes/api/stripe/checkout'
 import { Route as ApiStarknetPaymentRouteImport } from './routes/api/starknet/payment'
+import { Route as ApiNearAiChatRouteImport } from './routes/api/near-ai/chat'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiWebhooksTwilioRecordingStatusRouteImport } from './routes/api/webhooks/twilio/recording-status'
 import { Route as ApiWebhooksTwilioCallStatusRouteImport } from './routes/api/webhooks/twilio/call-status'
@@ -101,6 +102,11 @@ const ApiStarknetPaymentRoute = ApiStarknetPaymentRouteImport.update({
   path: '/api/starknet/payment',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiNearAiChatRoute = ApiNearAiChatRouteImport.update({
+  id: '/api/near-ai/chat',
+  path: '/api/near-ai/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/near-ai/chat': typeof ApiNearAiChatRoute
   '/api/starknet/payment': typeof ApiStarknetPaymentRoute
   '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/near-ai/chat': typeof ApiNearAiChatRoute
   '/api/starknet/payment': typeof ApiStarknetPaymentRoute
   '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/(auth-pages)/login': typeof authPagesLoginRoute
   '/(auth-pages)/signup': typeof authPagesSignupRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/api/near-ai/chat': typeof ApiNearAiChatRoute
   '/api/starknet/payment': typeof ApiStarknetPaymentRoute
   '/api/stripe/checkout': typeof ApiStripeCheckoutRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/api/auth/$'
+    | '/api/near-ai/chat'
     | '/api/starknet/payment'
     | '/api/stripe/checkout'
     | '/api/stripe/webhook'
@@ -203,6 +213,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/api/auth/$'
+    | '/api/near-ai/chat'
     | '/api/starknet/payment'
     | '/api/stripe/checkout'
     | '/api/stripe/webhook'
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/(auth-pages)/login'
     | '/(auth-pages)/signup'
     | '/api/auth/$'
+    | '/api/near-ai/chat'
     | '/api/starknet/payment'
     | '/api/stripe/checkout'
     | '/api/stripe/webhook'
@@ -242,6 +254,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiNearAiChatRoute: typeof ApiNearAiChatRoute
   ApiStarknetPaymentRoute: typeof ApiStarknetPaymentRoute
   ApiStripeCheckoutRoute: typeof ApiStripeCheckoutRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
@@ -361,6 +374,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStarknetPaymentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/near-ai/chat': {
+      id: '/api/near-ai/chat'
+      path: '/api/near-ai/chat'
+      fullPath: '/api/near-ai/chat'
+      preLoaderRoute: typeof ApiNearAiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -406,6 +426,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiNearAiChatRoute: ApiNearAiChatRoute,
   ApiStarknetPaymentRoute: ApiStarknetPaymentRoute,
   ApiStripeCheckoutRoute: ApiStripeCheckoutRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,

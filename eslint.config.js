@@ -30,5 +30,13 @@ export default defineConfig({
     // You can override any rules here
     "@typescript-eslint/no-deprecated": "warn",
   },
-  ignores: ["dist", ".wrangler", ".vercel", ".netlify", ".output", "build/"],
+  ignores: [
+    "dist", 
+    ".wrangler", 
+    ".vercel", 
+    ".netlify", 
+    ".output", 
+    "build/",
+    "src/lib/payments/functions.ts", // Placeholder file - not currently used
+  ],
 });
