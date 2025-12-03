@@ -146,7 +146,12 @@ export async function encryptPhoneNumber(
       throw new Error("Encryption returned empty result");
     }
     
-    const encrypted = encryptedArray[0];
+    const encrypted = encryptedArray[0] as unknown as {
+      ctHash: bigint;
+      securityZone: number;
+      utype: number;
+      signature: string;
+    };
     console.log("🔐 First encrypted item:", encrypted);
     console.log("🔐 Encrypted keys:", encrypted ? Object.keys(encrypted) : "null");
     

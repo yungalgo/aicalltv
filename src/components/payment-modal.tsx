@@ -104,6 +104,9 @@ export interface PaymentModalProps {
     interestingPiece?: string;
     videoStyle?: string;
     anythingElse?: string;
+    // Fhenix FHE encryption
+    fhenixEnabled?: boolean;
+    fhenixVaultId?: string;
   };
 }
 
@@ -792,6 +795,9 @@ export function PaymentModal({
                               interestingPiece: callDetails.interestingPiece,
                               videoStyle: callDetails.videoStyle,
                               anythingElse: callDetails.anythingElse,
+                              // Fhenix FHE encryption
+                              fhenixEnabled: callDetails.fhenixEnabled,
+                              fhenixVaultId: callDetails.fhenixVaultId,
                             },
                           }),
                         });

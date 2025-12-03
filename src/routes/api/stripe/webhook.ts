@@ -92,6 +92,9 @@ export const Route = createFileRoute("/api/stripe/webhook")({
             const interestingPiece = metadata.interestingPiece || null;
             const videoStyle = metadata.videoStyle || "anime";
             const anythingElse = metadata.anythingElse || null;
+            // Fhenix FHE encryption data
+            const fhenixEnabled = metadata.fhenixEnabled === "true";
+            const fhenixVaultId = metadata.fhenixVaultId || null;
 
             // Validate required fields
             if (!recipientName || !phoneNumber) {
@@ -165,6 +168,9 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                 paymentMethod: "stripe",
                 isFree: false,
                 status: "prompt_ready",
+                // Fhenix FHE encryption
+                fhenixEnabled,
+                fhenixVaultId,
               })
               .returning();
 

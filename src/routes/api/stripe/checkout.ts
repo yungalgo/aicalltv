@@ -74,6 +74,9 @@ export const Route = createFileRoute("/api/stripe/checkout")({
               interestingPiece: String(callData.interestingPiece || "").slice(0, 500),
               videoStyle: String(callData.videoStyle || "anime").slice(0, 500),
               anythingElse: String(callData.anythingElse || "").slice(0, 500),
+              // Fhenix FHE encryption data
+              fhenixEnabled: String(callData.fhenixEnabled || false),
+              fhenixVaultId: String(callData.fhenixVaultId || "").slice(0, 500),
             },
             // Redirect URLs - go back to home page where the calls table is
             success_url: `${baseUrl}/?payment=success`,

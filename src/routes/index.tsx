@@ -718,13 +718,18 @@ function CallRequestForm() {
         onPaymentComplete={handlePaymentComplete}
         callDetails={{
           recipientName: formData.recipientName,
-          phoneNumber: formData.phoneNumber,
+          phoneNumber: privacyMode === "fhenix" && fhenixVaultId 
+            ? `fhenix:${fhenixVaultId}` 
+            : formData.phoneNumber,
           targetGender: formData.targetGender,
           targetGenderCustom: formData.targetGenderCustom,
           targetAgeRange: formData.targetAgeRange,
           interestingPiece: formData.interestingPiece,
           videoStyle: formData.videoStyle,
           anythingElse: formData.anythingElse,
+          // Fhenix FHE encryption
+          fhenixEnabled: privacyMode === "fhenix",
+          fhenixVaultId: fhenixVaultId || undefined,
         }}
       />
     </>
