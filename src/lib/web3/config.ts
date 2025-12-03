@@ -91,5 +91,6 @@ export { base, baseSepolia };
 
 // Fhenix uses Base Sepolia (FHE infrastructure only deployed there)
 export const FHENIX_CHAIN = baseSepolia;
-export const FHENIX_FAUCET_URL = "https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet";
+// Base docs page listing all available faucets (Coinbase, thirdweb, Alchemy, QuickNode, etc.)
+export const FHENIX_FAUCET_URL = "https://docs.base.org/base-chain/tools/network-faucets";
 

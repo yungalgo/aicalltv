@@ -251,7 +251,7 @@ export const PII_VAULT_ABI = [
  * TODO: Update this address after deploying to Base Sepolia
  * Deploy via Remix: https://remix.ethereum.org
  * 1. Connect wallet to Base Sepolia network
- * 2. Get testnet ETH from: https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet
+ * 2. Get testnet ETH from: https://docs.base.org/base-chain/tools/network-faucets
  * 3. Deploy PIIVault_v2.sol contract
  * 4. Update address below
  * 
