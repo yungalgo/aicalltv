@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { createPostgresDriver } from "~/lib/db";
 import { z } from "zod";
-import { env } from "~/env/server";
 import { calls } from "~/lib/db/schema/calls";
 import * as schema from "~/lib/db/schema";
 import { auth } from "~/lib/auth/auth";
@@ -75,8 +74,8 @@ export const createCall = createServerFn({ method: "POST" }).handler(
     const userId = session.user.id;
       console.log(`[Create Call] ✅ Authenticated user: ${session.user.email}`);
 
-    // Create database connection
-    const driver = postgres(env.DATABASE_URL);
+    // Create database connection with Neon-optimized settings
+    const driver = createPostgresDriver();
     const db = drizzle({ client: driver, schema, casing: "snake_case" });
 
     // Handle Fhenix FHE encryption vs legacy encryption

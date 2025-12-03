@@ -188,20 +188,20 @@ async function handleStart(ws: WebSocket, wsData: WebSocketData, data: TwilioMes
     } else {
       // Fallback to DB query if not in cache (shouldn't happen normally)
       console.log(`[WS] ⚠️ Cache miss for ${callSid}, falling back to DB query`);
-      const postgres = (await import("postgres")).default;
-      const { drizzle } = await import("drizzle-orm/postgres-js");
-      const { eq } = await import("drizzle-orm");
-      const { calls } = await import("./src/lib/db/schema/calls");
-      const schema = await import("./src/lib/db/schema");
-      
-      const driver = postgres(process.env.DATABASE_URL!);
-      const db = drizzle({ client: driver, schema, casing: "snake_case" });
-      
-      const [call] = await db.select().from(calls).where(eq(calls.callSid, callSid)).limit(1);
-      await driver.end();
-      
-      if (!call?.openaiPrompt) {
-        console.error("[WS] Call not found or missing prompt:", callSid);
+    const postgres = (await import("postgres")).default;
+    const { drizzle } = await import("drizzle-orm/postgres-js");
+    const { eq } = await import("drizzle-orm");
+    const { calls } = await import("./src/lib/db/schema/calls");
+    const schema = await import("./src/lib/db/schema");
+    
+    const driver = postgres(process.env.DATABASE_URL!);
+    const db = drizzle({ client: driver, schema, casing: "snake_case" });
+    
+    const [call] = await db.select().from(calls).where(eq(calls.callSid, callSid)).limit(1);
+    await driver.end();
+    
+    if (!call?.openaiPrompt) {
+      console.error("[WS] Call not found or missing prompt:", callSid);
         return;
       }
       

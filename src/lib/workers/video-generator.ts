@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { createPostgresDriver } from "~/lib/db";
 import { env } from "~/env/server";
 import { calls } from "~/lib/db/schema/calls";
 import { user } from "~/lib/db/schema/auth.schema";
@@ -41,8 +41,8 @@ export async function setupVideoGeneratorWorker() {
       // Track temp files for cleanup
       const tempFiles: string[] = [];
 
-      // Create database connection
-      const driver = postgres(env.DATABASE_URL);
+      // Create database connection with Neon-optimized settings
+      const driver = createPostgresDriver();
       const db = drizzle({ client: driver, casing: "snake_case" });
 
       try {

@@ -1,9 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { createPostgresDriver } from "~/lib/db";
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
-import { env } from "~/env/server";
 import { callCredits } from "~/lib/db/schema/credits";
 import * as schema from "~/lib/db/schema";
 import { auth } from "~/lib/auth/auth";
@@ -39,7 +38,7 @@ export const createCredit = createServerFn({ method: "POST" }).handler(
       const userId = session.user.id;
 
       // Create database connection
-      const driver = postgres(env.DATABASE_URL);
+      const driver = createPostgresDriver();
       const db = drizzle({ client: driver, schema, casing: "snake_case" });
 
       try {
@@ -97,7 +96,7 @@ export const getCreditBalance = createServerFn({ method: "GET" }).handler(
         return { balance: 0 };
       }
 
-      const driver = postgres(env.DATABASE_URL);
+      const driver = createPostgresDriver();
       const db = drizzle({ client: driver, schema, casing: "snake_case" });
 
       try {

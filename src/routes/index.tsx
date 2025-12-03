@@ -431,9 +431,9 @@ function CallRequestForm() {
 
       // Reset form
       setFormData({
-    recipientName: "",
-    phoneNumber: "",
-    targetGender: "male",
+        recipientName: "",
+        phoneNumber: "",
+        targetGender: "male",
         targetGenderCustom: "",
         targetAgeRange: "",
         targetPhysicalDescription: "",
@@ -721,8 +721,8 @@ function CallRequestForm() {
         <div className="space-y-2">
           <Label htmlFor="videoStyle">Video Style *</Label>
           <div className="space-y-2">
-            <select
-              id="videoStyle"
+          <select
+            id="videoStyle"
               value={formData.videoStyle && VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number]) ? formData.videoStyle : formData.videoStyle ? "custom" : ""}
               onChange={(e) => {
                 const value = e.target.value;
@@ -734,21 +734,21 @@ function CallRequestForm() {
                   // If already custom, keep the value
                 } else if (value) {
                   setFormData({ ...formData, videoStyle: value });
-                }
+            }
               }}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               required={!formData.videoStyle || VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])}
-              disabled={isSubmitting}
-            >
+            disabled={isSubmitting}
+          >
               <option value="">Select a style...</option>
-              {VIDEO_STYLES.map((style) => (
-                <option key={style} value={style}>
-                  {style.charAt(0).toUpperCase() +
-                    style.slice(1).replace(/-/g, " ")}
-                </option>
-              ))}
+            {VIDEO_STYLES.map((style) => (
+              <option key={style} value={style}>
+                {style.charAt(0).toUpperCase() +
+                  style.slice(1).replace(/-/g, " ")}
+              </option>
+            ))}
               <option value="custom">Other (custom)</option>
-            </select>
+          </select>
             {(!formData.videoStyle || !VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])) && (
               <Input
                 id="videoStyleCustom"

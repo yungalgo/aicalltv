@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import Stripe from "stripe";
 import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import { createPostgresDriver } from "~/lib/db";
 import { eq } from "drizzle-orm";
 import { env } from "~/env/server";
 import { callCredits } from "~/lib/db/schema/credits";
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
-        let driver: ReturnType<typeof postgres> | null = null;
+        let driver: ReturnType<typeof createPostgresDriver> | null = null;
 
         try {
           // Check Stripe is configured
@@ -69,7 +69,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
             }
 
             // Check if this session was already processed (idempotency)
-            driver = postgres(env.DATABASE_URL);
+            driver = createPostgresDriver();
             const db = drizzle({ client: driver, schema, casing: "snake_case" });
 
             const [existingCredit] = await db

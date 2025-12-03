@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { desc, eq } from "drizzle-orm";
-import postgres from "postgres";
-import { env } from "~/env/server";
+import { createPostgresDriver } from "~/lib/db";
 import { calls } from "~/lib/db/schema/calls";
 import * as schema from "~/lib/db/schema";
 import { auth } from "~/lib/auth/auth";
@@ -61,8 +60,8 @@ export const getUserCalls = createServerFn({ method: "GET" }).handler(
 
     const userId = session.user.id;
 
-    // Create database connection
-    const driver = postgres(env.DATABASE_URL);
+    // Create database connection with Neon-optimized settings
+    const driver = createPostgresDriver();
     const db = drizzle({ client: driver, schema, casing: "snake_case" });
 
     // Fetch user's calls, ordered by most recent first

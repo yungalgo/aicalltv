@@ -1,8 +1,7 @@
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
 // Job type from pg-boss (used indirectly through getBoss)
-import { env } from "~/env/server";
+import { createPostgresDriver } from "~/lib/db";
 import { calls } from "~/lib/db/schema/calls";
 import * as schema from "~/lib/db/schema";
 import { getBoss, JOB_TYPES } from "~/lib/queue/boss";
@@ -30,8 +29,8 @@ export async function setupCallProcessorWorker() {
 
       console.log(`[Call Processor] Processing call ${callId}`);
 
-      // Create database connection
-      const driver = postgres(env.DATABASE_URL);
+      // Create database connection with Neon-optimized settings
+      const driver = createPostgresDriver();
       const db = drizzle({ client: driver, schema, casing: "snake_case" });
 
       try {

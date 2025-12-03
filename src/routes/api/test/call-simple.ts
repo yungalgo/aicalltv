@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import { env } from "~/env/server";
+import { createPostgresDriver } from "~/lib/db";
 import { calls } from "~/lib/db/schema/calls";
 import { user } from "~/lib/db/schema/auth.schema";
 import * as schema from "~/lib/db/schema";
@@ -48,7 +47,7 @@ export const Route = createFileRoute("/api/test/call-simple")({
           }
 
           // Create database connection
-          const driver = postgres(env.DATABASE_URL);
+          const driver = createPostgresDriver();
           const db = drizzle({ client: driver, schema, casing: "snake_case" });
 
           // Get or create a test user

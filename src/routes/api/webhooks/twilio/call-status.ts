@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import { env } from "~/env/server";
+import { createPostgresDriver } from "~/lib/db";
 import { calls } from "~/lib/db/schema/calls";
 import * as schema from "~/lib/db/schema";
 import { getBoss, JOB_TYPES } from "~/lib/queue/boss";
@@ -15,7 +14,7 @@ export const Route = createFileRoute("/api/webhooks/twilio/call-status")({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
-    let driver: ReturnType<typeof postgres> | null = null;
+    let driver: ReturnType<typeof createPostgresDriver> | null = null;
     
     try {
     const formData = await request.formData();
@@ -35,7 +34,7 @@ export const Route = createFileRoute("/api/webhooks/twilio/call-status")({
     console.log(`[Twilio Webhook] Call ${callSid} status: ${callStatus}`);
 
     // Create database connection
-      driver = postgres(env.DATABASE_URL);
+      driver = createPostgresDriver();
     const db = drizzle({ client: driver, schema, casing: "snake_case" });
 
     try {
