@@ -85,13 +85,14 @@ export async function setupVideoGeneratorWorker() {
         tempFiles.push(tempRecordingPath);
 
         // Split stereo audio and upload to S3
-        const { callerS3Url, calleeS3Url } = await splitStereoAudio(
+        // caller = AI, target = person being called
+        const { callerS3Url, targetS3Url } = await splitStereoAudio(
           tempRecordingPath,
           callId,
         );
         tempFiles.push(
           getTempFilePath(callId, "caller", "mp3"),
-          getTempFilePath(callId, "callee", "mp3"),
+          getTempFilePath(callId, "target", "mp3"),
         );
 
         // Get audio duration for cost calculation
@@ -134,7 +135,6 @@ export async function setupVideoGeneratorWorker() {
               ragebaitTrigger: call.ragebaitTrigger || undefined,
             },
             videoStyle: call.videoStyle,
-            anythingElse: call.anythingElse || undefined,
           };
           
           // Fail loudly if generation fails - no fallbacks during development
@@ -166,17 +166,18 @@ export async function setupVideoGeneratorWorker() {
           finalImageUrl = editResult.url;
         } else {
           // No uploaded image - generate from scratch using WavespeedAI nano-banana-pro
-          const imageResult = await generateImage({
-            prompt: imagePrompt,
-            callId,
-          });
+        const imageResult = await generateImage({
+          prompt: imagePrompt,
+          callId,
+        });
           finalImageUrl = imageResult.imageUrl;
         }
 
         // Generate multi-person video with WavespeedAI using the image
+        // Layout: TOP = caller (AI), BOTTOM = target (person)
         const videoResult = await generateMultiPersonVideo(
           callerS3Url,
-          calleeS3Url,
+          targetS3Url,
           callId,
           finalImageUrl, // Use either edited or generated image
           audioDuration,

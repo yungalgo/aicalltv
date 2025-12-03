@@ -6,9 +6,15 @@ export interface CallFormData {
   targetGender?: "male" | "female" | "prefer_not_to_say" | "other";
   targetGenderCustom?: string;
   targetAgeRange?: "" | "18-25" | "26-35" | "36-45" | "46-55" | "56+";
+  targetPhysicalDescription?: string;
+  targetCity?: string;
+  targetHobby?: string;
+  targetProfession?: string;
   interestingPiece?: string;
+  ragebaitTrigger?: string;
   videoStyle?: string;
-  anythingElse?: string;
+  uploadedImageUrl?: string;
+  uploadedImageS3Key?: string;
 }
 
 export interface ValidationError {
@@ -108,8 +114,8 @@ function validateGender(
   gender: string | undefined,
   customGender?: string
 ): { valid: boolean; normalized?: CallFormData["targetGender"]; error?: string } {
-  if (!gender) {
-    return { valid: true }; // Optional field
+  if (!gender || !gender.trim()) {
+    return { valid: false, error: "Gender is required" };
   }
   
   const normalized = gender.toLowerCase().trim();
@@ -136,8 +142,8 @@ function validateGender(
  * Validates age range
  */
 function validateAgeRange(ageRange: string | undefined): { valid: boolean; normalized?: CallFormData["targetAgeRange"]; error?: string } {
-  if (!ageRange) {
-    return { valid: true }; // Optional field
+  if (!ageRange || !ageRange.trim()) {
+    return { valid: false, error: "Age range is required" };
   }
   
   const validRanges: CallFormData["targetAgeRange"][] = ["18-25", "26-35", "36-45", "46-55", "56+"];
@@ -153,28 +159,37 @@ function validateAgeRange(ageRange: string | undefined): { valid: boolean; norma
 }
 
 /**
- * Validates video style
+ * Validates video style (can be from list or custom)
  */
 function validateVideoStyle(style: string | undefined): { valid: boolean; normalized?: string; error?: string } {
-  if (!style) {
+  if (!style || !style.trim()) {
     return { valid: false, error: "Video style is required" };
   }
   
-  // Normalize: lowercase and replace spaces with hyphens
-  const normalized = style.toLowerCase().trim().replace(/\s+/g, "-");
+  const trimmed = style.trim();
   
-  if (!VIDEO_STYLES.includes(normalized as typeof VIDEO_STYLES[number])) {
-    return { 
-      valid: false, 
-      error: `Invalid video style. Must be one of: ${VIDEO_STYLES.join(", ")}` 
-    };
+  // Normalize: lowercase and replace spaces with hyphens
+  const normalized = trimmed.toLowerCase().replace(/\s+/g, "-");
+  
+  // If it's in the list, use normalized version
+  if (VIDEO_STYLES.includes(normalized as typeof VIDEO_STYLES[number])) {
+    return { valid: true, normalized };
   }
   
-  return { valid: true, normalized };
+  // Otherwise, allow custom style (but validate length)
+  if (trimmed.length < 2) {
+    return { valid: false, error: "Video style must be at least 2 characters" };
+  }
+  
+  if (trimmed.length > 50) {
+    return { valid: false, error: "Video style must be 50 characters or less" };
+  }
+  
+  return { valid: true, normalized: trimmed.toLowerCase() };
 }
 
 /**
- * Validates text fields (interestingPiece, anythingElse)
+ * Validates text fields (interestingPiece, ragebaitTrigger, etc.)
  */
 function validateTextField(
   value: string | undefined,
@@ -225,7 +240,7 @@ export function validateCallFormData(data: Partial<CallFormData>): ValidationRes
     normalizedData.phoneNumber = phoneResult.normalized;
   }
 
-  // Validate gender (optional)
+  // Validate gender (required)
   const genderResult = validateGender(data.targetGender, data.targetGenderCustom);
   if (!genderResult.valid) {
     errors.push({ field: "targetGender", message: genderResult.error! });
@@ -239,14 +254,61 @@ export function validateCallFormData(data: Partial<CallFormData>): ValidationRes
         normalizedData.targetGenderCustom = customResult.normalized;
       }
     }
+  } else {
+    errors.push({ field: "targetGender", message: "Gender is required" });
   }
 
-  // Validate age range (optional)
+  // Validate age range (required)
   const ageResult = validateAgeRange(data.targetAgeRange);
   if (!ageResult.valid) {
     errors.push({ field: "targetAgeRange", message: ageResult.error! });
   } else if (ageResult.normalized) {
     normalizedData.targetAgeRange = ageResult.normalized;
+  } else {
+    errors.push({ field: "targetAgeRange", message: "Age range is required" });
+  }
+
+  // Validate city (required)
+  const cityResult = validateTextField(data.targetCity, "City/Area", 100, true);
+  if (!cityResult.valid) {
+    errors.push({ field: "targetCity", message: cityResult.error! });
+  } else if (cityResult.normalized) {
+    normalizedData.targetCity = cityResult.normalized;
+  }
+
+  // Validate hobby (required)
+  const hobbyResult = validateTextField(data.targetHobby, "Hobby", 100, true);
+  if (!hobbyResult.valid) {
+    errors.push({ field: "targetHobby", message: hobbyResult.error! });
+  } else if (hobbyResult.normalized) {
+    normalizedData.targetHobby = hobbyResult.normalized;
+  }
+
+  // Validate profession (required)
+  const professionResult = validateTextField(data.targetProfession, "Profession", 100, true);
+  if (!professionResult.valid) {
+    errors.push({ field: "targetProfession", message: professionResult.error! });
+  } else if (professionResult.normalized) {
+    normalizedData.targetProfession = professionResult.normalized;
+  }
+
+  // Validate physical description (required if no image uploaded)
+  const hasImage = !!(data.uploadedImageUrl || data.uploadedImageS3Key);
+  if (!hasImage) {
+    const physicalResult = validateTextField(data.targetPhysicalDescription, "Physical Description", 500, true);
+    if (!physicalResult.valid) {
+      errors.push({ field: "targetPhysicalDescription", message: physicalResult.error! });
+    } else if (physicalResult.normalized) {
+      normalizedData.targetPhysicalDescription = physicalResult.normalized;
+    }
+  } else {
+    // Optional if image uploaded
+    const physicalResult = validateTextField(data.targetPhysicalDescription, "Physical Description", 500, false);
+    if (!physicalResult.valid) {
+      errors.push({ field: "targetPhysicalDescription", message: physicalResult.error! });
+    } else if (physicalResult.normalized) {
+      normalizedData.targetPhysicalDescription = physicalResult.normalized;
+    }
   }
 
   // Validate video style (required)
@@ -257,20 +319,20 @@ export function validateCallFormData(data: Partial<CallFormData>): ValidationRes
     normalizedData.videoStyle = styleResult.normalized;
   }
 
-  // Validate interesting piece (optional)
-  const interestingResult = validateTextField(data.interestingPiece, "Interesting piece", 500);
+  // Validate interesting piece (required)
+  const interestingResult = validateTextField(data.interestingPiece, "Interesting piece", 500, true);
   if (!interestingResult.valid) {
     errors.push({ field: "interestingPiece", message: interestingResult.error! });
   } else if (interestingResult.normalized) {
     normalizedData.interestingPiece = interestingResult.normalized;
   }
 
-  // Validate anything else (optional)
-  const anythingElseResult = validateTextField(data.anythingElse, "Anything else", 1000);
-  if (!anythingElseResult.valid) {
-    errors.push({ field: "anythingElse", message: anythingElseResult.error! });
-  } else if (anythingElseResult.normalized) {
-    normalizedData.anythingElse = anythingElseResult.normalized;
+  // Validate ragebait trigger (required)
+  const ragebaitResult = validateTextField(data.ragebaitTrigger, "Ragebait trigger", 500, true);
+  if (!ragebaitResult.valid) {
+    errors.push({ field: "ragebaitTrigger", message: ragebaitResult.error! });
+  } else if (ragebaitResult.normalized) {
+    normalizedData.ragebaitTrigger = ragebaitResult.normalized;
   }
 
   return {

@@ -12,7 +12,7 @@ import { initiateTwilioCall } from "~/lib/twilio/call";
 /**
  * Test endpoint to initiate a Twilio call
  * POST /api/test/call
- * Body: { phoneNumber: string, recipientName: string, anythingElse?: string }
+ * Body: { phoneNumber: string, recipientName: string }
  * 
  * This is useful for testing calls without going through the full UI flow
  */
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/api/test/call")({
 
         try {
           const body = await request.json();
-          const { phoneNumber, recipientName, anythingElse } = body;
+          const { phoneNumber, recipientName } = body;
 
           if (!phoneNumber || !recipientName) {
             return new Response(
@@ -72,7 +72,6 @@ export const Route = createFileRoute("/api/test/call")({
             .values({
               userId,
               recipientName,
-              anythingElse: anythingElse || null,
               targetGender: "prefer_not_to_say",
               videoStyle: "anime",
               encryptedHandle,

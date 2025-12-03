@@ -52,7 +52,7 @@ export async function initiateTwilioCall(
 
   // Make the call with Media Stream enabled AND dual-channel recording
   // Media Stream: Real-time audio via WebSocket (for live processing)
-  // Dual-channel recording: Stereo WAV/MP3 file (left=caller, right=callee) for post-call processing
+  // Dual-channel recording: Stereo WAV/MP3 file (left=caller/AI, right=target/person) for post-call processing
   const twilioCall = await client.calls.create({
     to: phoneNumber,
     from: env.TWILIO_PHONE_NUMBER,
@@ -61,7 +61,7 @@ export async function initiateTwilioCall(
     statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
     statusCallbackMethod: "POST",
     record: true, // Enable recording
-    recordingChannels: "dual", // Dual-channel: left=caller, right=callee (stereo)
+    recordingChannels: "dual", // Dual-channel: left=caller/AI, right=target/person (stereo)
     recordingStatusCallback: recordingStatusCallbackUrl,
     recordingStatusCallbackMethod: "POST",
     // Note: Media Stream is configured in the TwiML response, not here

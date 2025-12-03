@@ -12,7 +12,6 @@ import { consumeCredit } from "~/lib/credits/functions";
 const createCallSchema = z.object({
   recipientName: z.string().min(1, "Recipient name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
-  anythingElse: z.string().max(1000, "Must be 1000 characters or less").optional(),
   // Target person details
   targetGender: z.enum(["male", "female", "prefer_not_to_say", "other"]),
   targetGenderCustom: z.string().optional(), // Required if gender is "other"
@@ -109,7 +108,6 @@ export const createCall = createServerFn({ method: "POST" }).handler(
         ragebaitTrigger: data.ragebaitTrigger,
       },
       videoStyle: data.videoStyle,
-      anythingElse: data.anythingElse,
     };
 
     // Generate OpenAI prompt - needed BEFORE call starts
@@ -139,7 +137,6 @@ export const createCall = createServerFn({ method: "POST" }).handler(
       .values({
         userId,
         recipientName: data.recipientName,
-        anythingElse: data.anythingElse || null,
         targetGender: data.targetGender,
         targetGenderCustom: data.targetGenderCustom || null,
         targetAgeRange: data.targetAgeRange || null,

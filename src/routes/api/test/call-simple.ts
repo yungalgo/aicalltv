@@ -11,7 +11,7 @@ import { initiateTwilioCall } from "~/lib/twilio/call";
 /**
  * Simple test endpoint to initiate a Twilio call WITHOUT authentication
  * POST /api/test/call-simple
- * Body: { phoneNumber: string, recipientName: string, anythingElse?: string }
+ * Body: { phoneNumber: string, recipientName: string }
  * 
  * WARNING: This endpoint does NOT require authentication - use only for testing!
  * It uses the first user in the database or creates a test user.
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/api/test/call-simple")({
       POST: async ({ request }: { request: Request }) => {
         try {
           const body = await request.json();
-          const { phoneNumber, recipientName, anythingElse } = body;
+          const { phoneNumber, recipientName } = body;
 
           if (!phoneNumber || !recipientName) {
             return new Response(
@@ -82,7 +82,6 @@ export const Route = createFileRoute("/api/test/call-simple")({
             .values({
               userId: testUserId,
               recipientName,
-              anythingElse: anythingElse || null,
               targetGender: "prefer_not_to_say",
               videoStyle: "anime",
               encryptedHandle,
@@ -114,7 +113,6 @@ export const Route = createFileRoute("/api/test/call-simple")({
               message: `Call initiated to ${phoneNumber}. Check Twilio console for status.`,
               phoneNumber,
               recipientName,
-              anythingElse,
             }),
             {
               status: 200,

@@ -17,7 +17,6 @@ interface ExtractedData {
   targetAgeRange?: "" | "18-25" | "26-35" | "36-45" | "46-55" | "56+";
   interestingPiece?: string;
   videoStyle?: string;
-  anythingElse?: string;
 }
 
 interface ValidationError {

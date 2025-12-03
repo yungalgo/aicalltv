@@ -2,8 +2,8 @@
 
 /**
  * Direct test script to initiate a Twilio call
- * Usage: bun scripts/test-call.ts <phone-number> <recipient-name> <context>
- * Example: bun scripts/test-call.ts "+15005550006" "Test User" "This is a test call"
+ * Usage: bun scripts/test-call.ts <phone-number> <recipient-name>
+ * Example: bun scripts/test-call.ts "+15005550006" "Test User"
  */
 
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -18,12 +18,10 @@ import { initiateTwilioCall } from "../src/lib/twilio/call";
 async function main() {
   const phoneNumber = process.argv[2] || "+19083363673"; // Google Voice number
   const recipientName = process.argv[3] || "Test User";
-  const anythingElse = process.argv[4] || "This is a test call to verify dual-channel recording works.";
 
   console.log("📞 Making test call...");
   console.log(`Phone Number: ${phoneNumber}`);
   console.log(`Recipient Name: ${recipientName}`);
-  console.log(`Context: ${anythingElse}`);
   console.log("");
 
   try {
@@ -64,10 +62,9 @@ async function main() {
       .values({
         userId: testUserId,
         recipientName,
-        anythingElse,
         targetGender: "prefer_not_to_say",
         videoStyle: "anime",
-        openaiPrompt: `You are making a test call to ${recipientName}. Context: ${anythingElse}`,
+        openaiPrompt: `You are making a test call to ${recipientName}. This is a test call to verify dual-channel recording works.`,
         encryptedHandle,
         paymentMethod: "free",
         isFree: true,

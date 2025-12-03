@@ -3,6 +3,9 @@
  * 
  * Generates images from prompts using Google's nano-banana-pro model
  * https://wavespeed.ai/models/google/nano-banana-pro
+ * 
+ * Image format: 9:16 vertical portrait
+ * Layout: TOP = caller (AI), BOTTOM = target (person being called)
  */
 
 import { env } from "~/env/server";
@@ -26,7 +29,8 @@ export interface GenerateImageOptions {
 
 /**
  * Submit image generation job to WavespeedAI nano-banana-pro
- * Always uses: PNG format, 16:9 aspect ratio, 4k resolution
+ * Always uses: PNG format, 9:16 aspect ratio (vertical), 4k resolution
+ * Layout: TOP = caller (AI), BOTTOM = target (person)
  */
 async function submitImageGenerationJob(
   prompt: string,
@@ -40,7 +44,7 @@ async function submitImageGenerationJob(
   const payload = {
     prompt: prompt,
     resolution: "4k",
-    aspect_ratio: "16:9",
+    aspect_ratio: "9:16", // Vertical portrait - TOP=caller, BOTTOM=target
     output_format: "png",
     enable_sync_mode: false,
     enable_base64_output: false,
@@ -209,7 +213,7 @@ export async function generateImage(
 
   const { prompt, callId } = options;
 
-  console.log(`[WavespeedAI Image] 🎨 Generating image for call ${callId} (PNG, 16:9, 4k)`);
+  console.log(`[WavespeedAI Image] 🎨 Generating image for call ${callId} (PNG, 9:16 vertical, 4k)`);
 
   // Submit job with retry (always PNG, 16:9, 4k)
   const requestId = await retryWithBackoff(
@@ -266,6 +270,7 @@ export interface EditImageOptions {
 /**
  * Submit image edit job to WavespeedAI nano-banana-pro/edit
  * Takes a user's uploaded photo and edits it into a phone call scene
+ * Layout: 9:16 vertical - TOP = caller (AI), BOTTOM = target (person from photo)
  */
 async function submitImageEditJob(
   sourceImageUrl: string,
@@ -277,14 +282,15 @@ async function submitImageEditJob(
     );
   }
 
-  // Edit prompt: transform the uploaded image into a phone call scene
-  const editPrompt = `Transform this person into a split-screen phone call scene. ${prompt}. Keep the person's face and identity, but show them holding a phone to their ear or on speakerphone, with an animated talking expression.`;
+  // Edit prompt: transform the uploaded image into a vertical split-screen phone call scene
+  // TOP = caller (AI), BOTTOM = target (the person in the uploaded photo)
+  const editPrompt = `Transform this into a vertical split-screen phone call scene (9:16 portrait). TOP half: an AI caller character on phone. BOTTOM half: this person from the photo, holding phone to ear or on speakerphone, with animated talking expression. ${prompt}. Keep the person's face and identity in the bottom half.`;
 
   const payload = {
     prompt: editPrompt,
     input_image: sourceImageUrl,
     resolution: "4k",
-    aspect_ratio: "16:9",
+    aspect_ratio: "9:16", // Vertical portrait - TOP=caller, BOTTOM=target
     output_format: "png",
     enable_sync_mode: false,
     enable_base64_output: false,

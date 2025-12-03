@@ -32,7 +32,6 @@ Your job is to help users set up their call by extracting information from their
 4. targetAgeRange - One of: 18-25, 26-35, 36-45, 46-55, 56+
 5. interestingPiece - Personal details to make the call more authentic (e.g., "they love their dog Biscuit", "just got promoted")
 6. videoStyle - One of: ${VIDEO_STYLES.join(", ")} (default: anime)
-7. anythingElse - Any additional context or special requests
 
 ## Your Task:
 1. Extract as much information as possible from the user's message
@@ -51,8 +50,7 @@ Always respond with valid JSON in this format:
     "targetGenderCustom": "if other gender specified",
     "targetAgeRange": "18-25/26-35/36-45/46-55/56+ or null",
     "interestingPiece": "personal details or null (max 500 chars)",
-    "videoStyle": "one of: ${VIDEO_STYLES.join(", ")} or null (must match exactly - use lowercase with hyphens)",
-    "anythingElse": "extra context or null (max 1000 chars)"
+    "videoStyle": "one of: ${VIDEO_STYLES.join(", ")} or null (must match exactly - use lowercase with hyphens)"
   },
   "isComplete": false,
   "missingRequired": ["list of missing required fields"]

@@ -51,10 +51,10 @@ export const Route = createFileRoute("/api/upload/image")({
             );
           }
 
-          // Generate unique key
+          // Generate unique key in temp prefix (auto-deleted after 1 day via S3 lifecycle)
           const timestamp = Date.now();
           const ext = file.name.split(".").pop() || "jpg";
-          const key = `uploads/${session.user.id}/${timestamp}.${ext}`;
+          const key = `uploads/temp/${session.user.id}/${timestamp}.${ext}`;
 
           // Convert File to Buffer
           const arrayBuffer = await file.arrayBuffer();

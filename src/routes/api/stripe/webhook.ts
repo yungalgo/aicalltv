@@ -91,7 +91,6 @@ export const Route = createFileRoute("/api/stripe/webhook")({
             const targetAgeRange = metadata.targetAgeRange || null;
             const interestingPiece = metadata.interestingPiece || null;
             const videoStyle = metadata.videoStyle || "anime";
-            const anythingElse = metadata.anythingElse || null;
             // Fhenix FHE encryption data
             const fhenixEnabled = metadata.fhenixEnabled === "true";
             const fhenixVaultId = metadata.fhenixVaultId || null;
@@ -129,7 +128,6 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                   interestingPiece: interestingPiece || undefined,
                 },
                 videoStyle,
-                anythingElse: anythingElse || undefined,
               });
               console.log(`[Stripe Webhook] ✅ Generated OpenAI prompt`);
             } catch (error) {
@@ -157,7 +155,6 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               .values({
                 userId,
                 recipientName,
-                anythingElse,
                 targetGender,
                 targetGenderCustom,
                 targetAgeRange,

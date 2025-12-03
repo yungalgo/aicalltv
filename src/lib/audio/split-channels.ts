@@ -1,5 +1,9 @@
 /**
  * Audio processing utilities for splitting stereo audio
+ * 
+ * Naming convention:
+ * - caller = The AI making the call (left channel)
+ * - target = The person being called/pranked (right channel)
  */
 
 import ffmpeg from "fluent-ffmpeg";
@@ -8,14 +12,17 @@ import { uploadFileToS3 } from "~/lib/storage/s3";
 import { retryWithBackoff } from "~/lib/utils/retry";
 
 export interface SplitAudioResult {
-  callerAudioPath: string; // Local temp file path
-  calleeAudioPath: string; // Local temp file path
-  callerS3Url: string; // S3 URL for caller audio
-  calleeS3Url: string; // S3 URL for callee audio
+  callerAudioPath: string; // Local temp file path - AI caller
+  targetAudioPath: string; // Local temp file path - target person
+  callerS3Url: string; // S3 URL for caller (AI) audio
+  targetS3Url: string; // S3 URL for target (person) audio
 }
 
 /**
- * Split stereo audio file into left (caller) and right (callee) channels
+ * Split stereo audio file into left (caller) and right (target) channels
+ * 
+ * - Left channel = caller (AI)
+ * - Right channel = target (person being called)
  * 
  * @param inputPath - Path to input stereo audio file
  * @param callId - Call ID for naming output files
@@ -26,19 +33,19 @@ export async function splitStereoAudio(
   callId: string,
 ): Promise<SplitAudioResult> {
   const callerAudioPath = getTempFilePath(callId, "caller", "mp3");
-  const calleeAudioPath = getTempFilePath(callId, "callee", "mp3");
+  const targetAudioPath = getTempFilePath(callId, "target", "mp3");
 
   console.log(`[Audio Split] Splitting stereo audio for call ${callId}`);
 
-  // Extract left channel (caller) as mono with 1 second silence prepended
-  // The stereo file tells us left=caller, right=callee
+  // Extract left channel (caller/AI) as mono with 1 second silence prepended
+  // The stereo file: left = caller (AI), right = target (person)
   // We use adelay filter to delay audio by 1 second (prepends silence)
   await retryWithBackoff(
     () =>
       new Promise<void>((resolve, reject) => {
         ffmpeg(inputPath)
           .audioFilters([
-            "pan=mono|c0=FL", // Extract left channel (caller) as mono
+            "pan=mono|c0=FL", // Extract left channel (caller/AI) as mono
             "adelay=1000" // Delay by 1000ms (1 second) - prepends silence
           ])
           .output(callerAudioPath)
@@ -54,23 +61,23 @@ export async function splitStereoAudio(
     { maxRetries: 2, initialDelay: 1000 },
   );
 
-  // Extract right channel (callee) as mono with 1 second silence prepended
-  // The stereo file tells us left=caller, right=callee
+  // Extract right channel (target/person) as mono with 1 second silence prepended
+  // The stereo file: left = caller (AI), right = target (person)
   // We use adelay filter to delay audio by 1 second (prepends silence)
   await retryWithBackoff(
     () =>
       new Promise<void>((resolve, reject) => {
         ffmpeg(inputPath)
           .audioFilters([
-            "pan=mono|c0=FR", // Extract right channel (callee) as mono
+            "pan=mono|c0=FR", // Extract right channel (target/person) as mono
             "adelay=1000" // Delay by 1000ms (1 second) - prepends silence
           ])
-          .output(calleeAudioPath)
+          .output(targetAudioPath)
           .on("end", () => {
             resolve();
           })
           .on("error", (error: Error) => {
-            console.error(`[Audio Split] ❌ Error extracting callee audio:`, error);
+            console.error(`[Audio Split] ❌ Error extracting target audio:`, error);
             reject(error);
           })
           .run();
@@ -79,7 +86,7 @@ export async function splitStereoAudio(
   );
 
   // Upload both channels to S3 for WavespeedAI multi model
-  const [callerS3Url, calleeS3Url] = await Promise.all([
+  const [callerS3Url, targetS3Url] = await Promise.all([
     uploadFileToS3(
       callerAudioPath,
       `audio/${callId}-caller.mp3`,
@@ -87,8 +94,8 @@ export async function splitStereoAudio(
       true, // Always use signed URLs for external API access
     ),
     uploadFileToS3(
-      calleeAudioPath,
-      `audio/${callId}-callee.mp3`,
+      targetAudioPath,
+      `audio/${callId}-target.mp3`,
       "audio/mpeg",
       true, // Always use signed URLs for external API access
     ),
@@ -98,9 +105,9 @@ export async function splitStereoAudio(
 
   return {
     callerAudioPath,
-    calleeAudioPath,
+    targetAudioPath,
     callerS3Url,
-    calleeS3Url,
+    targetS3Url,
   };
 }
 

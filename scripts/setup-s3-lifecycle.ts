@@ -1,10 +1,15 @@
 /**
  * Setup S3 lifecycle policy to auto-delete temp files (audio, images)
  * 
- * Run with: bun scripts/setup-s3-lifecycle.ts
- *       or: npx tsx scripts/setup-s3-lifecycle.ts
+ * NOTE: This script is for reference only. Lifecycle rules are configured manually
+ * in the AWS Console (S3 → Bucket → Management → Lifecycle rules).
  * 
- * NOTE: Videos are kept forever - only temp files are cleaned up.
+ * Rules to configure manually:
+ * - audio/ → delete after 7 days
+ * - images/ → delete after 7 days
+ * - uploads/temp/ → delete after 1 day
+ * 
+ * Videos are kept forever - only temp files are cleaned up.
  */
 
 import { 
@@ -95,6 +100,17 @@ async function setupLifecyclePolicy() {
       },
       Expiration: {
         Days: 7,
+      },
+    },
+    // Clean up temp uploads after 1 day (user-uploaded images before WaveSpeed processing)
+    {
+      ID: "DeleteTempUploadsAfter1Day",
+      Status: "Enabled" as const,
+      Filter: {
+        Prefix: "uploads/temp/",
+      },
+      Expiration: {
+        Days: 1,
       },
     },
     // NOTE: videos/ is NOT included - videos are kept forever

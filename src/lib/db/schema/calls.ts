@@ -16,8 +16,7 @@ export const calls = pgTable("calls", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   status: callStatusEnum("status").notNull().default("call_created"),
-  recipientName: text("recipient_name").notNull(),
-  anythingElse: text("anything_else"), // Optional additional context
+  recipientName: text("recipient_name").notNull(), // Plaintext name OR encrypted name JSON if fhenixEnabled
   // Target person details for personalization
   targetGender: text("target_gender").notNull(), // "male", "female", "prefer_not_to_say", or "other"
   targetGenderCustom: text("target_gender_custom"), // Custom gender if "other" selected

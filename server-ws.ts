@@ -54,13 +54,74 @@ interface WebSocketData {
 
 const connectionData = new WeakMap<WebSocket, WebSocketData>();
 
-// HTTP server for health checks
+// In-memory cache for call data (keyed by callSid)
+// This avoids DB queries in the critical path when call starts
+interface CachedCallData {
+  openaiPrompt: string;
+  cachedAt: number; // Timestamp for cleanup
+}
+
+const callDataCache = new Map<string, CachedCallData>();
+
+// Cleanup old cache entries (older than 1 hour) every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  const oneHour = 60 * 60 * 1000;
+  let cleaned = 0;
+  for (const [callSid, data] of callDataCache.entries()) {
+    if (now - data.cachedAt > oneHour) {
+      callDataCache.delete(callSid);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    console.log(`[WS Cache] Cleaned up ${cleaned} old cache entries`);
+  }
+}, 5 * 60 * 1000); // Every 5 minutes
+
+// HTTP server for health checks and cache management
 const httpServer = createServer((req, res) => {
+  // Health check
   if (req.url === "/" || req.url === "/health") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("WebSocket server running");
     return;
   }
+
+  // Cache endpoint: POST /cache/call to populate cache
+  if (req.method === "POST" && req.url === "/cache/call") {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+    });
+    req.on("end", () => {
+      try {
+        const data = JSON.parse(body);
+        const { callSid, openaiPrompt } = data;
+        
+        if (!callSid || !openaiPrompt) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Missing callSid or openaiPrompt" }));
+          return;
+        }
+
+        callDataCache.set(callSid, {
+          openaiPrompt,
+          cachedAt: Date.now(),
+        });
+        
+        console.log(`[WS Cache] ✅ Cached call data for ${callSid}`);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ success: true, callSid }));
+      } catch (error) {
+        console.error("[WS Cache] Error caching call data:", error);
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Failed to cache call data" }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404);
   res.end("Not Found");
 });
@@ -115,28 +176,47 @@ async function handleStart(ws: WebSocket, wsData: WebSocketData, data: TwilioMes
   wsData.streamSid = data.streamSid;
   
   try {
-    const postgres = (await import("postgres")).default;
-    const { drizzle } = await import("drizzle-orm/postgres-js");
-    const { eq } = await import("drizzle-orm");
-    const { calls } = await import("./src/lib/db/schema/calls");
-    const schema = await import("./src/lib/db/schema");
     const { OpenAIRealtimeClient } = await import("./src/lib/realtime/openai-client");
     
-    const driver = postgres(process.env.DATABASE_URL!);
-    const db = drizzle({ client: driver, schema, casing: "snake_case" });
+    // ✅ Check cache first - avoids DB query in critical path
+    let openaiPrompt: string | null = null;
+    const cached = callDataCache.get(callSid);
     
-    const [call] = await db.select().from(calls).where(eq(calls.callSid, callSid)).limit(1);
-    await driver.end();
+    if (cached) {
+      console.log(`[WS] ✅ Using cached call data for ${callSid} (saved ${Date.now() - cached.cachedAt}ms ago)`);
+      openaiPrompt = cached.openaiPrompt;
+    } else {
+      // Fallback to DB query if not in cache (shouldn't happen normally)
+      console.log(`[WS] ⚠️ Cache miss for ${callSid}, falling back to DB query`);
+      const postgres = (await import("postgres")).default;
+      const { drizzle } = await import("drizzle-orm/postgres-js");
+      const { eq } = await import("drizzle-orm");
+      const { calls } = await import("./src/lib/db/schema/calls");
+      const schema = await import("./src/lib/db/schema");
+      
+      const driver = postgres(process.env.DATABASE_URL!);
+      const db = drizzle({ client: driver, schema, casing: "snake_case" });
+      
+      const [call] = await db.select().from(calls).where(eq(calls.callSid, callSid)).limit(1);
+      await driver.end();
+      
+      if (!call?.openaiPrompt) {
+        console.error("[WS] Call not found or missing prompt:", callSid);
+        return;
+      }
+      
+      openaiPrompt = call.openaiPrompt;
+    }
     
-    if (!call?.openaiPrompt) {
-      console.error("[WS] Call not found or missing prompt:", callSid);
+    if (!openaiPrompt) {
+      console.error("[WS] No OpenAI prompt available for call:", callSid);
       return;
     }
     
     const openai = new OpenAIRealtimeClient({
       apiKey: process.env.OPENAI_API_KEY!,
       voice: "alloy",
-      instructions: call.openaiPrompt,
+      instructions: openaiPrompt,
     });
     
     await openai.connect();
@@ -160,11 +240,11 @@ async function handleStart(ws: WebSocket, wsData: WebSocketData, data: TwilioMes
         console.log("[WS] 🔊 First audio chunk sent to Twilio");
       }
       if (pcm16ToPCMUFn) {
-        ws.send(JSON.stringify({
-          event: "media",
-          streamSid: wsData.streamSid,
+      ws.send(JSON.stringify({
+        event: "media",
+        streamSid: wsData.streamSid,
           media: { payload: pcm16ToPCMUFn(audioBase64) },
-        }));
+      }));
       }
     });
     

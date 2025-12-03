@@ -11,6 +11,7 @@ import {
   shouldRetryCall,
   calculateNextRetryTime,
 } from "~/lib/calls/retry-logic";
+import { cacheCallData } from "~/lib/calls/cache";
 
 interface ProcessCallJob {
   callId: string;
@@ -211,6 +212,12 @@ export async function setupCallProcessorWorker() {
               updatedAt: new Date(),
             })
             .where(eq(calls.id, callId));
+          
+          // ✅ Cache call data in WebSocket server to avoid DB query in critical path
+          // This allows handleStart to get prompt instantly when call connects
+          if (call.openaiPrompt && callResult.callSid) {
+            await cacheCallData(callResult.callSid, call.openaiPrompt);
+          }
           
           // Call initiated successfully - status will be updated via webhook when call completes
           // If call fails (no answer, busy, etc.), webhook will handle retry scheduling

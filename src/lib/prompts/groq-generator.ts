@@ -26,7 +26,6 @@ export interface TargetPersonData {
 export interface PromptGenerationInput {
   targetPerson: TargetPersonData;
   videoStyle: string; // Aesthetic style: "anime", "claymation", "puppets", etc.
-  anythingElse?: string; // Optional additional context
 }
 
 /**
@@ -70,7 +69,6 @@ ${input.targetPerson.profession ? `- Profession: ${input.targetPerson.profession
 ${input.targetPerson.physicalDescription ? `- Physical Description: ${input.targetPerson.physicalDescription}` : ""}
 ${input.targetPerson.interestingPiece ? `- Secret/Thing only they know: ${input.targetPerson.interestingPiece}` : ""}
 ${input.targetPerson.ragebaitTrigger ? `- To ragebait them, say: ${input.targetPerson.ragebaitTrigger}` : ""}
-${input.anythingElse ? `\n**Additional Context:** ${input.anythingElse}` : ""}
 
 **CRITICAL REQUIREMENTS:**
 - Create an AMUSING, ENTERTAINING scenario that will result in funny, awkward, or hilarious reactions
@@ -133,34 +131,34 @@ export async function generateImagePrompt(
 
   const systemPrompt = `You generate concise image prompts for AI image generation models.
 
-Generate a split-screen phone call image prompt in ${input.videoStyle} style. Rules:
-- ONLY describe what is VISUALLY SEEN - no narrative, no explanations, no editorializing
-- TWO characters in split-screen format, BOTH ACTIVELY TALKING ON PHONES
+Generate a VERTICAL split-screen phone call image prompt in ${input.videoStyle} style. Rules:
+- 9:16 PORTRAIT orientation - vertical split, NOT horizontal
+- ONLY describe what is VISUALLY SEEN - no narrative, no explanations
+- TWO characters stacked VERTICALLY, BOTH ACTIVELY TALKING ON PHONES
+- TOP HALF: Caller (AI character) - talking on phone
+- BOTTOM HALF: Target person (based on provided details) - talking on phone
 - IMPORTANT: Characters must be SPEAKING into phones, not just looking at them
 - Phone poses: either holding phone TO EAR, or TALKING on speakerphone with phone in hand near mouth
 - Show ENGAGED CONVERSATION posture - animated expressions, mouth open/speaking, reactive faces
-- LEFT: Target person (based on provided details) - talking on phone
-- RIGHT: Caller (based on provided description) - talking on phone
 - Keep it SHORT and DIRECT - just visual elements
-- NO phrases like "capturing the essence", "oblivious to", "hint at", "nod to", "exudes", "reminiscent of"
+- NO phrases like "capturing the essence", "oblivious to", "hint at", "nod to", "exudes"
 - NO story/context - just describe appearances, poses, objects, colors, style
 
-Format example: "Split-screen ${input.videoStyle} image. Left: [character description, phone held to ear, speaking, expression]. Right: [character description, phone held to ear, speaking, expression]. Background: [simple description]."
+Format example: "Vertical split-screen ${input.videoStyle} image (9:16 portrait). Top: [caller description, phone held to ear, speaking]. Bottom: [target description, phone held to ear, speaking]. Background: [simple description]."
 
 Return ONLY the prompt text.`;
 
   const callerDesc = getRandomCallerDescription();
   
-  const userPrompt = `Split-screen ${input.videoStyle} phone call image.
+  const userPrompt = `Vertical split-screen ${input.videoStyle} phone call image (9:16 portrait).
 
-LEFT (target): ${input.targetPerson.gender}${input.targetPerson.ageRange ? `, ${input.targetPerson.ageRange}` : ""}${input.targetPerson.physicalDescription ? `, ${input.targetPerson.physicalDescription}` : ""}${input.targetPerson.profession ? `, looks like a ${input.targetPerson.profession}` : ""}${input.targetPerson.hobby ? `, ${input.targetPerson.hobby} enthusiast vibe` : ""}
+TOP (caller/AI): ${callerDesc}
 
-RIGHT (caller): ${callerDesc}
+BOTTOM (target person): ${input.targetPerson.gender}${input.targetPerson.ageRange ? `, ${input.targetPerson.ageRange}` : ""}${input.targetPerson.physicalDescription ? `, ${input.targetPerson.physicalDescription}` : ""}${input.targetPerson.profession ? `, looks like a ${input.targetPerson.profession}` : ""}${input.targetPerson.hobby ? `, ${input.targetPerson.hobby} enthusiast vibe` : ""}
 
 Style: ${input.videoStyle}
-${input.anythingElse ? `Context: ${input.anythingElse}` : ""}
 
-Write a SHORT, VISUAL-ONLY prompt. CRITICAL: Both characters must be ACTIVELY TALKING on phones - either phone held to ear OR speakerphone near mouth. Show engaged conversation poses with animated expressions, mouths open/speaking. NOT just looking at phone screens.`;
+Write a SHORT, VISUAL-ONLY prompt for a VERTICAL 9:16 split-screen. TOP = caller, BOTTOM = target. CRITICAL: Both characters must be ACTIVELY TALKING on phones - either phone held to ear OR speakerphone near mouth. Show engaged conversation poses with animated expressions, mouths open/speaking.`;
 
   const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
     method: "POST",

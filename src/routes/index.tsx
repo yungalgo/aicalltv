@@ -1,7 +1,6 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { Suspense, useState, useEffect, useCallback, useRef } from "react";
-import { useAccount } from "wagmi";
 import { AuthModal } from "~/components/auth-modal";
 import { CallsTable } from "~/components/calls-table";
 import { FhenixPrivacyToggle, type PrivacyMode, useFhenixReady, useFhenixEncryption } from "~/components/fhenix-privacy-toggle";
@@ -171,7 +170,6 @@ function CallRequestForm() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [inputMode, setInputMode] = useState<InputMode>("form");
   const [privacyMode, setPrivacyMode] = useState<PrivacyMode>("standard");
-  const { isConnected: isWalletConnected } = useAccount();
   const isFhenixReady = useFhenixReady(privacyMode);
   
   // Fhenix encryption hook
@@ -187,7 +185,6 @@ function CallRequestForm() {
   const [formData, setFormData] = useState({
     recipientName: "",
     phoneNumber: "",
-    anythingElse: "",
     targetGender: "male" as "male" | "female" | "prefer_not_to_say" | "other",
     targetGenderCustom: "",
     targetAgeRange: "" as "" | "18-25" | "26-35" | "36-45" | "46-55" | "56+",
@@ -260,6 +257,7 @@ function CallRequestForm() {
       ...prev,
       uploadedImageUrl: "",
       uploadedImageS3Key: "",
+      // Physical description becomes required again when image is removed
     }));
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -275,13 +273,13 @@ function CallRequestForm() {
       targetGender: data.targetGender || prev.targetGender,
       targetGenderCustom: data.targetGenderCustom || prev.targetGenderCustom,
       targetAgeRange: data.targetAgeRange || prev.targetAgeRange,
+      targetPhysicalDescription: data.targetPhysicalDescription || prev.targetPhysicalDescription,
       targetCity: data.targetCity || prev.targetCity,
       targetHobby: data.targetHobby || prev.targetHobby,
       targetProfession: data.targetProfession || prev.targetProfession,
       interestingPiece: data.interestingPiece || prev.interestingPiece,
       ragebaitTrigger: data.ragebaitTrigger || prev.ragebaitTrigger,
       videoStyle: data.videoStyle || prev.videoStyle,
-      anythingElse: data.anythingElse || prev.anythingElse,
     }));
   }, []);
 
@@ -388,38 +386,37 @@ function CallRequestForm() {
     try {
       console.log("[Client] Payment complete, creating call...");
       // Credit was created in payment modal, backend will consume it
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const result = await (createCall as any)({
-          data: {
-            recipientName: formData.recipientName,
-            // If Fhenix mode, send vault ID; otherwise send phone number
-            phoneNumber: privacyMode === "fhenix" && fhenixVaultId 
-              ? `fhenix:${fhenixVaultId}` // Prefix to indicate it's a vault reference
-              : formData.phoneNumber,
-            anythingElse: formData.anythingElse || undefined,
-            targetGender: formData.targetGender,
-            targetGenderCustom:
-              formData.targetGender === "other"
-                ? formData.targetGenderCustom
-                : undefined,
-            targetAgeRange: formData.targetAgeRange || undefined,
-            targetPhysicalDescription:
-              formData.targetPhysicalDescription || undefined,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (createCall as any)({
+        data: {
+          recipientName: formData.recipientName,
+          // If Fhenix mode, send vault ID; otherwise send phone number
+          phoneNumber: privacyMode === "fhenix" && fhenixVaultId 
+            ? `fhenix:${fhenixVaultId}` // Prefix to indicate it's a vault reference
+            : formData.phoneNumber,
+          targetGender: formData.targetGender,
+          targetGenderCustom:
+            formData.targetGender === "other"
+              ? formData.targetGenderCustom
+              : undefined,
+          targetAgeRange: formData.targetAgeRange || undefined,
+          targetPhysicalDescription:
+            formData.targetPhysicalDescription || undefined,
             // New personalization fields
             targetCity: formData.targetCity || undefined,
             targetHobby: formData.targetHobby || undefined,
             targetProfession: formData.targetProfession || undefined,
-            interestingPiece: formData.interestingPiece || undefined,
+          interestingPiece: formData.interestingPiece || undefined,
             ragebaitTrigger: formData.ragebaitTrigger || undefined,
-            videoStyle: formData.videoStyle,
+          videoStyle: formData.videoStyle,
             // Optional uploaded image
             uploadedImageUrl: formData.uploadedImageUrl || undefined,
             uploadedImageS3Key: formData.uploadedImageS3Key || undefined,
-            // Include fhenix metadata
-            fhenixEnabled: privacyMode === "fhenix",
-            fhenixVaultId: fhenixVaultId || undefined,
-          },
-        });
+          // Include fhenix metadata
+          fhenixEnabled: privacyMode === "fhenix",
+          fhenixVaultId: fhenixVaultId || undefined,
+        },
+      });
       console.log("[Client] Call created:", result);
 
       toast.success(
@@ -434,10 +431,9 @@ function CallRequestForm() {
 
       // Reset form
       setFormData({
-        recipientName: "",
-        phoneNumber: "",
-        anythingElse: "",
-        targetGender: "male",
+    recipientName: "",
+    phoneNumber: "",
+    targetGender: "male",
         targetGenderCustom: "",
         targetAgeRange: "",
         targetPhysicalDescription: "",
@@ -610,7 +606,7 @@ function CallRequestForm() {
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="targetGender">Gender</Label>
+            <Label htmlFor="targetGender">Gender *</Label>
             <select
               id="targetGender"
               value={formData.targetGender}
@@ -623,8 +619,10 @@ function CallRequestForm() {
                 })
               }
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              required
               disabled={isSubmitting}
             >
+              <option value="">Select...</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
               <option value="prefer_not_to_say">Prefer not to say</option>
@@ -633,7 +631,7 @@ function CallRequestForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="targetAgeRange">Age Range</Label>
+            <Label htmlFor="targetAgeRange">Age Range *</Label>
             <select
               id="targetAgeRange"
               value={formData.targetAgeRange}
@@ -645,9 +643,10 @@ function CallRequestForm() {
                 })
               }
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              required
               disabled={isSubmitting}
             >
-              <option value="">Any</option>
+              <option value="">Select...</option>
               <option value="18-25">18-25</option>
               <option value="26-35">26-35</option>
               <option value="36-45">36-45</option>
@@ -676,10 +675,10 @@ function CallRequestForm() {
           </div>
         )}
 
-        {/* New personalization fields */}
+        {/* New personalization fields - all mandatory */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="targetCity">City/Area</Label>
+            <Label htmlFor="targetCity">City/Area *</Label>
             <Input
               id="targetCity"
               value={formData.targetCity}
@@ -688,10 +687,11 @@ function CallRequestForm() {
               }
               placeholder="e.g. Brooklyn, NYC"
               disabled={isSubmitting}
+              required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="targetHobby">Hobby</Label>
+            <Label htmlFor="targetHobby">Hobby *</Label>
             <Input
               id="targetHobby"
               value={formData.targetHobby}
@@ -700,10 +700,11 @@ function CallRequestForm() {
               }
               placeholder="e.g. rock climbing"
               disabled={isSubmitting}
+              required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="targetProfession">Profession</Label>
+            <Label htmlFor="targetProfession">Profession *</Label>
             <Input
               id="targetProfession"
               value={formData.targetProfession}
@@ -712,36 +713,66 @@ function CallRequestForm() {
               }
               placeholder="e.g. software engineer"
               disabled={isSubmitting}
+              required
             />
           </div>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="videoStyle">Video Style *</Label>
-          <select
-            id="videoStyle"
-            value={formData.videoStyle}
-            onChange={(e) =>
-              setFormData({ ...formData, videoStyle: e.target.value })
-            }
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            required
-            disabled={isSubmitting}
-          >
-            {VIDEO_STYLES.map((style) => (
-              <option key={style} value={style}>
-                {style.charAt(0).toUpperCase() +
-                  style.slice(1).replace(/-/g, " ")}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-2">
+            <select
+              id="videoStyle"
+              value={formData.videoStyle && VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number]) ? formData.videoStyle : formData.videoStyle ? "custom" : ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === "custom") {
+                  // Switch to custom mode - clear if it was a preset
+                  if (VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])) {
+                    setFormData({ ...formData, videoStyle: "" });
+                  }
+                  // If already custom, keep the value
+                } else if (value) {
+                  setFormData({ ...formData, videoStyle: value });
+                }
+              }}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              required={!formData.videoStyle || VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])}
+              disabled={isSubmitting}
+            >
+              <option value="">Select a style...</option>
+              {VIDEO_STYLES.map((style) => (
+                <option key={style} value={style}>
+                  {style.charAt(0).toUpperCase() +
+                    style.slice(1).replace(/-/g, " ")}
+                </option>
+              ))}
+              <option value="custom">Other (custom)</option>
+            </select>
+            {(!formData.videoStyle || !VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])) && (
+              <Input
+                id="videoStyleCustom"
+                value={formData.videoStyle && !VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number]) ? formData.videoStyle : ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, videoStyle: e.target.value })
+                }
+                placeholder="Enter custom style (e.g. pixar, noir, vaporwave)"
+                required
+                disabled={isSubmitting}
+                className="mt-2"
+              />
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Choose from suggested styles or enter your own custom aesthetic.
+          </p>
         </div>
 
-        {/* Optional Image Upload */}
+        {/* Image Upload - Strongly Recommended */}
         <div className="space-y-2">
           <Label>
             Upload their photo{" "}
-            <span className="text-muted-foreground">(optional - makes video more personal)</span>
+            <span className="text-muted-foreground">(strongly recommended for best results)</span>
           </Label>
           <div className="flex items-center gap-4">
             <input
@@ -760,8 +791,8 @@ function CallRequestForm() {
                   className="w-16 h-16 object-cover rounded"
                 />
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Image uploaded ✓</p>
-                  <p className="text-xs text-muted-foreground">Will be used in video generation</p>
+                  <p className="text-sm font-medium">✓ Image uploaded - we'll use this for the video</p>
+                  <p className="text-xs text-muted-foreground">Physical description is now optional</p>
                 </div>
                 <Button
                   type="button"
@@ -785,17 +816,41 @@ function CallRequestForm() {
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Max 5MB. JPG, PNG, or WebP. We'll edit them into the phone call scene.
-          </p>
+          {!formData.uploadedImageUrl && (
+            <p className="text-xs text-muted-foreground">
+              💡 Tip: Upload a photo for more personalized results. Max 5MB. JPG, PNG, or WebP.
+            </p>
+          )}
         </div>
+
+        {/* Physical Description - Required if no image, Optional if image uploaded */}
+        {!formData.uploadedImageUrl && (
+          <div className="space-y-2">
+            <Label htmlFor="targetPhysicalDescription">
+              Physical Description *
+              <span className="text-muted-foreground text-xs ml-2">(hair, clothing, appearance)</span>
+            </Label>
+            <Textarea
+              id="targetPhysicalDescription"
+              value={formData.targetPhysicalDescription}
+              onChange={(e) =>
+                setFormData({ ...formData, targetPhysicalDescription: e.target.value })
+              }
+              placeholder="e.g. short brown hair, glasses, casual t-shirt"
+              rows={2}
+              required
+              disabled={isSubmitting}
+            />
+            <p className="text-xs text-muted-foreground">
+              Required if no photo uploaded. This helps generate a more accurate video.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="interestingPiece">
-            One thing virtually no one knows about them{" "}
-            <span className="text-muted-foreground">
-              (the hook)
-            </span>
+            One thing virtually no one knows about them *
+            <span className="text-muted-foreground text-xs ml-2">(the hook)</span>
           </Label>
           <Textarea
             id="interestingPiece"
@@ -805,16 +860,15 @@ function CallRequestForm() {
             }
             placeholder="e.g. 'they secretly still sleep with their childhood teddy bear'"
             rows={2}
+            required
             disabled={isSubmitting}
           />
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="ragebaitTrigger">
-            If you wanted to ragebait them, you would say...{" "}
-            <span className="text-muted-foreground">
-              (optional but spicy 🌶️)
-            </span>
+            If you wanted to ragebait them, you would say... *
+            <span className="text-muted-foreground text-xs ml-2">(spicy 🌶️)</span>
           </Label>
           <Textarea
             id="ragebaitTrigger"
@@ -824,30 +878,11 @@ function CallRequestForm() {
             }
             placeholder="e.g. 'their favorite sports team is overrated'"
             rows={2}
+            required
             disabled={isSubmitting}
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="anythingElse">
-            Additional notes{" "}
-            <span className="text-muted-foreground">(optional)</span>
-          </Label>
-          <Textarea
-            id="anythingElse"
-            value={formData.anythingElse}
-            onChange={(e) =>
-              setFormData({ ...formData, anythingElse: e.target.value })
-            }
-            placeholder="Any other context or special requests..."
-            rows={2}
-            maxLength={1000}
-            disabled={isSubmitting}
-          />
-          <p className="text-xs text-muted-foreground text-right">
-            {formData.anythingElse.length}/1000
-          </p>
-        </div>
       </>
       )}
 
@@ -902,6 +937,11 @@ function CallRequestForm() {
         <p className="text-center text-xs text-muted-foreground">
           Secure payment via credit card or crypto
         </p>
+
+        {/* NSFW Warning Footer */}
+        <p className="text-center text-xs text-muted-foreground mt-4 pt-4 border-t">
+          ⚠️ <strong>NSFW content is not supported.</strong> Calls with inappropriate content will fail and refunds are not possible. Please keep requests appropriate.
+        </p>
       </form>
 
       {/* Auth Modal - shown when not logged in */}
@@ -930,7 +970,6 @@ function CallRequestForm() {
           interestingPiece: formData.interestingPiece,
           ragebaitTrigger: formData.ragebaitTrigger,
           videoStyle: formData.videoStyle,
-          anythingElse: formData.anythingElse,
           uploadedImageUrl: formData.uploadedImageUrl,
           uploadedImageS3Key: formData.uploadedImageS3Key,
           // Fhenix FHE encryption

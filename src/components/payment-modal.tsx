@@ -108,7 +108,6 @@ export interface PaymentModalProps {
     interestingPiece?: string;
     ragebaitTrigger?: string;
     videoStyle?: string;
-    anythingElse?: string;
     // Optional uploaded image
     uploadedImageUrl?: string;
     uploadedImageS3Key?: string;
@@ -802,7 +801,6 @@ export function PaymentModal({
                               targetAgeRange: callDetails.targetAgeRange,
                               interestingPiece: callDetails.interestingPiece,
                               videoStyle: callDetails.videoStyle,
-                              anythingElse: callDetails.anythingElse,
                               // Fhenix FHE encryption
                               fhenixEnabled: callDetails.fhenixEnabled,
                               fhenixVaultId: callDetails.fhenixVaultId,
@@ -958,7 +956,6 @@ function ZCashPaymentStep({
               targetAgeRange: callDetails.targetAgeRange,
               interestingPiece: callDetails.interestingPiece,
               videoStyle: callDetails.videoStyle,
-              anythingElse: callDetails.anythingElse,
             },
           }),
         });

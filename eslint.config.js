@@ -38,5 +38,6 @@ export default defineConfig({
     ".output", 
     "build/",
     "src/lib/payments/functions.ts", // Placeholder file - not currently used
+    "contracts/**", // Hardhat contracts - separate TypeScript config
   ],
 });

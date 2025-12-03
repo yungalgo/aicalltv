@@ -18,7 +18,6 @@ interface CallData {
   userId: string;
   status: string;
   recipientName: string;
-  anythingElse: string | null;
   targetGender: string;
   targetGenderCustom: string | null;
   targetAgeRange: string | null;

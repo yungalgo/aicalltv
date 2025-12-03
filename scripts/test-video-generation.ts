@@ -74,13 +74,14 @@ async function testVideoGeneration() {
     tempFiles.push(tempRecordingPath);
 
     // Split stereo audio and upload to S3
-    const { callerS3Url, calleeS3Url } = await splitStereoAudio(
+    // Left channel = caller (AI), Right channel = target (person)
+    const { callerS3Url, targetS3Url } = await splitStereoAudio(
       tempRecordingPath,
       TEST_CALL_ID,
     );
     tempFiles.push(
       getTempFilePath(TEST_CALL_ID, "caller", "mp3"),
-      getTempFilePath(TEST_CALL_ID, "callee", "mp3"),
+      getTempFilePath(TEST_CALL_ID, "target", "mp3"),
     );
 
     // Get audio duration for cost calculation
@@ -95,7 +96,7 @@ async function testVideoGeneration() {
     });
 
     // Generate image from prompt using WavespeedAI nano-banana-pro
-    // Always generates PNG, 16:9, 4k resolution
+    // Always generates PNG, 9:16 portrait, 4k resolution
     console.log(`[Test] Generating image (this may take 30-60 seconds)...`);
     const imagePrompt = getDefaultCallImagePrompt();
     const imageResult = await generateImage({
@@ -105,10 +106,11 @@ async function testVideoGeneration() {
     console.log(`[Test] Image generated: ${imageResult.imageUrl}`);
 
     // Generate multi-person video with WavespeedAI
+    // Layout: TOP = caller (AI), BOTTOM = target (person)
     console.log(`[Test] Generating video (this may take 2-5 minutes)...`);
     const videoResult = await generateMultiPersonVideo(
       callerS3Url,
-      calleeS3Url,
+      targetS3Url,
       TEST_CALL_ID,
       imageResult.imageUrl, // Use generated image
       audioDuration,

@@ -119,12 +119,12 @@ The app automatically generates videos from call recordings using **WavespeedAI'
 
 ### How It Works
 
-1. **Recording**: Twilio records calls as stereo audio (left channel = caller, right channel = callee)
+1. **Recording**: Twilio records calls as stereo audio (left channel = caller/AI, right channel = target/person)
 2. **Processing**: The audio is split into two mono channels and uploaded to S3
 3. **Generation**: WavespeedAI generates a multi-person video using:
-   - Left audio (caller)
-   - Right audio (callee)
-   - Default split-screen image (two people on a park bench)
+   - Left audio (caller/AI)
+   - Right audio (target/person)
+   - Default split-screen image (two people on a phone call, 9:16 portrait)
    - `order: "meanwhile"` mode (shows both people simultaneously)
 4. **Storage**: The final video is uploaded to S3 and linked to the call record
 
@@ -138,7 +138,7 @@ bun run test:video
 
 This script:
 - Downloads a recording from Twilio
-- Splits the stereo audio into caller/callee channels
+- Splits the stereo audio into caller/target channels
 - Generates a multi-person video using WavespeedAI
 - Uploads the final video to S3
 - Cleans up temporary files

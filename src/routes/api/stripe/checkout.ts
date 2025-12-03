@@ -78,7 +78,6 @@ export const Route = createFileRoute("/api/stripe/checkout")({
               interestingPiece: String(callData.interestingPiece || "").slice(0, 500),
               ragebaitTrigger: String(callData.ragebaitTrigger || "").slice(0, 500),
               videoStyle: String(callData.videoStyle || "anime").slice(0, 500),
-              anythingElse: String(callData.anythingElse || "").slice(0, 500),
               // Optional uploaded image
               uploadedImageUrl: String(callData.uploadedImageUrl || "").slice(0, 500),
               uploadedImageS3Key: String(callData.uploadedImageS3Key || "").slice(0, 500),
