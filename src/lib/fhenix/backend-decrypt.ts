@@ -4,19 +4,19 @@
  * Handles server-side decryption of phone numbers stored in the PIIVault contract.
  * The backend service address must be set as an allowed decryptor in the contract.
  * 
- * Contract: 0x7eD75e4ec7b3Df1b651654d7A7E89CeC0AcEf0a5 (Base Mainnet)
+ * Contract: 0xc6d16980078e5613EDCe9B332d1F25810e57d9CB (Base Sepolia)
  */
 
 import { createPublicClient, createWalletClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { base } from "viem/chains";
+import { baseSepolia } from "viem/chains";
 import { env } from "~/env/server";
 import { PII_VAULT_ABI, PII_VAULT_ADDRESS } from "./abi";
 
-// Create public client for reading contract state
+// Create public client for reading contract state (Base Sepolia)
 const publicClient = createPublicClient({
-  chain: base,
-  transport: http("https://mainnet.base.org"),
+  chain: baseSepolia,
+  transport: http("https://sepolia.base.org"),
 });
 
 /**
@@ -35,8 +35,8 @@ function getBackendWalletClient() {
   
   return createWalletClient({
     account,
-    chain: base,
-    transport: http("https://mainnet.base.org"),
+    chain: baseSepolia,
+    transport: http("https://sepolia.base.org"),
   });
 }
 
