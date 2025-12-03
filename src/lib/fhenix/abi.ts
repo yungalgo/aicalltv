@@ -242,10 +242,10 @@ export const PII_VAULT_ABI = [
   },
 ] as const;
 
-// v1 contract (without decrypt functions) - for reference
+// v1 contract (without decrypt functions) - deprecated
 export const PII_VAULT_V1_ADDRESS = "0x7eD75e4ec7b3Df1b651654d7A7E89CeC0AcEf0a5" as const;
 
-// Current contract address - UPDATE THIS after deploying v2!
-// Set via env var VITE_PII_VAULT_ADDRESS or defaults to v1
-export const PII_VAULT_ADDRESS = "0x7eD75e4ec7b3Df1b651654d7A7E89CeC0AcEf0a5" as const;
+// v2 contract with full decryption support
+// https://base.blockscout.com/address/0xc6d16980078e5613EDCe9B332d1F25810e57d9CB
+export const PII_VAULT_ADDRESS = "0xc6d16980078e5613EDCe9B332d1F25810e57d9CB" as const;
 
