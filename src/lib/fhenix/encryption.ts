@@ -22,28 +22,28 @@ export async function initializeFhenix(
   publicClient: PublicClient
 ): Promise<boolean> {
   try {
-    // cofhejs.initialize expects ethers-style provider/signer
-    // We need to adapt viem clients
-    const provider = {
-      getNetwork: async () => ({ chainId: 8453n, name: "base" }),
-      getSigner: async () => ({
-        getAddress: async () => walletClient.account?.address,
-        signMessage: async (message: string) => {
-          if (!walletClient.account) throw new Error("No account");
-          return walletClient.signMessage({
-            account: walletClient.account,
-            message,
-          });
-        },
-      }),
-    };
-
-    await cofhejs.initialize({
-      provider: provider as unknown as Parameters<typeof cofhejs.initialize>[0]["provider"],
+    console.log("🔐 Initializing Fhenix with viem clients...");
+    console.log("🔐 Public client chain:", publicClient.chain?.name);
+    console.log("🔐 Wallet account:", walletClient.account?.address);
+    
+    // Use initializeWithViem for proper viem integration
+    const result = await cofhejs.initializeWithViem({
+      viemClient: publicClient,
+      viemWalletClient: walletClient,
+      generatePermit: true,
+      ignoreErrors: false,
     });
     
+    console.log("🔐 Initialize result:", result);
+    
+    if (!result.success) {
+      console.error("❌ Fhenix initialization failed:", result.error);
+      isInitialized = false;
+      return false;
+    }
+    
     isInitialized = true;
-    console.log("✅ Fhenix CoFHE initialized");
+    console.log("✅ Fhenix CoFHE initialized successfully");
     return true;
   } catch (error) {
     console.error("❌ Failed to initialize Fhenix:", error);
@@ -121,49 +121,34 @@ export async function encryptPhoneNumber(
     console.log("📱 Phone as uint64:", phoneUint64.toString());
     
     // Encrypt using cofhejs
-    const encryptedInput = await Encryptable.uint64(phoneUint64);
+    const encryptedInput = Encryptable.uint64(phoneUint64);
     console.log("🔐 Encryptable input:", encryptedInput);
     
-    const encrypted = await cofhejs.encrypt([encryptedInput]);
-    console.log("🔐 Encrypted result:", encrypted);
-    console.log("🔐 Encrypted result type:", typeof encrypted);
-    console.log("🔐 Encrypted result keys:", encrypted ? Object.keys(encrypted) : "null");
+    const encryptResult = await cofhejs.encrypt([encryptedInput]);
+    console.log("🔐 Encrypt result:", encryptResult);
     
-    if (!encrypted) {
-      throw new Error("Encryption returned null/undefined");
+    // cofhejs.encrypt returns a Result<T> object
+    if (!encryptResult.success) {
+      console.error("🔐 Encryption failed:", encryptResult.error);
+      throw encryptResult.error || new Error("Encryption failed");
     }
     
-    // Handle different possible response formats
-    let result: { data?: unknown; securityZone?: number; signature?: string };
+    const encryptedArray = encryptResult.data;
+    console.log("🔐 Encrypted data array:", encryptedArray);
     
-    if (Array.isArray(encrypted)) {
-      if (encrypted.length === 0) {
-        throw new Error("Encryption returned empty array");
-      }
-      result = encrypted[0];
-    } else if (typeof encrypted === "object") {
-      // Maybe it's a single object, not an array
-      result = encrypted as typeof result;
-    } else {
-      throw new Error(`Unexpected encryption result type: ${typeof encrypted}`);
+    if (!encryptedArray || encryptedArray.length === 0) {
+      throw new Error("Encryption returned empty result");
     }
     
-    console.log("🔐 Result object:", result);
-    console.log("🔐 Result keys:", result ? Object.keys(result) : "null");
-    
-    // Extract data - it might be nested or have different property names
-    const data = result?.data ?? (result as Record<string, unknown>)?.ciphertext ?? (result as Record<string, unknown>)?.value;
-    
-    if (data === undefined || data === null) {
-      console.error("🔐 Full result for debugging:", JSON.stringify(result, null, 2));
-      throw new Error("Could not find encrypted data in result");
-    }
+    const encrypted = encryptedArray[0];
+    console.log("🔐 First encrypted item:", encrypted);
+    console.log("🔐 Encrypted keys:", encrypted ? Object.keys(encrypted) : "null");
     
     return {
-      data: BigInt(data as string | number | bigint),
-      securityZone: result?.securityZone || 0,
-      utype: 5, // euint64 type
-      signature: (result?.signature as `0x${string}`) || "0x",
+      data: BigInt(encrypted.data),
+      securityZone: encrypted.securityZone || 0,
+      utype: encrypted.utype || 5, // euint64 type
+      signature: (encrypted.signature as `0x${string}`) || "0x",
     };
   } catch (error) {
     console.error("❌ Failed to encrypt phone number:", error);

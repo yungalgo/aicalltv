@@ -6,26 +6,38 @@
  */
 
 declare module "cofhejs/web" {
-  export interface EncryptedInput {
-    data: string | bigint;
-    securityZone?: number;
-    utype?: number;
-    signature?: string;
+  export interface Result<T> {
+    success: boolean;
+    data: T | null;
+    error: Error | null;
   }
 
-  export interface InitializeOptions {
-    provider: unknown;
+  export interface EncryptedInput {
+    data: bigint;
+    securityZone: number;
+    utype: number;
+    signature: string;
+  }
+
+  export interface ViemInitializeOptions {
+    viemClient: unknown;
+    viemWalletClient?: unknown;
+    generatePermit?: boolean;
+    ignoreErrors?: boolean;
+    environment?: string;
   }
 
   export interface CofheJS {
-    initialize(options: InitializeOptions): Promise<void>;
-    encrypt(inputs: EncryptableValue[]): Promise<EncryptedInput[]>;
-    decrypt(data: unknown): Promise<unknown>;
+    initialize(options: unknown): Promise<Result<unknown>>;
+    initializeWithViem(options: ViemInitializeOptions): Promise<Result<unknown>>;
+    encrypt(inputs: EncryptableValue[]): Promise<Result<EncryptedInput[]>>;
+    decrypt(data: unknown): Promise<Result<unknown>>;
   }
 
   export interface EncryptableValue {
-    _type: string;
-    _value: bigint | string | number;
+    data: bigint | number;
+    securityZone: number;
+    utype: number;
   }
 
   export const cofhejs: CofheJS;
