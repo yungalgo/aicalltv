@@ -33,9 +33,13 @@ export function FhenixPrivacyToggle({
   onChange,
   disabled = false,
 }: FhenixPrivacyToggleProps) {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
   const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
+  const { switchChain, isPending: isSwitching } = useSwitchChain();
+  
+  // Check if on correct network
+  const isOnCorrectNetwork = chain?.id === baseSepolia.id;
 
   const handleModeChange = (mode: PrivacyMode) => {
     onChange(mode);
@@ -123,7 +127,8 @@ export function FhenixPrivacyToggle({
         {/* Wallet Connection Section (shown when Fhenix selected) */}
         {value === "fhenix" && (
           <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20 space-y-2">
-            {isConnected ? (
+            {isConnected && isOnCorrectNetwork ? (
+              /* Connected AND on correct network */
               <>
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
@@ -155,6 +160,51 @@ export function FhenixPrivacyToggle({
                   </a>
                 </div>
               </>
+            ) : isConnected && !isOnCorrectNetwork ? (
+              /* Connected but WRONG network */
+              <div className="space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    <span className="text-sm text-amber-400">
+                      Wrong Network: {chain?.name || "Unknown"}
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => disconnect()}
+                    className="text-xs h-7 text-muted-foreground hover:text-foreground"
+                  >
+                    Disconnect
+                  </Button>
+                </div>
+                <p className="text-xs text-amber-400/80">
+                  Please switch to Base Sepolia to use FHE encryption
+                </p>
+                <Button
+                  type="button"
+                  onClick={() => switchChain?.({ chainId: baseSepolia.id })}
+                  disabled={isSwitching || disabled}
+                  className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+                  size="sm"
+                >
+                  {isSwitching ? (
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Switching...
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-2">
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M7 16V4M7 4L3 8M7 4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+                      </svg>
+                      Switch to Base Sepolia
+                    </span>
+                  )}
+                </Button>
+              </div>
             ) : (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
