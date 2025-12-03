@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect, useCallback } from "react";
 import { useAccount } from "wagmi";
 import { AuthModal } from "~/components/auth-modal";
 import { CallsTable } from "~/components/calls-table";
-import { FhenixPrivacyToggle, type PrivacyMode, useFhenixReady } from "~/components/fhenix-privacy-toggle";
+import { FhenixPrivacyToggle, type PrivacyMode, useFhenixReady, useFhenixEncryption } from "~/components/fhenix-privacy-toggle";
 import { Header } from "~/components/header";
 import { NearAiChat } from "~/components/near-ai-chat";
 import { PaymentModal } from "~/components/payment-modal";
@@ -104,8 +104,8 @@ function InputModeTab({
       type="button"
       onClick={onClick}
       className={`
-        relative flex-1 flex flex-col items-center justify-center py-4 px-6 rounded-xl
-        transition-all duration-300 overflow-hidden group
+        relative flex-1 flex flex-col items-center justify-center py-4 px-3 sm:px-6 rounded-xl
+        transition-all duration-300 overflow-hidden group min-h-[120px]
         ${isActive 
           ? isAi 
             ? "bg-gradient-to-br from-violet-600 via-purple-600 to-cyan-500 text-white shadow-lg near-ai-glow" 
@@ -119,23 +119,10 @@ function InputModeTab({
         <div className="absolute inset-0 near-ai-shimmer pointer-events-none" />
       )}
       
-      {/* Icon with float animation for AI */}
-      <span className={`text-2xl mb-1 ${isAi && isActive ? "near-ai-float" : ""}`}>
-        {icon}
-      </span>
-      
-      {/* Label */}
-      <span className="font-semibold text-sm">{label}</span>
-      
-      {/* Sublabel */}
-      <span className={`text-xs mt-0.5 ${isActive ? "opacity-80" : "opacity-60"}`}>
-        {sublabel}
-      </span>
-      
-      {/* Badge */}
+      {/* Badge - positioned top right */}
       {badge && (
         <span className={`
-          absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full
+          absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full z-10
           ${isActive 
             ? "bg-white/20 text-white" 
             : "bg-gradient-to-r from-violet-500 to-cyan-500 text-white"
@@ -145,11 +132,24 @@ function InputModeTab({
         </span>
       )}
       
-      {/* TEE Badge for AI tab */}
+      {/* Icon with float animation for AI */}
+      <span className={`text-2xl mb-1 ${isAi && isActive ? "near-ai-float" : ""}`}>
+        {icon}
+      </span>
+      
+      {/* Label */}
+      <span className="font-semibold text-sm text-center">{label}</span>
+      
+      {/* Sublabel */}
+      <span className={`text-xs mt-0.5 text-center ${isActive ? "opacity-80" : "opacity-60"}`}>
+        {sublabel}
+      </span>
+      
+      {/* TEE Badge for AI tab - in flow, not absolute */}
       {isAi && (
         <span className={`
-          absolute bottom-2 left-1/2 -translate-x-1/2 text-[9px] font-medium px-2 py-0.5 rounded-full
-          flex items-center gap-1
+          mt-2 text-[9px] font-medium px-2 py-0.5 rounded-full
+          flex items-center gap-1 whitespace-nowrap
           ${isActive 
             ? "bg-green-400/20 text-green-100 tee-badge" 
             : "bg-green-500/10 text-green-600 dark:text-green-400"
@@ -173,6 +173,17 @@ function CallRequestForm() {
   const [privacyMode, setPrivacyMode] = useState<PrivacyMode>("standard");
   const { isConnected: isWalletConnected } = useAccount();
   const isFhenixReady = useFhenixReady(privacyMode);
+  
+  // Fhenix encryption hook
+  const { 
+    encryptPhone, 
+    isEncrypting, 
+    encryptionError 
+  } = useFhenixEncryption();
+  
+  // Store the vault callId after encryption (used instead of raw phone)
+  const [fhenixVaultId, setFhenixVaultId] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState({
     recipientName: "",
     phoneNumber: "",
@@ -249,7 +260,7 @@ function CallRequestForm() {
   // Handle form submission - checks auth then shows payment
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (isSubmitting) return;
+    if (isSubmitting || isEncrypting) return;
 
     // Validate form first
     if (!validateForm()) return;
@@ -266,7 +277,23 @@ function CallRequestForm() {
       return;
     }
 
-    // User is logged in - show payment modal
+    // If Fhenix mode, encrypt phone number on-chain first
+    if (privacyMode === "fhenix") {
+      toast.info("🔐 Encrypting phone number on Base...", { duration: 3000 });
+      
+      const result = await encryptPhone(formData.phoneNumber);
+      
+      if (!result) {
+        toast.error(encryptionError || "Failed to encrypt phone number. Please try again.");
+        return;
+      }
+      
+      // Store the vault ID for use in call creation
+      setFhenixVaultId(result.callId);
+      toast.success("✅ Phone encrypted on-chain!", { duration: 2000 });
+    }
+
+    // User is logged in (and phone encrypted if Fhenix) - show payment modal
     setShowPaymentModal(true);
   };
 
@@ -291,7 +318,10 @@ function CallRequestForm() {
       const result = await (createCall as any)({
         data: {
           recipientName: formData.recipientName,
-          phoneNumber: formData.phoneNumber,
+          // If Fhenix mode, send vault ID; otherwise send phone number
+          phoneNumber: privacyMode === "fhenix" && fhenixVaultId 
+            ? `fhenix:${fhenixVaultId}` // Prefix to indicate it's a vault reference
+            : formData.phoneNumber,
           anythingElse: formData.anythingElse || undefined,
           targetGender: formData.targetGender,
           targetGenderCustom:
@@ -303,6 +333,9 @@ function CallRequestForm() {
             formData.targetPhysicalDescription || undefined,
           interestingPiece: formData.interestingPiece || undefined,
           videoStyle: formData.videoStyle,
+          // Include fhenix metadata
+          fhenixEnabled: privacyMode === "fhenix",
+          fhenixVaultId: fhenixVaultId || undefined,
         },
       });
       console.log("[Client] Call created:", result);
@@ -329,6 +362,9 @@ function CallRequestForm() {
         interestingPiece: "",
         videoStyle: "anime",
       });
+      // Reset Fhenix state
+      setFhenixVaultId(null);
+      setPrivacyMode("standard");
     } catch (error) {
       console.error("[Client] Error creating call:", error);
       toast.error(
@@ -480,13 +516,6 @@ function CallRequestForm() {
           </p>
         </div>
 
-        {/* Fhenix Privacy Toggle */}
-        <FhenixPrivacyToggle
-          value={privacyMode}
-          onChange={setPrivacyMode}
-          disabled={isSubmitting}
-        />
-
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="targetGender">Gender</Label>
@@ -616,6 +645,13 @@ function CallRequestForm() {
           </p>
         </div>
 
+        {/* Fhenix Privacy Toggle */}
+        <FhenixPrivacyToggle
+          value={privacyMode}
+          onChange={setPrivacyMode}
+          disabled={isSubmitting}
+        />
+
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -639,11 +675,19 @@ function CallRequestForm() {
         <Button
           type="submit"
           size="lg"
-          className="w-full h-14 text-lg font-semibold rounded-full"
-          disabled={isSubmitting}
+          className={`w-full h-14 text-lg font-semibold rounded-full ${
+            privacyMode === "fhenix" 
+              ? "bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700" 
+              : ""
+          }`}
+          disabled={isSubmitting || isEncrypting}
         >
-          {isSubmitting
+          {isEncrypting
+            ? "🔐 Encrypting on Base..."
+            : isSubmitting
             ? "Processing..."
+            : privacyMode === "fhenix"
+            ? `🔐 Buy with FHE Privacy $${PAYMENT_CONFIG.priceUSD}`
             : `🛡️ Buy a Call $${PAYMENT_CONFIG.priceUSD}`}
         </Button>
 

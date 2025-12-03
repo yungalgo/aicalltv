@@ -1,0 +1,25 @@
+{
+  "name": "pii-vault-contracts",
+  "version": "1.0.0",
+  "description": "PIIVault smart contract for Fhenix FHE encryption on Base",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy:base": "hardhat run scripts/deploy.ts --network base-mainnet",
+    "deploy:base-sepolia": "hardhat run scripts/deploy.ts --network base-sepolia",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
+    "test": "hardhat test",
+    "clean": "hardhat clean"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "cofhe-hardhat-plugin": "^0.3.1",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.0.0",
+    "hardhat": "^2.22.0"
+  },
+  "dependencies": {
+    "@fhenixprotocol/cofhe-contracts": "^0.0.13",
+    "@openzeppelin/contracts": "^5.1.0"
+  }
+}

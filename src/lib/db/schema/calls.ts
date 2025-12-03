@@ -39,7 +39,10 @@ export const calls = pgTable("calls", {
   paymentMethod: paymentMethodEnum("payment_method").notNull(),
   paymentTxHash: text("payment_tx_hash"),
   paymentAmount: decimal("payment_amount", { precision: 18, scale: 8 }), // ZEC equivalent
-  encryptedHandle: text("encrypted_handle"), // Fhenix encrypted PII
+  encryptedHandle: text("encrypted_handle"), // Legacy encrypted PII (deprecated)
+  // Fhenix FHE encryption fields
+  fhenixEnabled: boolean("fhenix_enabled").notNull().default(false), // Whether FHE encryption is used
+  fhenixVaultId: text("fhenix_vault_id"), // bytes32 callId in PIIVault contract on Base
   callSid: text("call_sid"), // Twilio Call SID for webhook mapping
   recordingUrl: text("recording_url"), // Twilio recording URL
   recordingSid: text("recording_sid"), // Twilio recording SID

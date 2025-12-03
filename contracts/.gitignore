@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Environment variables (contains private keys!)
+.env
+
+# Hardhat artifacts
+artifacts/
+cache/
+typechain-types/
+
+# Coverage
+coverage/
+coverage.json
+
+# Local deployment data (keep latest.json as example)
+deployments/*.json
+!deployments/.gitkeep
+

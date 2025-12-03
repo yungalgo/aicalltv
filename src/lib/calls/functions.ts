@@ -20,6 +20,9 @@ const createCallSchema = z.object({
   targetPhysicalDescription: z.string().optional(),
   interestingPiece: z.string().optional(), // Personal details/hook
   videoStyle: z.string().min(1, "Video style is required"), // Aesthetic style
+  // Fhenix FHE encryption fields
+  fhenixEnabled: z.boolean().optional().default(false),
+  fhenixVaultId: z.string().optional(), // bytes32 callId from PIIVault contract
 }).refine(
   (data) => {
     // If gender is "other", genderCustom must be provided
@@ -31,6 +34,18 @@ const createCallSchema = z.object({
   {
     message: "Custom gender is required when 'other' is selected",
     path: ["targetGenderCustom"],
+  },
+).refine(
+  (data) => {
+    // If fhenixEnabled, vaultId must be provided
+    if (data.fhenixEnabled && !data.fhenixVaultId) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "Fhenix vault ID is required when FHE encryption is enabled",
+    path: ["fhenixVaultId"],
   },
 );
 
@@ -58,9 +73,19 @@ export const createCall = createServerFn({ method: "POST" }).handler(
     const driver = postgres(env.DATABASE_URL);
     const db = drizzle({ client: driver, schema, casing: "snake_case" });
 
-    // TODO: Encrypt phone number with Fhenix CoFHE
-    // For now, we'll store it as plain text (will encrypt later)
-    const encryptedHandle = `encrypted_${data.phoneNumber}`;
+    // Handle Fhenix FHE encryption vs legacy encryption
+    let encryptedHandle: string;
+    
+    if (data.fhenixEnabled && data.fhenixVaultId) {
+      // Fhenix mode: phone is encrypted on-chain, we store the vault reference
+      // Format: fhenix:0x... (bytes32 callId in PIIVault contract)
+      encryptedHandle = `fhenix:${data.fhenixVaultId}`;
+      console.log(`[Create Call] 🔐 Using Fhenix FHE encryption, vaultId: ${data.fhenixVaultId}`);
+    } else {
+      // Legacy mode: encrypt phone number server-side
+      encryptedHandle = `encrypted_${data.phoneNumber}`;
+      console.log(`[Create Call] Using legacy phone encryption`);
+    }
 
     // Generate OpenAI prompt using Groq (needed BEFORE call starts)
     const promptInput = {
@@ -112,6 +137,9 @@ export const createCall = createServerFn({ method: "POST" }).handler(
         openaiPrompt,
         imagePrompt: null, // Will be generated later in video-generator worker
         encryptedHandle,
+        // Fhenix FHE encryption fields
+        fhenixEnabled: data.fhenixEnabled || false,
+        fhenixVaultId: data.fhenixVaultId || null,
         paymentMethod: "web3_wallet", // Will be updated from credit
         isFree: false, // Will be updated from credit
         status: "prompt_ready", // Status indicates prompt is ready

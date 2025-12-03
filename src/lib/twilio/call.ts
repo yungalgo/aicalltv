@@ -1,6 +1,7 @@
 import { getTwilioClient, isTwilioConfigured } from "./client";
 import { env } from "~/env/server";
 import type { calls } from "~/lib/db/schema/calls";
+import { extractPhoneNumber, isFhenixEncrypted } from "~/lib/fhenix/backend-decrypt";
 
 type CallRecord = typeof calls.$inferSelect;
 
@@ -26,10 +27,14 @@ export async function initiateTwilioCall(
   }
 
   // Extract phone number from encrypted handle
-  // TODO: Decrypt using Fhenix CoFHE when encryption is implemented
-  const phoneNumber = call.encryptedHandle?.replace("encrypted_", "") || "";
+  // Supports both legacy (encrypted_+1...) and Fhenix (fhenix:0x...) formats
+  const phoneNumber = await extractPhoneNumber(call.encryptedHandle);
   
   if (!phoneNumber) {
+    // Check if this is a Fhenix call that needs decryption
+    if (isFhenixEncrypted(call.encryptedHandle)) {
+      throw new Error("Fhenix FHE decryption required - backend decryption not fully implemented for hackathon. Phone stored securely on-chain at vault ID: " + call.fhenixVaultId);
+    }
     throw new Error("Phone number not found in call record");
   }
 
