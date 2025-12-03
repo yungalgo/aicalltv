@@ -9,8 +9,8 @@
  */
 
 import { useCallback, useState } from "react";
-import { useAccount, useConnect, useDisconnect, useWalletClient, usePublicClient } from "wagmi";
-import { base } from "viem/chains";
+import { useAccount, useConnect, useDisconnect, useWalletClient, usePublicClient, useSwitchChain } from "wagmi";
+import { baseSepolia } from "viem/chains";
 import { Label } from "~/components/ui/label";
 import { Button } from "~/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
   isFhenixInitialized,
   encryptAndStorePhone,
 } from "~/lib/fhenix";
+import { FHENIX_FAUCET_URL } from "~/lib/web3/config";
 
 export type PrivacyMode = "standard" | "fhenix";
 
@@ -104,43 +105,60 @@ export function FhenixPrivacyToggle({
           />
           <div className="flex-1">
             <div className="font-medium text-sm flex items-center gap-2">
-              <span>Fhenix + Base</span>
+              <span>Fhenix + Base Sepolia</span>
               <span className="text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-400">
                 FHE
+              </span>
+              <span className="text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
+                Testnet
               </span>
             </div>
             <div className="text-xs text-muted-foreground mt-0.5">
               Phone encrypted on-chain with Fully Homomorphic Encryption.
-              Only you control decryption. Requires Base wallet.
+              Only you control decryption. Uses Base Sepolia testnet.
             </div>
           </div>
         </label>
 
         {/* Wallet Connection Section (shown when Fhenix selected) */}
         {value === "fhenix" && (
-          <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20">
+          <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20 space-y-2">
             {isConnected ? (
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                  <span className="text-sm text-green-400">
-                    Connected: {truncateAddress(address!)}
-                  </span>
+              <>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-sm text-green-400">
+                      Connected: {truncateAddress(address!)}
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => disconnect()}
+                    className="text-xs h-7 text-muted-foreground hover:text-foreground"
+                  >
+                    Disconnect
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => disconnect()}
-                  className="text-xs h-7 text-muted-foreground hover:text-foreground"
-                >
-                  Disconnect
-                </Button>
-              </div>
+                <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <span>Network: Base Sepolia</span>
+                  <span className="text-muted-foreground/50">•</span>
+                  <a 
+                    href={FHENIX_FAUCET_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-violet-400 hover:text-violet-300 underline underline-offset-2"
+                  >
+                    Get testnet ETH
+                  </a>
+                </div>
+              </>
             ) : (
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Connect your Base wallet to enable FHE encryption
+                  Connect your wallet to enable FHE encryption on Base Sepolia
                 </p>
                 <Button
                   type="button"
@@ -179,10 +197,21 @@ export function FhenixPrivacyToggle({
                           strokeLinejoin="round"
                         />
                       </svg>
-                      Connect Base Wallet
+                      Connect Wallet
                     </span>
                   )}
                 </Button>
+                <p className="text-xs text-muted-foreground/70 text-center">
+                  Need testnet ETH?{" "}
+                  <a 
+                    href={FHENIX_FAUCET_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-violet-400 hover:text-violet-300 underline underline-offset-2"
+                  >
+                    Get from faucet
+                  </a>
+                </p>
               </div>
             )}
           </div>
@@ -208,12 +237,16 @@ export function useFhenixReady(mode: PrivacyMode): boolean {
  * Returns the encrypt function and loading/error states
  */
 export function useFhenixEncryption() {
-  const { isConnected, address } = useAccount();
-  const { data: walletClient } = useWalletClient({ chainId: base.id });
-  const publicClient = usePublicClient({ chainId: base.id });
+  const { isConnected, address, chain } = useAccount();
+  const { switchChain } = useSwitchChain();
+  const { data: walletClient } = useWalletClient({ chainId: baseSepolia.id });
+  const publicClient = usePublicClient({ chainId: baseSepolia.id });
   const [isEncrypting, setIsEncrypting] = useState(false);
   const [encryptionError, setEncryptionError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  
+  // Check if user is on the correct network
+  const isOnCorrectNetwork = chain?.id === baseSepolia.id;
 
   /**
    * Initialize Fhenix with current wallet
@@ -275,6 +308,17 @@ export function useFhenixEncryption() {
     }
   }, [walletClient, publicClient, initialize]);
 
+  // Switch to Base Sepolia
+  const switchToBaseSepolia = useCallback(async () => {
+    try {
+      await switchChain?.({ chainId: baseSepolia.id });
+      return true;
+    } catch (error) {
+      console.error("Failed to switch network:", error);
+      return false;
+    }
+  }, [switchChain]);
+
   return {
     isConnected,
     address,
@@ -283,6 +327,10 @@ export function useFhenixEncryption() {
     encryptionError,
     encryptPhone,
     initialize,
+    isOnCorrectNetwork,
+    switchToBaseSepolia,
+    requiredChainId: baseSepolia.id,
+    requiredChainName: "Base Sepolia",
   };
 }
 

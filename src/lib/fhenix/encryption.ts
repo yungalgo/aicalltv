@@ -2,7 +2,10 @@
  * Fhenix FHE Encryption Service
  * 
  * Handles client-side encryption of phone numbers using cofhejs
- * and storage on the PIIVault contract on Base mainnet.
+ * and storage on the PIIVault contract on Base Sepolia.
+ * 
+ * Note: Fhenix CoFHE infrastructure is only deployed on testnets
+ * (Base Sepolia, Arbitrum Sepolia, Ethereum Sepolia).
  */
 
 import { cofhejs, Encryptable } from "cofhejs/web";
@@ -27,8 +30,8 @@ export async function initializeFhenix(
     console.log("🔐 Wallet account:", walletClient.account?.address);
     
     // Use initializeWithViem for proper viem integration
-    // Note: CoFHE service uses TESTNET infrastructure even for Base mainnet contracts
-    // The contract is on Base mainnet, but encryption/decryption uses Fhenix's testnet CoFHE service
+    // CoFHE service uses TESTNET infrastructure (Base Sepolia, Arbitrum Sepolia, Ethereum Sepolia)
+    // Contract is deployed on Base Sepolia where Fhenix FHE infrastructure is available
     const result = await cofhejs.initializeWithViem({
       viemClient: publicClient,
       viemWalletClient: walletClient,

@@ -4,7 +4,7 @@
  */
 
 import { http, createConfig } from "wagmi";
-import { base } from "wagmi/chains";
+import { base, baseSepolia } from "wagmi/chains";
 import { metaMaskWallet } from "@rainbow-me/rainbowkit/wallets";
 import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 
@@ -75,16 +75,21 @@ const connectors = connectorsForWallets(
   },
 );
 
-// wagmi config - Base only
+// wagmi config - Base mainnet (payments) + Base Sepolia (Fhenix FHE)
 export const wagmiConfig = createConfig({
   connectors,
-  chains: [base],
+  chains: [base, baseSepolia],
   transports: {
     [base.id]: http(),
+    [baseSepolia.id]: http(),
   },
   ssr: true,
 });
 
 // Re-export chains for convenience
-export { base };
+export { base, baseSepolia };
+
+// Fhenix uses Base Sepolia (FHE infrastructure only deployed there)
+export const FHENIX_CHAIN = baseSepolia;
+export const FHENIX_FAUCET_URL = "https://www.coinbase.com/faucets/base-ethereum-sepolia-faucet";
 
