@@ -1,8 +1,10 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { Suspense, useState, useEffect, useCallback } from "react";
+import { useAccount } from "wagmi";
 import { AuthModal } from "~/components/auth-modal";
 import { CallsTable } from "~/components/calls-table";
+import { FhenixPrivacyToggle, type PrivacyMode, useFhenixReady } from "~/components/fhenix-privacy-toggle";
 import { Header } from "~/components/header";
 import { NearAiChat } from "~/components/near-ai-chat";
 import { PaymentModal } from "~/components/payment-modal";
@@ -168,6 +170,9 @@ function CallRequestForm() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [inputMode, setInputMode] = useState<InputMode>("form");
+  const [privacyMode, setPrivacyMode] = useState<PrivacyMode>("standard");
+  const { isConnected: isWalletConnected } = useAccount();
+  const isFhenixReady = useFhenixReady(privacyMode);
   const [formData, setFormData] = useState({
     recipientName: "",
     phoneNumber: "",
@@ -248,6 +253,12 @@ function CallRequestForm() {
 
     // Validate form first
     if (!validateForm()) return;
+
+    // If Fhenix mode selected but wallet not connected, show error
+    if (privacyMode === "fhenix" && !isFhenixReady) {
+      toast.error("Please connect your Base wallet to use Fhenix encryption");
+      return;
+    }
 
     // If not logged in, show auth modal first
     if (!user) {
@@ -468,6 +479,13 @@ function CallRequestForm() {
             🔒 Encrypted before storage • US numbers only (10 digits)
           </p>
         </div>
+
+        {/* Fhenix Privacy Toggle */}
+        <FhenixPrivacyToggle
+          value={privacyMode}
+          onChange={setPrivacyMode}
+          disabled={isSubmitting}
+        />
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
