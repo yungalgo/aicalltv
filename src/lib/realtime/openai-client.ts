@@ -57,7 +57,7 @@ export class OpenAIRealtimeClient {
       this.ws.on("open", () => {
         console.log("[OpenAI Realtime] ✅ WebSocket connection OPENED");
         
-        // Send session configuration
+        // Send session configuration with turn detection for natural conversation
         const sessionConfig = {
           voice: this.config.voice,
           instructions: this.config.instructions,
@@ -65,6 +65,13 @@ export class OpenAIRealtimeClient {
           output_audio_format: "pcm16",
           input_audio_transcription: {
             model: "whisper-1",
+          },
+          // Enable server-side Voice Activity Detection for interruption handling
+          turn_detection: {
+            type: "server_vad",
+            threshold: 0.5, // Sensitivity (0.0-1.0, lower = more sensitive)
+            prefix_padding_ms: 300, // Audio to include before speech detected
+            silence_duration_ms: 500, // How long silence before turn ends
           },
         };
         
@@ -185,6 +192,21 @@ export class OpenAIRealtimeClient {
           if (message.delta) {
             console.log("[OpenAI Realtime] AI responding:", message.delta);
           }
+          break;
+
+        case "input_audio_buffer.speech_started":
+          // User started speaking - AI should stop/pause
+          console.log("[OpenAI Realtime] 🎤 User speech detected - interruption");
+          break;
+
+        case "input_audio_buffer.speech_stopped":
+          // User stopped speaking
+          console.log("[OpenAI Realtime] 🎤 User speech ended");
+          break;
+
+        case "response.cancelled":
+          // Response was cancelled (interrupted)
+          console.log("[OpenAI Realtime] ⏹️ Response cancelled (user interrupted)");
           break;
 
         case "error":

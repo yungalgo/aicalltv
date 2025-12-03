@@ -34,6 +34,8 @@ interface WebSocketData {
   callSid?: string;
   streamSid?: string;
   audioChunkCount: number;
+  audioBuffer: string[]; // Buffer audio while OpenAI is connecting
+  openaiConnecting: boolean;
 }
 
 const connectionData = new WeakMap<WebSocket, WebSocketData>();
@@ -54,7 +56,7 @@ const wss = new WebSocketServer({ server: httpServer, path: "/twilio/stream" });
 
 wss.on("connection", (ws: WebSocket) => {
   console.log("[WS] Connected");
-  connectionData.set(ws, { audioChunkCount: 0 });
+  connectionData.set(ws, { audioChunkCount: 0, audioBuffer: [], openaiConnecting: false });
   
   ws.on("message", async (message: Buffer) => {
     try {
@@ -127,6 +129,16 @@ async function handleStart(ws: WebSocket, wsData: WebSocketData, data: TwilioMes
     await openai.connect();
     wsData.openaiClient = openai;
     
+    // Flush any buffered audio that arrived while we were connecting
+    if (wsData.audioBuffer.length > 0) {
+      console.log(`[WS] 📤 Flushing ${wsData.audioBuffer.length} buffered audio chunks to OpenAI`);
+      const { pcmuToPCM16 } = await import("./src/lib/realtime/audio-converter");
+      for (const chunk of wsData.audioBuffer) {
+        openai.sendAudio(pcmuToPCM16(chunk));
+      }
+      wsData.audioBuffer = []; // Clear buffer
+    }
+    
     let audioSentCount = 0;
     openai.onAudio((audioBase64: string) => {
       audioSentCount++;
@@ -157,9 +169,14 @@ function handleMedia(wsData: WebSocketData, data: TwilioMessage) {
     console.log("[WS] 🎤 First audio from Twilio received");
   }
   
+  // If OpenAI is not ready, buffer the audio instead of dropping it
   if (!wsData.openaiClient) {
-    if (wsData.audioChunkCount % 100 === 1) {
-      console.log("[WS] ⏳ Waiting for OpenAI...", wsData.audioChunkCount, "chunks");
+    // Buffer up to 3 seconds of audio (8kHz * 1 byte * 3 seconds / 20ms chunks ≈ 150 chunks)
+    if (wsData.audioBuffer.length < 150) {
+      wsData.audioBuffer.push(data.media.payload);
+    }
+    if (wsData.audioChunkCount % 50 === 1) {
+      console.log("[WS] ⏳ Buffering audio while OpenAI connects...", wsData.audioBuffer.length, "chunks");
     }
     return;
   }
