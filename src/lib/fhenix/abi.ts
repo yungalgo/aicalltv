@@ -248,15 +248,11 @@ export const PII_VAULT_ABI = [
 /**
  * PIIVault v2 contract on Base Sepolia
  * 
- * TODO: Update this address after deploying to Base Sepolia
- * Deploy via Remix: https://remix.ethereum.org
- * 1. Connect wallet to Base Sepolia network
- * 2. Get testnet ETH from: https://docs.base.org/base-chain/tools/network-faucets
- * 3. Deploy PIIVault_v2.sol contract
- * 4. Update address below
+ * Verified: https://repo.sourcify.dev/84532/0xc6d16980078e5613EDCe9B332d1F25810e57d9CB/
+ * Explorer: https://sepolia.basescan.org/address/0xc6d16980078e5613EDCe9B332d1F25810e57d9CB
  * 
  * Deployer wallet: 0x8bf8e3c90f7c42c589d7bacfacaa6fa5f15648d7
  * This wallet is owner & backendService - use its private key for FHENIX_BACKEND_PRIVATE_KEY
  */
-export const PII_VAULT_ADDRESS = "0x0000000000000000000000000000000000000000" as const; // TODO: Update after Base Sepolia deployment
+export const PII_VAULT_ADDRESS = "0xc6d16980078e5613EDCe9B332d1F25810e57d9CB" as const;
 
