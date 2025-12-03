@@ -410,6 +410,7 @@ function CallRequestForm() {
         </div>
       </div>
 
+      <form onSubmit={handleSubmit} className="space-y-6">
       {/* AI Chat Mode */}
       {inputMode === "ai-chat" && (
         <div className="relative mb-8">
@@ -469,9 +470,9 @@ function CallRequestForm() {
         </div>
       )}
 
-      {/* Form Mode - Only shown when form mode is active */}
+      {/* Form Fields - Only shown when form mode is active */}
       {inputMode === "form" && (
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <>
         <div className="space-y-2">
           <Label htmlFor="recipientName">Who should we call? *</Label>
           <Input
@@ -644,14 +645,17 @@ function CallRequestForm() {
             {formData.anythingElse.length}/1000
           </p>
         </div>
+      </>
+      )}
 
-        {/* Fhenix Privacy Toggle */}
+        {/* Fhenix Privacy Toggle - Always visible */}
         <FhenixPrivacyToggle
           value={privacyMode}
           onChange={setPrivacyMode}
           disabled={isSubmitting}
         />
 
+        {/* Terms checkbox - Always visible */}
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -672,6 +676,7 @@ function CallRequestForm() {
           </Label>
         </div>
 
+        {/* Submit button - Always visible */}
         <Button
           type="submit"
           size="lg"
@@ -695,7 +700,6 @@ function CallRequestForm() {
           Secure payment via credit card or crypto
         </p>
       </form>
-      )}
 
       {/* Auth Modal - shown when not logged in */}
       <AuthModal
