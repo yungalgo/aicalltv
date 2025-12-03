@@ -257,6 +257,7 @@ export async function encryptAndStorePhone(
 
   // Generate unique call ID
   const callId = generateCallId(walletClient.account.address);
+  console.log("🆔 Generated callId (vault reference):", callId);
   
   // Check if call ID already exists (very unlikely with timestamp)
   const exists = await checkCallIdExists(publicClient, callId);
