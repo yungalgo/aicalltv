@@ -16,7 +16,7 @@ import { getRequest } from "@tanstack/react-start/server";
 const createCreditSchema = z.object({
   paymentMethod: z.enum(["free", "sol_usdc", "base_usdc", "zcash", "ztarknet", "credit_card"]),
   paymentRef: z.string().optional(), // tx hash, Stripe session ID, etc.
-  network: z.string().optional(), // "base", "solana", "stripe", "ztarknet"
+  network: z.string().optional(), // "base", "solana", "credit_card", "zcash", "ztarknet"
   amountCents: z.number().int().positive(), // e.g., 900 = $9.00
 });
 

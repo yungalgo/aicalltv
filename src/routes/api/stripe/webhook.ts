@@ -107,7 +107,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                   state: "unused",
                   paymentMethod: "credit_card",
                   paymentRef: session.id,
-                  network: "stripe",
+                  network: "credit_card",
                   amountCents: PAYMENT_CONFIG.priceCents,
                 })
                 .returning();
@@ -142,7 +142,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                   state: "unused",
                   paymentMethod: "credit_card",
                   paymentRef: session.id,
-                  network: "stripe",
+                  network: "credit_card",
                   amountCents: PAYMENT_CONFIG.priceCents,
                 })
                 .returning();
@@ -184,7 +184,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                 state: "consumed",
                 paymentMethod: "credit_card",
                 paymentRef: session.id,
-                network: "stripe",
+                network: "credit_card",
                 amountCents: PAYMENT_CONFIG.priceCents,
                 callId: newCall.id,
                 consumedAt: new Date(),
