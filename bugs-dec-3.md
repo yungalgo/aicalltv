@@ -82,15 +82,16 @@ turn_detection: {
 ---
 
 ## 4. Image Prompt - Phone Position
-**Status:** 📋 Todo
+**Status:** ✅ FIXED
 **Priority:** MEDIUM
 
 **Problem:** Generated images show people holding phones but looking at them (like texting), not talking on them (speakerphone or to ear).
 
-**Fix:** Update image prompt to specify:
-- Person holding phone to ear, OR
-- Person on speakerphone with phone in hand, talking
-- Active conversation pose, not passive phone browsing
+**Fix Applied:** Updated `groq-generator.ts`:
+- Characters must be TALKING on phones, not just looking at them
+- Phone held to ear OR speakerphone near mouth
+- Animated expressions, mouths open/speaking
+- Engaged conversation posture
 
 ---
 
@@ -128,23 +129,16 @@ POST https://api.wavespeed.ai/api/v3/google/nano-banana-pro/edit
 ---
 
 ## 6. Video Links Expire (S3 presigned URL)
-**Status:** 📋 Todo
+**Status:** ✅ FIXED
 **Priority:** HIGH
 
-**Problem:** Video URLs expire after ~24 hours (86400 seconds). Shows XML error:
-```xml
-<Error>
-  <Code>AccessDenied</Code>
-  <Message>Request has expired</Message>
-  <X-Amz-Expires>86400</X-Amz-Expires>
-</Error>
-```
+**Problem:** Video URLs expire after ~24 hours (86400 seconds).
 
-**Fix Options:**
-- [ ] Option A: Increase presigned URL expiry (7 days? 30 days?)
-- [ ] Option B: Store videos in public bucket (if acceptable)
-- [ ] Option C: Generate fresh presigned URLs on-demand when viewing
-- [ ] Option D: Copy to permanent storage after generation
+**Fix Applied:** Option C - Generate fresh presigned URLs on-demand:
+1. Added `videoS3Key` column to store S3 object key
+2. Added `getFreshVideoUrl()` function (7 days max expiry)
+3. `getUserCalls()` now auto-refreshes expired URLs when fetching
+4. `isPresignedUrlExpired()` detects URLs expiring within 1 hour buffer
 
 ---
 
@@ -152,10 +146,10 @@ POST https://api.wavespeed.ai/api/v3/google/nano-banana-pro/edit
 
 | Bug | Status | Notes |
 |-----|--------|-------|
-| 1. Call Delay | 🔍 | Need to inspect Twilio/OpenAI handshake |
-| 2. Audio Quality | 🔍 | Check codec/sample rate settings |
-| 3. No Interruption | 🔍 | Check VAD/turn detection |
-| 4. Image Prompt | 📋 | Update prompt text |
-| 5. Form Fill | 📋 | Requires migration |
-| 6. Video Expiry | 📋 | S3 presigned URL issue |
+| 1. Call Delay | ✅ | Audio buffering during OpenAI connect |
+| 2. Audio Quality | 📋 | Requires better resampling algorithms |
+| 3. No Interruption | ✅ | Added server_vad turn detection |
+| 4. Image Prompt | ✅ | Updated for active phone conversation pose |
+| 5. Form Fill | 📋 | Requires schema migration + UI changes |
+| 6. Video Expiry | ✅ | Auto-refresh presigned URLs on-demand |
 
