@@ -5,8 +5,8 @@
  * and storage on the PIIVault contract on Base mainnet.
  */
 
-import { cofhejs, Encryptable } from "cofhejs";
-import { encodeAbiParameters, keccak256, toHex } from "viem";
+import { cofhejs, Encryptable } from "cofhejs/web";
+import { encodeAbiParameters, keccak256 } from "viem";
 import type { WalletClient, PublicClient } from "viem";
 import { PII_VAULT_ABI, PII_VAULT_ADDRESS } from "./abi";
 

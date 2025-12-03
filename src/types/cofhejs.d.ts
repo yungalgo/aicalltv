@@ -1,9 +1,11 @@
 /**
  * Type declarations for cofhejs package
  * Fhenix Confidential Homomorphic Encryption JavaScript SDK
+ * 
+ * Use: import { cofhejs, Encryptable } from "cofhejs/web"
  */
 
-declare module "cofhejs" {
+declare module "cofhejs/web" {
   export interface EncryptedInput {
     data: string | bigint;
     securityZone?: number;
@@ -35,5 +37,9 @@ declare module "cofhejs" {
     bool(value: boolean): EncryptableValue;
     string(value: string): EncryptableValue;
   };
+}
+
+declare module "cofhejs/node" {
+  export * from "cofhejs/web";
 }
 
