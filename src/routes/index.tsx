@@ -1,6 +1,6 @@
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
-import { Suspense, useState, useEffect, useCallback } from "react";
+import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { useAccount } from "wagmi";
 import { AuthModal } from "~/components/auth-modal";
 import { CallsTable } from "~/components/calls-table";
@@ -192,9 +192,79 @@ function CallRequestForm() {
     targetGenderCustom: "",
     targetAgeRange: "" as "" | "18-25" | "26-35" | "36-45" | "46-55" | "56+",
     targetPhysicalDescription: "",
-    interestingPiece: "",
+    // New personalization fields
+    targetCity: "",
+    targetHobby: "",
+    targetProfession: "",
+    interestingPiece: "", // "One thing virtually no one knows about them"
+    ragebaitTrigger: "", // "If you wanted to ragebait them, you would say this"
     videoStyle: "anime",
+    // Optional image upload
+    uploadedImageUrl: "",
+    uploadedImageS3Key: "",
   });
+  
+  // Image upload state
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Handle image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", file);
+
+      const response = await fetch("/api/upload/image", {
+        method: "POST",
+        body: formDataUpload,
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const result = await response.json();
+      setFormData((prev) => ({
+        ...prev,
+        uploadedImageUrl: result.url,
+        uploadedImageS3Key: result.key,
+      }));
+      toast.success("Image uploaded! We'll use it in your video");
+    } catch (error) {
+      console.error("Image upload error:", error);
+      toast.error("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  // Remove uploaded image
+  const handleRemoveImage = () => {
+    setFormData((prev) => ({
+      ...prev,
+      uploadedImageUrl: "",
+      uploadedImageS3Key: "",
+    }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   // Handle data from NEAR AI chat
   const handleAiFormFill = useCallback((data: Partial<typeof formData>) => {
@@ -205,7 +275,11 @@ function CallRequestForm() {
       targetGender: data.targetGender || prev.targetGender,
       targetGenderCustom: data.targetGenderCustom || prev.targetGenderCustom,
       targetAgeRange: data.targetAgeRange || prev.targetAgeRange,
+      targetCity: data.targetCity || prev.targetCity,
+      targetHobby: data.targetHobby || prev.targetHobby,
+      targetProfession: data.targetProfession || prev.targetProfession,
       interestingPiece: data.interestingPiece || prev.interestingPiece,
+      ragebaitTrigger: data.ragebaitTrigger || prev.ragebaitTrigger,
       videoStyle: data.videoStyle || prev.videoStyle,
       anythingElse: data.anythingElse || prev.anythingElse,
     }));
@@ -314,30 +388,38 @@ function CallRequestForm() {
     try {
       console.log("[Client] Payment complete, creating call...");
       // Credit was created in payment modal, backend will consume it
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (createCall as any)({
-        data: {
-          recipientName: formData.recipientName,
-          // If Fhenix mode, send vault ID; otherwise send phone number
-          phoneNumber: privacyMode === "fhenix" && fhenixVaultId 
-            ? `fhenix:${fhenixVaultId}` // Prefix to indicate it's a vault reference
-            : formData.phoneNumber,
-          anythingElse: formData.anythingElse || undefined,
-          targetGender: formData.targetGender,
-          targetGenderCustom:
-            formData.targetGender === "other"
-              ? formData.targetGenderCustom
-              : undefined,
-          targetAgeRange: formData.targetAgeRange || undefined,
-          targetPhysicalDescription:
-            formData.targetPhysicalDescription || undefined,
-          interestingPiece: formData.interestingPiece || undefined,
-          videoStyle: formData.videoStyle,
-          // Include fhenix metadata
-          fhenixEnabled: privacyMode === "fhenix",
-          fhenixVaultId: fhenixVaultId || undefined,
-        },
-      });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result = await (createCall as any)({
+          data: {
+            recipientName: formData.recipientName,
+            // If Fhenix mode, send vault ID; otherwise send phone number
+            phoneNumber: privacyMode === "fhenix" && fhenixVaultId 
+              ? `fhenix:${fhenixVaultId}` // Prefix to indicate it's a vault reference
+              : formData.phoneNumber,
+            anythingElse: formData.anythingElse || undefined,
+            targetGender: formData.targetGender,
+            targetGenderCustom:
+              formData.targetGender === "other"
+                ? formData.targetGenderCustom
+                : undefined,
+            targetAgeRange: formData.targetAgeRange || undefined,
+            targetPhysicalDescription:
+              formData.targetPhysicalDescription || undefined,
+            // New personalization fields
+            targetCity: formData.targetCity || undefined,
+            targetHobby: formData.targetHobby || undefined,
+            targetProfession: formData.targetProfession || undefined,
+            interestingPiece: formData.interestingPiece || undefined,
+            ragebaitTrigger: formData.ragebaitTrigger || undefined,
+            videoStyle: formData.videoStyle,
+            // Optional uploaded image
+            uploadedImageUrl: formData.uploadedImageUrl || undefined,
+            uploadedImageS3Key: formData.uploadedImageS3Key || undefined,
+            // Include fhenix metadata
+            fhenixEnabled: privacyMode === "fhenix",
+            fhenixVaultId: fhenixVaultId || undefined,
+          },
+        });
       console.log("[Client] Call created:", result);
 
       toast.success(
@@ -359,8 +441,14 @@ function CallRequestForm() {
         targetGenderCustom: "",
         targetAgeRange: "",
         targetPhysicalDescription: "",
+        targetCity: "",
+        targetHobby: "",
+        targetProfession: "",
         interestingPiece: "",
+        ragebaitTrigger: "",
         videoStyle: "anime",
+        uploadedImageUrl: "",
+        uploadedImageS3Key: "",
       });
       // Reset Fhenix state
       setFhenixVaultId(null);
@@ -588,6 +676,46 @@ function CallRequestForm() {
           </div>
         )}
 
+        {/* New personalization fields */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="targetCity">City/Area</Label>
+            <Input
+              id="targetCity"
+              value={formData.targetCity}
+              onChange={(e) =>
+                setFormData({ ...formData, targetCity: e.target.value })
+              }
+              placeholder="e.g. Brooklyn, NYC"
+              disabled={isSubmitting}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="targetHobby">Hobby</Label>
+            <Input
+              id="targetHobby"
+              value={formData.targetHobby}
+              onChange={(e) =>
+                setFormData({ ...formData, targetHobby: e.target.value })
+              }
+              placeholder="e.g. rock climbing"
+              disabled={isSubmitting}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="targetProfession">Profession</Label>
+            <Input
+              id="targetProfession"
+              value={formData.targetProfession}
+              onChange={(e) =>
+                setFormData({ ...formData, targetProfession: e.target.value })
+              }
+              placeholder="e.g. software engineer"
+              disabled={isSubmitting}
+            />
+          </div>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="videoStyle">Video Style *</Label>
           <select
@@ -609,11 +737,64 @@ function CallRequestForm() {
           </select>
         </div>
 
+        {/* Optional Image Upload */}
+        <div className="space-y-2">
+          <Label>
+            Upload their photo{" "}
+            <span className="text-muted-foreground">(optional - makes video more personal)</span>
+          </Label>
+          <div className="flex items-center gap-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              className="hidden"
+              disabled={isSubmitting || isUploadingImage}
+            />
+            {formData.uploadedImageUrl ? (
+              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+                <img
+                  src={formData.uploadedImageUrl}
+                  alt="Uploaded"
+                  className="w-16 h-16 object-cover rounded"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Image uploaded ✓</p>
+                  <p className="text-xs text-muted-foreground">Will be used in video generation</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRemoveImage}
+                  disabled={isSubmitting}
+                >
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isSubmitting || isUploadingImage}
+                className="w-full"
+              >
+                {isUploadingImage ? "Uploading..." : "📷 Choose Photo"}
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Max 5MB. JPG, PNG, or WebP. We'll edit them into the phone call scene.
+          </p>
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="interestingPiece">
-            Personal hook{" "}
+            One thing virtually no one knows about them{" "}
             <span className="text-muted-foreground">
-              (makes it more authentic)
+              (the hook)
             </span>
           </Label>
           <Textarea
@@ -622,8 +803,27 @@ function CallRequestForm() {
             onChange={(e) =>
               setFormData({ ...formData, interestingPiece: e.target.value })
             }
-            placeholder="Things only they would know... e.g. 'they love their dog Biscuit'"
-            rows={3}
+            placeholder="e.g. 'they secretly still sleep with their childhood teddy bear'"
+            rows={2}
+            disabled={isSubmitting}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="ragebaitTrigger">
+            If you wanted to ragebait them, you would say...{" "}
+            <span className="text-muted-foreground">
+              (optional but spicy 🌶️)
+            </span>
+          </Label>
+          <Textarea
+            id="ragebaitTrigger"
+            value={formData.ragebaitTrigger}
+            onChange={(e) =>
+              setFormData({ ...formData, ragebaitTrigger: e.target.value })
+            }
+            placeholder="e.g. 'their favorite sports team is overrated'"
+            rows={2}
             disabled={isSubmitting}
           />
         </div>
@@ -724,9 +924,15 @@ function CallRequestForm() {
           targetGender: formData.targetGender,
           targetGenderCustom: formData.targetGenderCustom,
           targetAgeRange: formData.targetAgeRange,
+          targetCity: formData.targetCity,
+          targetHobby: formData.targetHobby,
+          targetProfession: formData.targetProfession,
           interestingPiece: formData.interestingPiece,
+          ragebaitTrigger: formData.ragebaitTrigger,
           videoStyle: formData.videoStyle,
           anythingElse: formData.anythingElse,
+          uploadedImageUrl: formData.uploadedImageUrl,
+          uploadedImageS3Key: formData.uploadedImageS3Key,
           // Fhenix FHE encryption
           fhenixEnabled: privacyMode === "fhenix",
           fhenixVaultId: fhenixVaultId || undefined,

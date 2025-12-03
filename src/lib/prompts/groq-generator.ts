@@ -15,7 +15,12 @@ export interface TargetPersonData {
   genderCustom?: string; // If gender is "other"
   ageRange?: string; // "18-25", "26-35", "36-45", "46-55", "56+"
   physicalDescription?: string;
-  interestingPiece?: string; // Personal details/hook
+  // New personalization fields
+  city?: string; // City/area they live in
+  hobby?: string; // Their hobby
+  profession?: string; // Their job
+  interestingPiece?: string; // "One thing virtually no one knows about them"
+  ragebaitTrigger?: string; // "If you wanted to ragebait them..."
 }
 
 export interface PromptGenerationInput {
@@ -59,16 +64,20 @@ Return ONLY the prompt text as a string - do not wrap it in JSON or add any form
 - Name: ${input.targetPerson.name}
 - Gender: ${input.targetPerson.gender}${input.targetPerson.genderCustom ? ` (${input.targetPerson.genderCustom})` : ""}
 ${input.targetPerson.ageRange ? `- Age Range: ${input.targetPerson.ageRange}` : ""}
+${input.targetPerson.city ? `- Lives in: ${input.targetPerson.city}` : ""}
+${input.targetPerson.hobby ? `- Hobby: ${input.targetPerson.hobby}` : ""}
+${input.targetPerson.profession ? `- Profession: ${input.targetPerson.profession}` : ""}
 ${input.targetPerson.physicalDescription ? `- Physical Description: ${input.targetPerson.physicalDescription}` : ""}
-${input.targetPerson.interestingPiece ? `- Interesting Hook/Personal Detail: ${input.targetPerson.interestingPiece}` : ""}
+${input.targetPerson.interestingPiece ? `- Secret/Thing only they know: ${input.targetPerson.interestingPiece}` : ""}
+${input.targetPerson.ragebaitTrigger ? `- To ragebait them, say: ${input.targetPerson.ragebaitTrigger}` : ""}
 ${input.anythingElse ? `\n**Additional Context:** ${input.anythingElse}` : ""}
 
 **CRITICAL REQUIREMENTS:**
 - Create an AMUSING, ENTERTAINING scenario that will result in funny, awkward, or hilarious reactions
-- Use the interesting piece/hook creatively to set up a clever, amusing premise
+- Use ALL the personal details creatively - city, hobby, profession, secrets, ragebait triggers
 - The goal is ENTERTAINMENT - make viewers laugh at ${input.targetPerson.name}'s reactions
 - Create a believable character/situation that will catch them off guard
-- Incorporate the context in a way that creates an entertaining scenario
+- If a ragebait trigger is provided, work it naturally into the conversation for maximum effect
 - Guide the AI on what character to play, how to open, and how to create amusing moments
 - Examples: mistaken identity, absurd situations, clever misunderstandings, awkward scenarios
 - NEVER mention AI, prank calls, or break character
@@ -144,7 +153,7 @@ Return ONLY the prompt text.`;
   
   const userPrompt = `Split-screen ${input.videoStyle} phone call image.
 
-LEFT (target): ${input.targetPerson.gender}${input.targetPerson.ageRange ? `, ${input.targetPerson.ageRange}` : ""}${input.targetPerson.physicalDescription ? `, ${input.targetPerson.physicalDescription}` : ""}
+LEFT (target): ${input.targetPerson.gender}${input.targetPerson.ageRange ? `, ${input.targetPerson.ageRange}` : ""}${input.targetPerson.physicalDescription ? `, ${input.targetPerson.physicalDescription}` : ""}${input.targetPerson.profession ? `, looks like a ${input.targetPerson.profession}` : ""}${input.targetPerson.hobby ? `, ${input.targetPerson.hobby} enthusiast vibe` : ""}
 
 RIGHT (caller): ${callerDesc}
 

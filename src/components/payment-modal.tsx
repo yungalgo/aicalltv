@@ -101,9 +101,17 @@ export interface PaymentModalProps {
     targetGender?: string;
     targetGenderCustom?: string;
     targetAgeRange?: string;
+    // New personalization fields
+    targetCity?: string;
+    targetHobby?: string;
+    targetProfession?: string;
     interestingPiece?: string;
+    ragebaitTrigger?: string;
     videoStyle?: string;
     anythingElse?: string;
+    // Optional uploaded image
+    uploadedImageUrl?: string;
+    uploadedImageS3Key?: string;
     // Fhenix FHE encryption
     fhenixEnabled?: boolean;
     fhenixVaultId?: string;

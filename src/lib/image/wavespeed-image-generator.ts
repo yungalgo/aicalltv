@@ -254,3 +254,109 @@ export function getDefaultCallImagePrompt(): string {
   );
 }
 
+// WaveSpeed Edit API for user-uploaded images
+const EDIT_MODEL_ENDPOINT = `${WAVESPEED_API_BASE}/google/nano-banana-pro/edit`;
+
+export interface EditImageOptions {
+  sourceImageUrl: string;
+  prompt: string;
+  callId: string;
+}
+
+/**
+ * Submit image edit job to WavespeedAI nano-banana-pro/edit
+ * Takes a user's uploaded photo and edits it into a phone call scene
+ */
+async function submitImageEditJob(
+  sourceImageUrl: string,
+  prompt: string,
+): Promise<string> {
+  if (!env.WAVESPEED_API_KEY) {
+    throw new Error(
+      "WavespeedAI API key not configured. Please set WAVESPEED_API_KEY environment variable",
+    );
+  }
+
+  // Edit prompt: transform the uploaded image into a phone call scene
+  const editPrompt = `Transform this person into a split-screen phone call scene. ${prompt}. Keep the person's face and identity, but show them holding a phone to their ear or on speakerphone, with an animated talking expression.`;
+
+  const payload = {
+    prompt: editPrompt,
+    input_image: sourceImageUrl,
+    resolution: "4k",
+    aspect_ratio: "16:9",
+    output_format: "png",
+    enable_sync_mode: false,
+    enable_base64_output: false,
+  };
+
+  const response = await fetch(EDIT_MODEL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.WAVESPEED_API_KEY}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `WavespeedAI edit API error: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+
+  const result = await response.json();
+  const requestId = result.data?.id;
+
+  if (!requestId) {
+    throw new Error(
+      `WavespeedAI edit API error: No request ID in response - ${JSON.stringify(result)}`,
+    );
+  }
+
+  return requestId;
+}
+
+/**
+ * Edit a user-uploaded image using WavespeedAI nano-banana-pro/edit
+ * Transforms the uploaded photo into a phone call scene
+ */
+export async function editImageWithWavespeed(
+  options: EditImageOptions,
+): Promise<{ url: string; key: string }> {
+  if (!env.WAVESPEED_API_KEY) {
+    throw new Error(
+      "WavespeedAI API key not configured. Please set WAVESPEED_API_KEY environment variable",
+    );
+  }
+
+  const { sourceImageUrl, prompt, callId } = options;
+
+  console.log(`[WavespeedAI Edit] 🎨 Editing uploaded image for call ${callId}`);
+
+  // Submit edit job with retry
+  const requestId = await retryWithBackoff(
+    () => submitImageEditJob(sourceImageUrl, prompt),
+    { maxRetries: 2, initialDelay: 1000 },
+  );
+
+  console.log(`[WavespeedAI Edit] Job submitted: ${requestId.substring(0, 8)}...`);
+
+  // Poll for completion (reuse existing polling function)
+  const wavespeedImageUrl = await retryWithBackoff(
+    () => pollImageGeneration(requestId),
+    { maxRetries: 3, initialDelay: 2000 },
+  );
+
+  // Download and store in S3
+  const { url: s3Url, key: s3Key } = await downloadAndStoreImage(
+    wavespeedImageUrl,
+    callId,
+  );
+
+  console.log(`[WavespeedAI Edit] ✅ Edited image stored`);
+
+  return { url: s3Url, key: s3Key };
+}
+

@@ -17,9 +17,16 @@ const createCallSchema = z.object({
   targetGender: z.enum(["male", "female", "prefer_not_to_say", "other"]),
   targetGenderCustom: z.string().optional(), // Required if gender is "other"
   targetAgeRange: z.enum(["18-25", "26-35", "36-45", "46-55", "56+"]).optional(),
-  targetPhysicalDescription: z.string().optional(),
-  interestingPiece: z.string().optional(), // Personal details/hook
+  targetPhysicalDescription: z.string().optional(), // New personalization fields
+  targetCity: z.string().optional(),
+  targetHobby: z.string().optional(),
+  targetProfession: z.string().optional(),
+  interestingPiece: z.string().optional(), // "One thing virtually no one knows about them"
+  ragebaitTrigger: z.string().optional(), // "If you wanted to ragebait them..."
   videoStyle: z.string().min(1, "Video style is required"), // Aesthetic style
+  // Optional uploaded image
+  uploadedImageUrl: z.string().optional(),
+  uploadedImageS3Key: z.string().optional(),
   // Fhenix FHE encryption fields
   fhenixEnabled: z.boolean().optional().default(false),
   fhenixVaultId: z.string().optional(), // bytes32 callId from PIIVault contract
@@ -95,7 +102,11 @@ export const createCall = createServerFn({ method: "POST" }).handler(
         genderCustom: data.targetGenderCustom,
         ageRange: data.targetAgeRange,
         physicalDescription: data.targetPhysicalDescription,
+        city: data.targetCity,
+        hobby: data.targetHobby,
+        profession: data.targetProfession,
         interestingPiece: data.interestingPiece,
+        ragebaitTrigger: data.ragebaitTrigger,
       },
       videoStyle: data.videoStyle,
       anythingElse: data.anythingElse,
@@ -133,8 +144,16 @@ export const createCall = createServerFn({ method: "POST" }).handler(
         targetGenderCustom: data.targetGenderCustom || null,
         targetAgeRange: data.targetAgeRange || null,
         targetPhysicalDescription: data.targetPhysicalDescription || null,
+        // New personalization fields
+        targetCity: data.targetCity || null,
+        targetHobby: data.targetHobby || null,
+        targetProfession: data.targetProfession || null,
         interestingPiece: data.interestingPiece || null,
+        ragebaitTrigger: data.ragebaitTrigger || null,
         videoStyle: data.videoStyle,
+        // Optional uploaded image
+        uploadedImageUrl: data.uploadedImageUrl || null,
+        uploadedImageS3Key: data.uploadedImageS3Key || null,
         openaiPrompt,
         imagePrompt: null, // Will be generated later in video-generator worker
         encryptedHandle,

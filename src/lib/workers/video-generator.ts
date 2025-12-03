@@ -127,7 +127,11 @@ export async function setupVideoGeneratorWorker() {
               genderCustom: call.targetGenderCustom || undefined,
               ageRange: call.targetAgeRange || undefined,
               physicalDescription: call.targetPhysicalDescription || undefined,
+              city: call.targetCity || undefined,
+              hobby: call.targetHobby || undefined,
+              profession: call.targetProfession || undefined,
               interestingPiece: call.interestingPiece || undefined,
+              ragebaitTrigger: call.ragebaitTrigger || undefined,
             },
             videoStyle: call.videoStyle,
             anythingElse: call.anythingElse || undefined,
@@ -147,18 +151,34 @@ export async function setupVideoGeneratorWorker() {
             .where(eq(calls.id, callId));
         }
 
-        // Generate image from prompt using WavespeedAI nano-banana-pro
-        const imageResult = await generateImage({
-          prompt: imagePrompt,
-          callId,
-        });
+        // Generate image - either edit user's uploaded image or generate from scratch
+        let finalImageUrl: string;
+        
+        if (call.uploadedImageUrl) {
+          // User uploaded an image - use WaveSpeed edit API to place them in scene
+          console.log(`[Video Generator] 📸 Using uploaded image for call ${callId}`);
+          const { editImageWithWavespeed } = await import("~/lib/image/wavespeed-image-generator");
+          const editResult = await editImageWithWavespeed({
+            sourceImageUrl: call.uploadedImageUrl,
+            prompt: imagePrompt, // Use generated prompt to describe the scene
+            callId,
+          });
+          finalImageUrl = editResult.url;
+        } else {
+          // No uploaded image - generate from scratch using WavespeedAI nano-banana-pro
+          const imageResult = await generateImage({
+            prompt: imagePrompt,
+            callId,
+          });
+          finalImageUrl = imageResult.imageUrl;
+        }
 
-        // Generate multi-person video with WavespeedAI using the generated image
+        // Generate multi-person video with WavespeedAI using the image
         const videoResult = await generateMultiPersonVideo(
           callerS3Url,
           calleeS3Url,
           callId,
-          imageResult.imageUrl, // Use generated image
+          finalImageUrl, // Use either edited or generated image
           audioDuration,
         );
 

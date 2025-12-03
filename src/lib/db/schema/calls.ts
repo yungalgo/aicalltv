@@ -17,14 +17,22 @@ export const calls = pgTable("calls", {
     .references(() => user.id, { onDelete: "cascade" }),
   status: callStatusEnum("status").notNull().default("call_created"),
   recipientName: text("recipient_name").notNull(),
-  anythingElse: text("anything_else"), // Optional additional context (was recipientContext)
+  anythingElse: text("anything_else"), // Optional additional context
   // Target person details for personalization
   targetGender: text("target_gender").notNull(), // "male", "female", "prefer_not_to_say", or "other"
   targetGenderCustom: text("target_gender_custom"), // Custom gender if "other" selected
   targetAgeRange: text("target_age_range"), // "18-25", "26-35", "36-45", "46-55", "56+"
   targetPhysicalDescription: text("target_physical_description"), // Hair, clothing, etc.
-  interestingPiece: text("interesting_piece"), // Personal details/hook that would engage them
+  // New fields for better personalization
+  targetCity: text("target_city"), // City/area they live in
+  targetHobby: text("target_hobby"), // Their hobby or interest
+  targetProfession: text("target_profession"), // Their job/profession
+  interestingPiece: text("interesting_piece"), // "One thing virtually no one knows about them"
+  ragebaitTrigger: text("ragebait_trigger"), // "If you wanted to ragebait them, you would say this"
   videoStyle: text("video_style"), // Aesthetic style: "anime", "claymation", "puppets", etc.
+  // Optional uploaded image for video generation
+  uploadedImageUrl: text("uploaded_image_url"), // S3 URL of user-uploaded image
+  uploadedImageS3Key: text("uploaded_image_s3_key"), // S3 key for uploaded image
   // Generated prompts
   openaiPrompt: text("openai_prompt"), // Generated OpenAI call instructions
   imagePrompt: text("image_prompt"), // Generated image generation prompt
