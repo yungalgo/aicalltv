@@ -208,6 +208,30 @@ export async function uploadVideoToS3(
 }
 
 /**
+ * Get fresh presigned URL for video (7 days expiry - max allowed)
+ * Used when stored URL has expired
+ */
+export async function getFreshVideoUrl(
+  s3Key: string,
+  bucket?: string,
+): Promise<string> {
+  const client = getS3Client();
+  const s3Bucket = bucket || env.AWS_S3_BUCKET;
+
+  if (!s3Bucket) {
+    throw new Error("S3 bucket not configured. Please set AWS_S3_BUCKET");
+  }
+
+  const command = new GetObjectCommand({
+    Bucket: s3Bucket,
+    Key: s3Key,
+  });
+
+  // 7 days is the maximum for presigned URLs
+  return getSignedUrl(client, command, { expiresIn: 604800 });
+}
+
+/**
  * Upload file from local path to S3
  * @param useSignedUrl - If true, always return a signed URL (for external API access)
  */

@@ -170,9 +170,10 @@ export async function setupVideoGeneratorWorker() {
         tempFiles.push(videoPath);
 
         // Upload final video to S3
+        const videoS3Key = `videos/${callId}.mp4`;
         const finalVideoUrl = await uploadFileToS3(
           videoPath,
-          `videos/${callId}.mp4`,
+          videoS3Key,
           "video/mp4",
         );
 
@@ -183,11 +184,12 @@ export async function setupVideoGeneratorWorker() {
           .where(eq(user.id, call.userId))
           .limit(1);
 
-        // Update database
+        // Update database with both URL and S3 key (key is used for generating fresh URLs)
         await db
           .update(calls)
           .set({
             videoUrl: finalVideoUrl,
+            videoS3Key: videoS3Key, // Store S3 key for generating fresh presigned URLs
             videoStatus: "completed",
             wavespeedJobId: videoResult.jobId,
             updatedAt: new Date(),

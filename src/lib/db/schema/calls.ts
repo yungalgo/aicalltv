@@ -47,7 +47,8 @@ export const calls = pgTable("calls", {
   recordingUrl: text("recording_url"), // Twilio recording URL
   recordingSid: text("recording_sid"), // Twilio recording SID
   duration: integer("duration"), // seconds
-  videoUrl: text("video_url"), // S3 video URL
+  videoUrl: text("video_url"), // S3 video URL (may be expired presigned URL)
+  videoS3Key: text("video_s3_key"), // S3 object key for generating fresh URLs
   videoStatus: videoStatusEnum("video_status").default("pending"),
   wavespeedJobId: text("wavespeed_job_id"), // WavespeedAI job IDs (comma-separated)
   videoErrorMessage: text("video_error_message"),
