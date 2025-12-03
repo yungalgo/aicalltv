@@ -494,15 +494,18 @@ function CallRequestForm() {
             <Input
               id="phoneNumber"
               type="tel"
-              value={formData.phoneNumber?.replace(/^\+1\s?/, "") || ""}
+              value={(() => {
+                // Format as (xxx) xxx-xxxx for display
+                const digits = formData.phoneNumber?.replace(/^\+1/, "").replace(/\D/g, "") || "";
+                if (digits.length === 0) return "";
+                if (digits.length <= 3) return `(${digits}`;
+                if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+                return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+              })()}
               onChange={(e) => {
-                // Auto-add +1 prefix, remove non-digits
-                let value = e.target.value.replace(/[^\d]/g, "");
-                // Limit to 10 digits (US phone number)
-                if (value.length > 10) {
-                  value = value.substring(0, 10);
-                }
-                // Always add +1 prefix
+                // Strip to digits only, limit to 10
+                const value = e.target.value.replace(/[^\d]/g, "").substring(0, 10);
+                // Store with +1 prefix (raw format for backend)
                 setFormData({ ...formData, phoneNumber: value ? `+1${value}` : "" });
               }}
               placeholder="(555) 123-4567"

@@ -118,22 +118,52 @@ export async function encryptPhoneNumber(
   try {
     // Convert phone to uint64
     const phoneUint64 = phoneToUint64(phoneNumber);
+    console.log("📱 Phone as uint64:", phoneUint64.toString());
     
     // Encrypt using cofhejs
     const encryptedInput = await Encryptable.uint64(phoneUint64);
-    const encrypted = await cofhejs.encrypt([encryptedInput]);
+    console.log("🔐 Encryptable input:", encryptedInput);
     
-    if (!encrypted || encrypted.length === 0) {
-      throw new Error("Encryption returned empty result");
+    const encrypted = await cofhejs.encrypt([encryptedInput]);
+    console.log("🔐 Encrypted result:", encrypted);
+    console.log("🔐 Encrypted result type:", typeof encrypted);
+    console.log("🔐 Encrypted result keys:", encrypted ? Object.keys(encrypted) : "null");
+    
+    if (!encrypted) {
+      throw new Error("Encryption returned null/undefined");
     }
-
-    const result = encrypted[0];
+    
+    // Handle different possible response formats
+    let result: { data?: unknown; securityZone?: number; signature?: string };
+    
+    if (Array.isArray(encrypted)) {
+      if (encrypted.length === 0) {
+        throw new Error("Encryption returned empty array");
+      }
+      result = encrypted[0];
+    } else if (typeof encrypted === "object") {
+      // Maybe it's a single object, not an array
+      result = encrypted as typeof result;
+    } else {
+      throw new Error(`Unexpected encryption result type: ${typeof encrypted}`);
+    }
+    
+    console.log("🔐 Result object:", result);
+    console.log("🔐 Result keys:", result ? Object.keys(result) : "null");
+    
+    // Extract data - it might be nested or have different property names
+    const data = result?.data ?? (result as Record<string, unknown>)?.ciphertext ?? (result as Record<string, unknown>)?.value;
+    
+    if (data === undefined || data === null) {
+      console.error("🔐 Full result for debugging:", JSON.stringify(result, null, 2));
+      throw new Error("Could not find encrypted data in result");
+    }
     
     return {
-      data: BigInt(result.data),
-      securityZone: result.securityZone || 0,
+      data: BigInt(data as string | number | bigint),
+      securityZone: result?.securityZone || 0,
       utype: 5, // euint64 type
-      signature: (result.signature as `0x${string}`) || "0x",
+      signature: (result?.signature as `0x${string}`) || "0x",
     };
   } catch (error) {
     console.error("❌ Failed to encrypt phone number:", error);
