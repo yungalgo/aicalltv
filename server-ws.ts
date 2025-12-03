@@ -8,6 +8,20 @@ import { WebSocketServer, WebSocket } from "ws";
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 
+// Pre-import audio converter to avoid async import in hot path
+let pcmuToPCM16Fn: ((payload: string) => string) | null = null;
+let pcm16ToPCMUFn: ((payload: string) => string) | null = null;
+
+async function loadAudioConverter() {
+  const { pcmuToPCM16, pcm16ToPCMU } = await import("./src/lib/realtime/audio-converter");
+  pcmuToPCM16Fn = pcmuToPCM16;
+  pcm16ToPCMUFn = pcm16ToPCMU;
+  console.log("[WS] Audio converter loaded");
+}
+
+// Load on startup
+loadAudioConverter();
+
 interface OpenAIRealtimeClientType {
   connect: () => Promise<void>;
   close: () => void;
@@ -107,7 +121,6 @@ async function handleStart(ws: WebSocket, wsData: WebSocketData, data: TwilioMes
     const { calls } = await import("./src/lib/db/schema/calls");
     const schema = await import("./src/lib/db/schema");
     const { OpenAIRealtimeClient } = await import("./src/lib/realtime/openai-client");
-    const { pcm16ToPCMU } = await import("./src/lib/realtime/audio-converter");
     
     const driver = postgres(process.env.DATABASE_URL!);
     const db = drizzle({ client: driver, schema, casing: "snake_case" });
@@ -132,9 +145,10 @@ async function handleStart(ws: WebSocket, wsData: WebSocketData, data: TwilioMes
     // Flush any buffered audio that arrived while we were connecting
     if (wsData.audioBuffer.length > 0) {
       console.log(`[WS] 📤 Flushing ${wsData.audioBuffer.length} buffered audio chunks to OpenAI`);
-      const { pcmuToPCM16 } = await import("./src/lib/realtime/audio-converter");
       for (const chunk of wsData.audioBuffer) {
-        openai.sendAudio(pcmuToPCM16(chunk));
+        if (pcmuToPCM16Fn) {
+          openai.sendAudio(pcmuToPCM16Fn(chunk));
+        }
       }
       wsData.audioBuffer = []; // Clear buffer
     }
@@ -145,11 +159,13 @@ async function handleStart(ws: WebSocket, wsData: WebSocketData, data: TwilioMes
       if (audioSentCount === 1) {
         console.log("[WS] 🔊 First audio chunk sent to Twilio");
       }
-      ws.send(JSON.stringify({
-        event: "media",
-        streamSid: wsData.streamSid,
-        media: { payload: pcm16ToPCMU(audioBase64) },
-      }));
+      if (pcm16ToPCMUFn) {
+        ws.send(JSON.stringify({
+          event: "media",
+          streamSid: wsData.streamSid,
+          media: { payload: pcm16ToPCMUFn(audioBase64) },
+        }));
+      }
     });
     
     openai.onTranscript((text: string) => {
@@ -181,11 +197,8 @@ function handleMedia(wsData: WebSocketData, data: TwilioMessage) {
     return;
   }
   
-  // Capture values before async import to satisfy TypeScript
-  const client = wsData.openaiClient;
-  const payload = data.media.payload;
-  
-  import("./src/lib/realtime/audio-converter").then(({ pcmuToPCM16 }) => {
-    client.sendAudio(pcmuToPCM16(payload));
-  });
+  // Use pre-loaded converter (no async import in hot path)
+  if (pcmuToPCM16Fn) {
+    wsData.openaiClient.sendAudio(pcmuToPCM16Fn(data.media.payload));
+  }
 }
