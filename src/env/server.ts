@@ -54,6 +54,11 @@ export const env = createEnv({
     // NEAR AI configuration (for natural language call requests - TEE private inference)
     // Get your API key from https://cloud.near.ai
     NEAR_AI_API_KEY: z.string().optional(),
+
+    // Fhenix FHE configuration (for backend phone decryption)
+    // Private key of the backend wallet that has decryption permission
+    // This must be the same address set as backendService in PIIVault contract
+    FHENIX_BACKEND_PRIVATE_KEY: z.string().optional(),
   },
   runtimeEnv: process.env,
 });

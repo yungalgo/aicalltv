@@ -1,6 +1,8 @@
 /**
- * PIIVault Contract ABI
- * Deployed on Base Mainnet at: 0x7eD75e4ec7b3Df1b651654d7A7E89CeC0AcEf0a5
+ * PIIVault Contract ABI (v2 with decryption support)
+ * 
+ * v1 deployed at: 0x7eD75e4ec7b3Df1b651654d7A7E89CeC0AcEf0a5 (no decrypt functions)
+ * v2: Deploy PIIVault_v2.sol for full decryption support
  */
 export const PII_VAULT_ABI = [
   {
@@ -25,6 +27,25 @@ export const PII_VAULT_ABI = [
       },
     ],
     name: "PhoneStored",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "bytes32",
+        name: "callId",
+        type: "bytes32",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "requestedBy",
+        type: "address",
+      },
+    ],
+    name: "DecryptionRequested",
     type: "event",
   },
   {
@@ -98,6 +119,62 @@ export const PII_VAULT_ABI = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "bytes32",
+        name: "callId",
+        type: "bytes32",
+      },
+    ],
+    name: "requestDecryption",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "bytes32",
+        name: "callId",
+        type: "bytes32",
+      },
+    ],
+    name: "getDecryptedPhoneNumber",
+    outputs: [
+      {
+        internalType: "uint64",
+        name: "",
+        type: "uint64",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "bytes32",
+        name: "callId",
+        type: "bytes32",
+      },
+    ],
+    name: "checkDecryptionStatus",
+    outputs: [
+      {
+        internalType: "bool",
+        name: "isDecrypted",
+        type: "bool",
+      },
+      {
+        internalType: "uint64",
+        name: "phoneNumber",
+        type: "uint64",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "owner",
     outputs: [
@@ -165,5 +242,10 @@ export const PII_VAULT_ABI = [
   },
 ] as const;
 
+// v1 contract (without decrypt functions) - for reference
+export const PII_VAULT_V1_ADDRESS = "0x7eD75e4ec7b3Df1b651654d7A7E89CeC0AcEf0a5" as const;
+
+// Current contract address - UPDATE THIS after deploying v2!
+// Set via env var VITE_PII_VAULT_ADDRESS or defaults to v1
 export const PII_VAULT_ADDRESS = "0x7eD75e4ec7b3Df1b651654d7A7E89CeC0AcEf0a5" as const;
 
