@@ -105,7 +105,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                 .values({
                   userId,
                   state: "unused",
-                  paymentMethod: "stripe",
+                  paymentMethod: "credit_card",
                   paymentRef: session.id,
                   network: "stripe",
                   amountCents: PAYMENT_CONFIG.priceCents,
@@ -140,7 +140,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                 .values({
                   userId,
                   state: "unused",
-                  paymentMethod: "stripe",
+                  paymentMethod: "credit_card",
                   paymentRef: session.id,
                   network: "stripe",
                   amountCents: PAYMENT_CONFIG.priceCents,
@@ -165,7 +165,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                 videoStyle,
                 openaiPrompt,
                 encryptedHandle,
-                paymentMethod: "stripe",
+                paymentMethod: "credit_card",
                 isFree: false,
                 status: "prompt_ready",
                 // Fhenix FHE encryption
@@ -182,7 +182,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               .values({
                 userId,
                 state: "consumed",
-                paymentMethod: "stripe",
+                paymentMethod: "credit_card",
                 paymentRef: session.id,
                 network: "stripe",
                 amountCents: PAYMENT_CONFIG.priceCents,

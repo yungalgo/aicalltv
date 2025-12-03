@@ -14,7 +14,7 @@ import { getRequest } from "@tanstack/react-start/server";
  * Called by frontend after crypto tx confirms, or by webhook for Lemon Squeezy
  */
 const createCreditSchema = z.object({
-  paymentMethod: z.enum(["web3_wallet", "sol", "stripe", "free", "near_ai", "mina", "zcash", "ztarknet"]),
+  paymentMethod: z.enum(["free", "sol_usdc", "base_usdc", "zcash", "ztarknet", "credit_card"]),
   paymentRef: z.string().optional(), // tx hash, Stripe session ID, etc.
   network: z.string().optional(), // "base", "solana", "stripe", "ztarknet"
   amountCents: z.number().int().positive(), // e.g., 900 = $9.00
@@ -124,14 +124,18 @@ export const getCreditBalance = createServerFn({ method: "GET" }).handler(
 
 /**
  * Consume a credit for a call (internal use - called by createCall)
- * Returns the credit ID if successful, throws if no credit available
+ * Returns credit info if successful, throws if no credit available
  */
 export async function consumeCredit(
   db: ReturnType<typeof drizzle>,
   userId: string,
   callId: string
-): Promise<string> {
-  // Find an unused credit for this user
+): Promise<{
+  creditId: string;
+  paymentMethod: string;
+  isFree: boolean;
+}> {
+  // Find an unused credit for this user (oldest first)
   const [credit] = await db
     .select()
     .from(callCredits)
@@ -141,6 +145,7 @@ export async function consumeCredit(
         eq(callCredits.state, "unused")
       )
     )
+    .orderBy(callCredits.createdAt) // FIFO - use oldest credit first
     .limit(1);
 
   if (!credit) {
@@ -157,8 +162,12 @@ export async function consumeCredit(
     })
     .where(eq(callCredits.id, credit.id));
 
-  console.log(`[Credit] ✅ Consumed credit ${credit.id} for call ${callId}`);
+  console.log(`[Credit] ✅ Consumed credit ${credit.id} for call ${callId} (method: ${credit.paymentMethod})`);
 
-  return credit.id;
+  return {
+    creditId: credit.id,
+    paymentMethod: credit.paymentMethod,
+    isFree: credit.paymentMethod === "free",
+  };
 }
 

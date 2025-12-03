@@ -248,7 +248,7 @@ function SolanaPayButton({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (createCredit as any)({
           data: {
-            paymentMethod: "sol",
+            paymentMethod: "sol_usdc",
             paymentRef: signature,
             network: "solana",
             amountCents: PAYMENT_CONFIG.priceCents,
@@ -317,7 +317,7 @@ export function PaymentModal({
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           await (createCredit as any)({
             data: {
-              paymentMethod: "web3_wallet",
+              paymentMethod: "base_usdc",
               paymentRef: txHash,
               network: "base",
               amountCents: PAYMENT_CONFIG.priceCents,

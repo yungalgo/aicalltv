@@ -10,13 +10,11 @@ export const callStatusEnum = pgEnum("call_status", [
 
 export const paymentMethodEnum = pgEnum("payment_method", [
   "free",
-  "near_ai",
-  "sol",
-  "mina",
+  "sol_usdc",
+  "base_usdc",
   "zcash",
   "ztarknet",
-  "web3_wallet",
-  "stripe",
+  "credit_card",
 ]);
 
 export const creditStateEnum = pgEnum("credit_state", [

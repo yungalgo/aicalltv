@@ -122,6 +122,7 @@ export const createCall = createServerFn({ method: "POST" }).handler(
 
     // Create call record with prompt_ready status
     // Status: prompt_ready → Call is ready to be processed (has OpenAI prompt)
+    // Note: paymentMethod and isFree will be updated after consuming credit
     const [newCall] = await db
       .insert(calls)
       .values({
@@ -140,7 +141,7 @@ export const createCall = createServerFn({ method: "POST" }).handler(
         // Fhenix FHE encryption fields
         fhenixEnabled: data.fhenixEnabled || false,
         fhenixVaultId: data.fhenixVaultId || null,
-        paymentMethod: "web3_wallet", // Will be updated from credit
+        paymentMethod: "free", // Temporary - will be updated from credit
         isFree: false, // Will be updated from credit
         status: "prompt_ready", // Status indicates prompt is ready
       })
@@ -149,8 +150,23 @@ export const createCall = createServerFn({ method: "POST" }).handler(
     // SECURITY: Consume a credit for this call
     // This is the core of payment verification - no credit = no call
     try {
-      await consumeCredit(db, userId, newCall.id);
-      console.log(`[Create Call] ✅ Credit consumed for call ${newCall.id}`);
+      const creditInfo = await consumeCredit(db, userId, newCall.id);
+      console.log(`[Create Call] ✅ Credit consumed for call ${newCall.id} (method: ${creditInfo.paymentMethod})`);
+      
+      // Update call with actual payment method from credit
+      const { eq } = await import("drizzle-orm");
+      // Cast payment method to the enum type
+      type PaymentMethod = "free" | "sol_usdc" | "base_usdc" | "zcash" | "ztarknet" | "credit_card";
+      await db.update(calls)
+        .set({
+          paymentMethod: creditInfo.paymentMethod as PaymentMethod,
+          isFree: creditInfo.isFree,
+        })
+        .where(eq(calls.id, newCall.id));
+      
+      // Update local object for return
+      (newCall as { paymentMethod: string }).paymentMethod = creditInfo.paymentMethod;
+      newCall.isFree = creditInfo.isFree;
     } catch {
       // No credit available - delete the call we just created
       const { eq } = await import("drizzle-orm");
