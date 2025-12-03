@@ -27,11 +27,13 @@ export async function initializeFhenix(
     console.log("🔐 Wallet account:", walletClient.account?.address);
     
     // Use initializeWithViem for proper viem integration
+    // Environment "MAINNET" connects to Fhenix CoFHE on Base mainnet
     const result = await cofhejs.initializeWithViem({
       viemClient: publicClient,
       viemWalletClient: walletClient,
       generatePermit: true,
       ignoreErrors: false,
+      environment: "MAINNET",
     });
     
     console.log("🔐 Initialize result:", result);
