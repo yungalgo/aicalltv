@@ -150,8 +150,9 @@ export async function encryptPhoneNumber(
     console.log("🔐 First encrypted item:", encrypted);
     console.log("🔐 Encrypted keys:", encrypted ? Object.keys(encrypted) : "null");
     
+    // cofhejs returns ctHash (ciphertext hash), map it to data for the contract
     return {
-      data: BigInt(encrypted.data),
+      data: BigInt(encrypted.ctHash), // cofhejs uses ctHash, contract expects data
       securityZone: encrypted.securityZone || 0,
       utype: encrypted.utype || 5, // euint64 type
       signature: (encrypted.signature as `0x${string}`) || "0x",
