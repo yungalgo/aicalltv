@@ -126,14 +126,17 @@ export async function generateImagePrompt(
 
 Generate a split-screen phone call image prompt in ${input.videoStyle} style. Rules:
 - ONLY describe what is VISUALLY SEEN - no narrative, no explanations, no editorializing
-- TWO characters in split-screen format, BOTH holding phones
-- LEFT: Target person (based on provided details)
-- RIGHT: Caller (based on provided description)
+- TWO characters in split-screen format, BOTH ACTIVELY TALKING ON PHONES
+- IMPORTANT: Characters must be SPEAKING into phones, not just looking at them
+- Phone poses: either holding phone TO EAR, or TALKING on speakerphone with phone in hand near mouth
+- Show ENGAGED CONVERSATION posture - animated expressions, mouth open/speaking, reactive faces
+- LEFT: Target person (based on provided details) - talking on phone
+- RIGHT: Caller (based on provided description) - talking on phone
 - Keep it SHORT and DIRECT - just visual elements
 - NO phrases like "capturing the essence", "oblivious to", "hint at", "nod to", "exudes", "reminiscent of"
 - NO story/context - just describe appearances, poses, objects, colors, style
 
-Format example: "Split-screen ${input.videoStyle} image. Left: [character description, holding phone type]. Right: [character description, holding phone type]. Background: [simple description]."
+Format example: "Split-screen ${input.videoStyle} image. Left: [character description, phone held to ear, speaking, expression]. Right: [character description, phone held to ear, speaking, expression]. Background: [simple description]."
 
 Return ONLY the prompt text.`;
 
@@ -148,7 +151,7 @@ RIGHT (caller): ${callerDesc}
 Style: ${input.videoStyle}
 ${input.anythingElse ? `Context: ${input.anythingElse}` : ""}
 
-Write a SHORT, VISUAL-ONLY prompt. Both characters holding phones. No narrative or explanation - just what the image shows.`;
+Write a SHORT, VISUAL-ONLY prompt. CRITICAL: Both characters must be ACTIVELY TALKING on phones - either phone held to ear OR speakerphone near mouth. Show engaged conversation poses with animated expressions, mouths open/speaking. NOT just looking at phone screens.`;
 
   const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
     method: "POST",
