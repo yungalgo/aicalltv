@@ -3,7 +3,6 @@
  */
 
 import { env } from "~/env/server";
-import { uploadAudioToS3 } from "~/lib/storage/s3";
 
 export interface DownloadRecordingOptions {
   recordingUrl: string;
@@ -66,23 +65,5 @@ export async function downloadTwilioRecording(
   throw new Error(
     `Failed to download recording after ${maxRetries} attempts: ${lastError?.message}`,
   );
-}
-
-/**
- * Store recording in S3 and return S3 URL
- */
-export async function storeRecordingInS3(
-  recordingBuffer: Buffer,
-  callId: string,
-): Promise<string> {
-  const s3Url = await uploadAudioToS3(
-    recordingBuffer,
-    callId,
-    `recordings/${callId}.mp3`, // Store in recordings/ prefix
-  );
-
-  console.log(`[Twilio Recording] Stored recording in S3: ${s3Url}`);
-
-  return s3Url;
 }
 

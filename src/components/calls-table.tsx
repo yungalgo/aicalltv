@@ -44,6 +44,7 @@ interface CallData {
   recordingSid: string | null;
   duration: number | null;
   videoUrl: string | null;
+  videoS3Key: string | null;
   videoStatus: string | null;
   wavespeedJobId: string | null;
   videoErrorMessage: string | null;

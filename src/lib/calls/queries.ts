@@ -10,6 +10,7 @@ import { getRequest } from "@tanstack/react-start/server";
 
 /**
  * Check if a presigned S3 URL has expired or will expire soon
+ * Note: This checks the URL expiry, not the file - videos are kept forever
  */
 function isPresignedUrlExpired(url: string | null): boolean {
   if (!url) return false;
@@ -71,7 +72,7 @@ export const getUserCalls = createServerFn({ method: "GET" }).handler(
       .where(eq(calls.userId, userId))
       .orderBy(desc(calls.createdAt));
 
-    // Refresh expired video URLs
+    // Auto-refresh expired video URLs (videos are kept forever, only URLs expire)
     const { getFreshVideoUrl } = await import("~/lib/storage/s3");
     const refreshedCalls = await Promise.all(
       userCalls.map(async (call) => {
