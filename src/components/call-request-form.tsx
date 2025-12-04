@@ -524,6 +524,7 @@ export function CallRequestForm() {
                 placeholder="Their name"
                 required
                 disabled={isSubmitting}
+                style={{ color: '#1A1A1A' }}
               />
             </div>
 
@@ -553,6 +554,7 @@ export function CallRequestForm() {
                   disabled={isSubmitting}
                   className="flex-1"
                   maxLength={14} // (555) 123-4567 = 14 chars
+                  style={{ color: '#1A1A1A' }}
                 />
               </div>
             </div>
@@ -573,7 +575,7 @@ export function CallRequestForm() {
                 required
                 disabled={isSubmitting}
               >
-                <SelectTrigger id="targetGender">
+                <SelectTrigger id="targetGender" style={{ color: '#1A1A1A' }} className="[&>span[data-placeholder]]:!text-[#1A1A1A] [&>span[data-placeholder]]:!opacity-70">
                   <SelectValue placeholder="Select..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -598,7 +600,7 @@ export function CallRequestForm() {
                 required
                 disabled={isSubmitting}
               >
-                <SelectTrigger id="targetAgeRange">
+                <SelectTrigger id="targetAgeRange" style={{ color: '#1A1A1A' }} className="[&>span[data-placeholder]]:!text-[#1A1A1A] [&>span[data-placeholder]]:!opacity-70">
                   <SelectValue placeholder="Select..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -627,6 +629,7 @@ export function CallRequestForm() {
                 placeholder="Please specify"
                 required
                 disabled={isSubmitting}
+                style={{ color: '#1A1A1A' }}
               />
             </div>
           )}
@@ -643,6 +646,7 @@ export function CallRequestForm() {
                 placeholder="e.g. Brooklyn, NYC"
                 disabled={isSubmitting}
                 required
+                style={{ color: '#1A1A1A' }}
               />
             </div>
             <div className="space-y-2">
@@ -656,6 +660,7 @@ export function CallRequestForm() {
                 placeholder="e.g. rock climbing"
                 disabled={isSubmitting}
                 required
+                style={{ color: '#1A1A1A' }}
               />
             </div>
             <div className="space-y-2">
@@ -669,6 +674,7 @@ export function CallRequestForm() {
                 placeholder="e.g. software engineer"
                 disabled={isSubmitting}
                 required
+                style={{ color: '#1A1A1A' }}
               />
             </div>
           </div>
@@ -707,7 +713,7 @@ export function CallRequestForm() {
                   required
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger id="callerId">
+                  <SelectTrigger id="callerId" style={{ color: '#1A1A1A' }} className="[&>span[data-placeholder]]:!text-[#1A1A1A] [&>span[data-placeholder]]:!opacity-70">
                     <SelectValue placeholder="Select a caller..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -737,7 +743,7 @@ export function CallRequestForm() {
                 required={!formData.videoStyle || VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])}
                 disabled={isSubmitting}
               >
-                <SelectTrigger id="videoStyle">
+                <SelectTrigger id="videoStyle" style={{ color: '#1A1A1A' }} className="[&>span[data-placeholder]]:!text-[#1A1A1A] [&>span[data-placeholder]]:!opacity-70">
                   <SelectValue placeholder="Select a style..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -761,6 +767,7 @@ export function CallRequestForm() {
                   required
                   disabled={isSubmitting}
                   className="mt-2"
+                  style={{ color: '#1A1A1A' }}
                 />
               )}
               <p className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>
@@ -841,6 +848,7 @@ export function CallRequestForm() {
                 rows={2}
                 required
                 disabled={isSubmitting}
+                style={{ color: '#1A1A1A' }}
               />
               <p className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                 Required if no photo uploaded but we really suggest you upload one.
@@ -863,6 +871,7 @@ export function CallRequestForm() {
               rows={2}
               required
               disabled={isSubmitting}
+              style={{ color: '#1A1A1A' }}
             />
           </div>
 
@@ -881,6 +890,7 @@ export function CallRequestForm() {
               rows={2}
               required
               disabled={isSubmitting}
+              style={{ color: '#1A1A1A' }}
             />
           </div>
         </div>
