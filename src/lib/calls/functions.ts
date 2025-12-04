@@ -11,6 +11,8 @@ import { consumeCredit } from "~/lib/credits/functions";
 const createCallSchema = z.object({
   recipientName: z.string().min(1, "Recipient name is required"),
   phoneNumber: z.string().min(1, "Phone number is required"),
+  // Caller selection
+  callerId: z.string().uuid("Invalid caller ID"), // Required: UUID of selected caller
   // Target person details
   targetGender: z.enum(["male", "female", "prefer_not_to_say", "other"]),
   targetGenderCustom: z.string().optional(), // Required if gender is "other"
@@ -92,6 +94,34 @@ export const createCall = createServerFn({ method: "POST" }).handler(
       console.log(`[Create Call] Using legacy phone encryption`);
     }
 
+    // Fetch caller data for prompt generation
+    let callerData: { name: string; personality: string; speakingStyle: string; appearanceDescription?: string } | undefined;
+    if (data.callerId) {
+      const { eq } = await import("drizzle-orm");
+      const [caller] = await db
+        .select({
+          name: schema.callers.name,
+          personality: schema.callers.personality,
+          speakingStyle: schema.callers.speakingStyle,
+          appearanceDescription: schema.callers.appearanceDescription,
+        })
+        .from(schema.callers)
+        .where(eq(schema.callers.id, data.callerId))
+        .limit(1);
+      
+      if (caller) {
+        callerData = {
+          name: caller.name,
+          personality: caller.personality,
+          speakingStyle: caller.speakingStyle,
+          appearanceDescription: caller.appearanceDescription,
+        };
+        console.log(`[Create Call] 📞 Using caller: ${caller.name}`);
+      } else {
+        console.warn(`[Create Call] ⚠️ Caller ${data.callerId} not found, proceeding without caller personality`);
+      }
+    }
+
     // Generate OpenAI prompt using Groq (needed BEFORE call starts)
     const promptInput = {
       targetPerson: {
@@ -107,6 +137,8 @@ export const createCall = createServerFn({ method: "POST" }).handler(
         ragebaitTrigger: data.ragebaitTrigger,
       },
       videoStyle: data.videoStyle,
+      hasUploadedImage: !!data.uploadedImageUrl,
+      caller: callerData,
     };
 
     // Generate OpenAI prompt and welcome greeting - needed BEFORE call starts
@@ -139,6 +171,7 @@ export const createCall = createServerFn({ method: "POST" }).handler(
       .insert(calls)
       .values({
         userId,
+        callerId: data.callerId || null, // Selected caller
         recipientName: data.recipientName,
         targetGender: data.targetGender,
         targetGenderCustom: data.targetGenderCustom || null,

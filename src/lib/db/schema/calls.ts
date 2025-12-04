@@ -8,6 +8,7 @@ import {
   decimal,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth.schema";
+import { callers } from "./callers";
 import { callStatusEnum, paymentMethodEnum, videoStatusEnum } from "./enums";
 
 export const calls = pgTable("calls", {
@@ -17,6 +18,8 @@ export const calls = pgTable("calls", {
     .references(() => user.id, { onDelete: "cascade" }),
   status: callStatusEnum("status").notNull().default("call_created"),
   recipientName: text("recipient_name").notNull(), // Plaintext name OR encrypted name JSON if fhenixEnabled
+  // Caller selection
+  callerId: uuid("caller_id").references(() => callers.id), // Selected caller (nullable for backward compatibility)
   // Target person details for personalization
   targetGender: text("target_gender").notNull(), // "male", "female", "prefer_not_to_say", or "other"
   targetGenderCustom: text("target_gender_custom"), // Custom gender if "other" selected

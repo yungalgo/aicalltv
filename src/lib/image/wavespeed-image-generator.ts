@@ -278,6 +278,13 @@ export interface EditImageOptions {
   callId: string;
 }
 
+export interface EditDualImageOptions {
+  callerImageUrl: string;     // Caller's default 1:1 headshot
+  targetImageUrl: string;     // User's uploaded target photo
+  prompt: string;             // Style prompt
+  callId: string;
+}
+
 /**
  * Submit image edit job to WavespeedAI nano-banana-pro/edit
  * Takes a user's uploaded photo and edits it into a phone call scene
@@ -307,6 +314,65 @@ EDIT INSTRUCTIONS: Preserve the uploaded person's face, likeness, and identity i
     images: [sourceImageUrl], // Array of image URLs
     resolution: "4k",
     aspect_ratio: "16:9", // Landscape - LEFT=caller, RIGHT=target (for WavespeedAI multi model)
+    output_format: "png",
+    enable_sync_mode: false,
+    enable_base64_output: false,
+  };
+
+  const response = await fetch(EDIT_MODEL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.WAVESPEED_API_KEY}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `WavespeedAI edit API error: ${response.status} ${response.statusText} - ${errorText}`,
+    );
+  }
+
+  const result = await response.json();
+  const requestId = result.data?.id;
+
+  if (!requestId) {
+    throw new Error(
+      `WavespeedAI edit API error: No request ID in response - ${JSON.stringify(result)}`,
+    );
+  }
+
+  return requestId;
+}
+
+/**
+ * Submit dual-image edit job to WavespeedAI nano-banana-pro/edit
+ * Takes caller's default headshot (LEFT) and user's uploaded target photo (RIGHT)
+ * Layout: 16:9 landscape - LEFT = caller, RIGHT = target
+ */
+async function submitDualImageEditJob(
+  callerImageUrl: string,
+  targetImageUrl: string,
+  prompt: string,
+): Promise<string> {
+  if (!env.WAVESPEED_API_KEY) {
+    throw new Error(
+      "WavespeedAI API key not configured. Please set WAVESPEED_API_KEY environment variable",
+    );
+  }
+
+  // The Groq-generated prompt specifies LEFT uses caller's appearance, RIGHT uses uploaded photo
+  const editPrompt = `${prompt}
+
+EDIT INSTRUCTIONS: LEFT half uses the caller reference image. RIGHT half uses the uploaded target photo - preserve their face, likeness, and identity while applying the art style. Both characters must be actively speaking on phones.`;
+
+  const payload = {
+    prompt: editPrompt,
+    images: [callerImageUrl, targetImageUrl], // Both images for edit: [LEFT caller, RIGHT target]
+    resolution: "4k",
+    aspect_ratio: "16:9", // Landscape - LEFT=caller, RIGHT=target
     output_format: "png",
     enable_sync_mode: false,
     enable_base64_output: false,
@@ -378,6 +444,48 @@ export async function editImageWithWavespeed(
   );
 
   console.log(`[WavespeedAI Edit] ✅ Edited image stored`);
+
+  return { url: s3Url, key: s3Key };
+}
+
+/**
+ * Edit dual images (caller's default + user's uploaded target) using WavespeedAI nano-banana-pro/edit
+ * Creates a composite 16:9 image with caller on LEFT and target on RIGHT
+ */
+export async function editDualImageWithCaller(
+  options: EditDualImageOptions,
+): Promise<{ url: string; key: string }> {
+  if (!env.WAVESPEED_API_KEY) {
+    throw new Error(
+      "WavespeedAI API key not configured. Please set WAVESPEED_API_KEY environment variable",
+    );
+  }
+
+  const { callerImageUrl, targetImageUrl, prompt, callId } = options;
+
+  console.log(`[WavespeedAI Edit] 🎨 Editing dual images (caller + target) for call ${callId}`);
+
+  // Submit dual-image edit job with retry
+  const requestId = await retryWithBackoff(
+    () => submitDualImageEditJob(callerImageUrl, targetImageUrl, prompt),
+    { maxRetries: 2, initialDelay: 1000 },
+  );
+
+  console.log(`[WavespeedAI Edit] Job submitted: ${requestId.substring(0, 8)}...`);
+
+  // Poll for completion (reuse existing polling function)
+  const wavespeedImageUrl = await retryWithBackoff(
+    () => pollImageGeneration(requestId),
+    { maxRetries: 3, initialDelay: 2000 },
+  );
+
+  // Download and store in S3
+  const { url: s3Url, key: s3Key } = await downloadAndStoreImage(
+    wavespeedImageUrl,
+    callId,
+  );
+
+  console.log(`[WavespeedAI Edit] ✅ Dual-image edit completed and stored`);
 
   return { url: s3Url, key: s3Key };
 }

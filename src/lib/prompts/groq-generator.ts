@@ -27,6 +27,13 @@ export interface PromptGenerationInput {
   targetPerson: TargetPersonData;
   videoStyle: string; // Aesthetic style: "anime", "claymation", "puppets", etc.
   hasUploadedImage?: boolean; // If true, don't describe target appearance (we have their photo)
+  // NEW: Caller information
+  caller?: {
+    name: string;
+    personality: string;
+    speakingStyle: string;
+    appearanceDescription?: string; // For image generation
+  };
 }
 
 export interface GeneratedPrompts {
@@ -60,6 +67,32 @@ export async function generateCallPrompts(
 
 Your task is to generate instructions for a PRANK CALL - the PRIMARY GOAL is ENTERTAINMENT.
 
+${input.caller ? `
+**CRITICAL: TWO EQUALLY IMPORTANT ELEMENTS**
+
+1. **THE CALLER CHARACTER** (provides the "angle" and personality):
+   Name: ${input.caller.name}
+   Personality: ${input.caller.personality}
+   Speaking Style: ${input.caller.speakingStyle}
+   
+   This character provides the unique angle, psychological hook, and speaking style. Without this, there's no distinctive approach.
+
+2. **THE TARGET PERSON** (provides relatability and power):
+   The specific details about the person being called (name, location, hobbies, profession, secrets, etc.) make the call relatable and powerful. Without these, the call feels generic and loses impact.
+
+**THE MAGIC HAPPENS WHEN BOTH COMBINE:**
+- The caller's personality/angle creates the unique approach
+- The target person's specific details make it personal and relatable
+- Together, they create a scenario that feels both cleverly crafted AND personally relevant
+
+The systemPrompt you generate must:
+- Make the AI embody the caller character completely (${input.caller.name})
+- Use the caller's specific angle/personality as the foundation
+- Incorporate the target person's specific details to personalize the scenario
+- Create a scenario where the caller's angle intersects with the target's personal details
+- Make it feel like THIS caller is calling THIS specific person for a reason that makes sense
+` : ''}
+
 You must return a JSON object with EXACTLY this structure:
 {
   "systemPrompt": "The full instructions for the AI on how to conduct the call...",
@@ -68,15 +101,20 @@ You must return a JSON object with EXACTLY this structure:
 
 The systemPrompt must:
 - NEVER mention "AI", "AI-powered", "artificial intelligence", "prank call", or break the fourth wall
-- Create a believable, AMUSING scenario designed to get funny, awkward, or hilarious reactions
-- Use the interesting piece/hook creatively to set up a clever, entertaining premise
-- Incorporate specific details about the target person to make it more effective and personal
-- Guide the AI to play a character/situation that will create amusing moments
+${input.caller ? `- Make the AI embody the caller character: ${input.caller.name} - ${input.caller.personality}` : ''}
+- Create a believable, AMUSING scenario that combines the caller's angle with the target's personal details
+- Use the target person's specific information (name, location, hobbies, profession, secrets) to make the scenario feel personally relevant
+- Use the caller's unique angle/personality to create the distinctive approach
+- The scenario should feel like THIS caller calling THIS person makes sense given their details
 - Keep responses SHORT (1-3 sentences) - this is a phone call!
 - The goal is ENTERTAINMENT - make viewers LAUGH
+${input.caller ? `- The caller's speaking style: ${input.caller.speakingStyle} - this must be reflected in all responses` : ''}
 
 The welcomeGreeting must:
 - Be the EXACT first thing said when they answer (no "Hello?" - jump right into character)
+${input.caller ? `- Be spoken in the style of ${input.caller.name}: ${input.caller.speakingStyle}` : ''}
+- Reference something specific about the target person (their name, location, hobby, etc.) to show this is personal
+- Use the caller's angle to create the unique approach
 - Set up the scenario immediately
 - Be intriguing/confusing enough that they'll respond
 - Be 1-2 sentences max
@@ -84,9 +122,18 @@ The welcomeGreeting must:
 
 Return ONLY valid JSON, no markdown, no explanation.`;
 
-  const userPrompt = `Generate a prank call scenario JSON for:
+  const userPrompt = `Generate a prank call scenario JSON that COMBINES both elements:
 
-**Target Person:**
+${input.caller ? `
+**THE CALLER CHARACTER** (provides the angle):
+Name: ${input.caller.name}
+Personality: ${input.caller.personality}
+Speaking Style: ${input.caller.speakingStyle}
+
+This caller has a specific angle/approach. Use their personality to create the unique hook.
+` : ''}
+
+**THE TARGET PERSON** (provides relatability):
 - Name: ${input.targetPerson.name}
 - Gender: ${input.targetPerson.gender}${input.targetPerson.genderCustom ? ` (${input.targetPerson.genderCustom})` : ""}
 ${input.targetPerson.ageRange ? `- Age Range: ${input.targetPerson.ageRange}` : ""}
@@ -97,7 +144,16 @@ ${input.targetPerson.physicalDescription ? `- Physical Description: ${input.targ
 ${input.targetPerson.interestingPiece ? `- Secret/Thing only they know: ${input.targetPerson.interestingPiece}` : ""}
 ${input.targetPerson.ragebaitTrigger ? `- To ragebait them, say: ${input.targetPerson.ragebaitTrigger}` : ""}
 
-Create an ENTERTAINING scenario. Use the details creatively. Return ONLY the JSON object.`;
+**YOUR TASK:**
+${input.caller ? `1. Use ${input.caller.name}'s unique angle/personality as the foundation for the scenario` : ''}
+2. Incorporate the target person's specific details to make it personal and relatable
+3. Create a scenario where the caller's angle intersects naturally with the target's personal information
+4. Make it feel like THIS caller calling THIS person makes sense given their details
+5. The scenario should feel both cleverly crafted (from the caller's angle) AND personally relevant (from the target's details)
+
+Example: If the caller is "Sandra the Neighbor" (nosy, suspicious) and the target lives in "Brooklyn" and has hobby "birdwatching", create a scenario where Sandra's suspicious nature intersects with their Brooklyn location and birdwatching hobby in a way that feels personal and relevant.
+
+Create an ENTERTAINING scenario that balances BOTH elements equally. Return ONLY the JSON object.`;
 
   const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
     method: "POST",
@@ -195,7 +251,8 @@ export async function generateImagePrompt(
     );
   }
 
-  const callerDesc = getRandomCallerDescription();
+  // Use caller's appearance description if available, otherwise fall back to random
+  const callerDesc = input.caller?.appearanceDescription || getRandomCallerDescription();
 
   // When user uploaded a photo, we only describe the LEFT person (AI caller)
   // The RIGHT will use their uploaded photo as reference
@@ -216,13 +273,21 @@ Return ONLY the prompt text.`;
 
     const userPrompt = `Edit an uploaded photo into a ${input.videoStyle} phone call scene (16:9 landscape, side by side).
 
-LEFT (caller/AI - GENERATE NEW): ${callerDesc}
+LEFT (caller/AI - USE CALLER'S APPEARANCE): ${callerDesc}
+${input.caller ? `This caller has a specific personality: ${input.caller.personality}. Reflect their character visually in their expression, pose, and setting.` : ''}
 
 RIGHT (target person - USE UPLOADED PHOTO): Render them in ${input.videoStyle} style, holding phone and actively speaking.
+${input.targetPerson.city ? `Their location: ${input.targetPerson.city} - incorporate visual elements that suggest this location in the background.` : ''}
+${input.targetPerson.hobby ? `Their hobby: ${input.targetPerson.hobby} - include subtle visual references to this hobby in their background or surroundings.` : ''}
+${input.targetPerson.profession ? `Their profession: ${input.targetPerson.profession} - incorporate visual elements related to their profession in the scene.` : ''}
 
 Style: ${input.videoStyle}
 
-Write a SHORT prompt. LEFT = generated caller. RIGHT = uploaded photo rendered in the art style. Both must be ACTIVELY TALKING on phones with mouths open.`;
+Write a SHORT prompt that:
+- Shows the caller with their specific appearance and personality reflected visually
+- Incorporates visual elements related to the target person's details (location, hobby, profession) in the background or context
+- Makes the scene feel personally relevant to THIS caller calling THIS specific person
+- Both characters must be ACTIVELY TALKING on phones with mouths open`;
 
     const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
       method: "POST",
@@ -280,13 +345,23 @@ Return ONLY the prompt text.`;
   
   const userPrompt = `Horizontal split-screen ${input.videoStyle} phone call image (16:9 landscape, side by side).
 
-LEFT (caller/AI): ${callerDesc}
+LEFT (caller/AI - USE CALLER'S APPEARANCE): ${callerDesc}
+${input.caller ? `This caller has a specific personality: ${input.caller.personality}. Reflect their character visually in their expression, pose, and setting.` : ''}
 
 RIGHT (target person): ${input.targetPerson.gender}${input.targetPerson.ageRange ? `, ${input.targetPerson.ageRange}` : ""}${input.targetPerson.physicalDescription ? `, ${input.targetPerson.physicalDescription}` : ""}${input.targetPerson.profession ? `, looks like a ${input.targetPerson.profession}` : ""}${input.targetPerson.hobby ? `, ${input.targetPerson.hobby} enthusiast vibe` : ""}
+${input.targetPerson.city ? `Location context: ${input.targetPerson.city} - incorporate visual elements that suggest this location in the background.` : ''}
+${input.targetPerson.hobby ? `Hobby context: ${input.targetPerson.hobby} - include subtle visual references to this hobby in their background or surroundings.` : ''}
+${input.targetPerson.profession ? `Profession context: ${input.targetPerson.profession} - incorporate visual elements related to their profession in the scene.` : ''}
 
 Style: ${input.videoStyle}
 
-Write a SHORT, VISUAL-ONLY prompt for a HORIZONTAL 16:9 split-screen. LEFT = caller, RIGHT = target. CRITICAL: Both characters must be ACTIVELY TALKING on phones - either phone held to ear OR speakerphone near mouth. Show engaged conversation poses with animated expressions, mouths open/speaking.`;
+Write a SHORT, VISUAL-ONLY prompt for a HORIZONTAL 16:9 split-screen that:
+- Shows the caller with their specific appearance and personality reflected visually
+- Incorporates visual elements related to the target person's details (location, hobby, profession) in the background or context
+- Makes the scene feel personally relevant to THIS caller calling THIS specific person
+- LEFT = caller, RIGHT = target
+- CRITICAL: Both characters must be ACTIVELY TALKING on phones - either phone held to ear OR speakerphone near mouth
+- Show engaged conversation poses with animated expressions, mouths open/speaking`;
 
   const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
     method: "POST",

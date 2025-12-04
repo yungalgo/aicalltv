@@ -32,29 +32,47 @@ export const Route = createFileRoute("/api/twilio/voice")({
         console.log(`[Voice]   CallSid: ${callSid}`);
         console.log(`[Voice]   CallId: ${callId}`);
 
-        // Default welcome greeting
+        // Default welcome greeting and voice ID
         let welcomeGreeting = "Hello! How can I help you today?";
+        let voiceId = "UgBBYS2sOqTuMpoF3BR0"; // Default ElevenLabs voice
         
-        // Fetch call-specific welcome greeting from database
+        // Fetch call-specific welcome greeting and caller voice ID from database
         if (callId) {
           try {
             const driver = postgres(env.DATABASE_URL);
             const db = drizzle({ client: driver, schema, casing: "snake_case" });
             
             const [call] = await db
-              .select({ welcomeGreeting: calls.welcomeGreeting })
+              .select({ 
+                welcomeGreeting: calls.welcomeGreeting,
+                callerId: calls.callerId,
+              })
               .from(calls)
               .where(eq(calls.id, callId))
               .limit(1);
-            
-            await driver.end();
             
             if (call?.welcomeGreeting) {
               welcomeGreeting = call.welcomeGreeting;
               console.log(`[Voice] ✅ Using greeting: "${welcomeGreeting.substring(0, 50)}..."`);
             }
+            
+            // Fetch caller's voice ID if caller is selected
+            if (call?.callerId) {
+              const [caller] = await db
+                .select({ voiceId: schema.callers.voiceId })
+                .from(schema.callers)
+                .where(eq(schema.callers.id, call.callerId))
+                .limit(1);
+              
+              if (caller?.voiceId) {
+                voiceId = caller.voiceId;
+                console.log(`[Voice] ✅ Using caller voice ID: ${voiceId}`);
+              }
+            }
+            
+            await driver.end();
           } catch (error) {
-            console.error("[Voice] Failed to fetch greeting:", error);
+            console.error("[Voice] Failed to fetch call data:", error);
           }
         }
         
@@ -82,7 +100,7 @@ export const Route = createFileRoute("/api/twilio/voice")({
             welcomeGreeting="${escapedGreeting}"
             welcomeGreetingInterruptible="speech"
             ttsProvider="ElevenLabs"
-            voice="UgBBYS2sOqTuMpoF3BR0"
+            voice="${voiceId}"
             transcriptionProvider="Deepgram"
             speechModel="nova-3-general"
             interruptible="speech"

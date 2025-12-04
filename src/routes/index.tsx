@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { AuthModal } from "~/components/auth-modal";
@@ -172,6 +172,18 @@ function CallRequestForm() {
   const [privacyMode, setPrivacyMode] = useState<PrivacyMode>("standard");
   const isFhenixReady = useFhenixReady(privacyMode);
   
+  // Fetch callers
+  const { data: callers = [], isLoading: callersLoading, error: callersError } = useQuery<Array<{ id: string; name: string }>>({
+    queryKey: ["callers"],
+    queryFn: async () => {
+      const res = await fetch("/api/callers");
+      if (!res.ok) throw new Error("Failed to fetch callers");
+      const data = await res.json();
+      console.log("[Callers] Fetched callers:", data.length);
+      return data;
+    },
+  });
+  
   // Fhenix encryption hook
   const { 
     encryptPhone, 
@@ -185,6 +197,7 @@ function CallRequestForm() {
   const [formData, setFormData] = useState({
     recipientName: "",
     phoneNumber: "",
+    callerId: null as string | null,
     targetGender: "male" as "male" | "female" | "prefer_not_to_say" | "other",
     targetGenderCustom: "",
     targetAgeRange: "" as "" | "18-25" | "26-35" | "36-45" | "46-55" | "56+",
@@ -320,6 +333,12 @@ function CallRequestForm() {
 
   // Form validation using the same validation logic as API
   const validateForm = (): boolean => {
+    // Check caller is selected
+    if (!formData.callerId) {
+      toast.error("Please select a caller");
+      return false;
+    }
+    
     const validationResult = validateCallFormData(formData);
     
     if (!validationResult.isValid) {
@@ -405,6 +424,7 @@ function CallRequestForm() {
           phoneNumber: privacyMode === "fhenix" && fhenixVaultId 
             ? `fhenix:${fhenixVaultId}` // Prefix to indicate it's a vault reference
             : formData.phoneNumber,
+          callerId: formData.callerId || undefined,
           targetGender: formData.targetGender,
           targetGenderCustom:
             formData.targetGender === "other"
@@ -444,6 +464,7 @@ function CallRequestForm() {
       setFormData({
         recipientName: "",
         phoneNumber: "",
+        callerId: null,
         targetGender: "male",
         targetGenderCustom: "",
         targetAgeRange: "",
@@ -568,6 +589,42 @@ function CallRequestForm() {
       {/* Form Fields - Only shown when form mode is active */}
       {inputMode === "form" && (
       <>
+        {/* Caller Selection - First field */}
+        <div className="space-y-2">
+          <Label htmlFor="callerId">Caller *</Label>
+          {callersError ? (
+            <div className="flex h-10 w-full items-center rounded-md border border-destructive bg-background px-3 py-2 text-sm text-destructive">
+              Error loading callers: {callersError.message}
+            </div>
+          ) : callersLoading ? (
+            <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+              Loading callers...
+            </div>
+          ) : callers.length === 0 ? (
+            <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+              No callers available
+            </div>
+          ) : (
+            <select
+              id="callerId"
+              value={formData.callerId || ""}
+              onChange={(e) =>
+                setFormData({ ...formData, callerId: e.target.value || null })
+              }
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              required
+              disabled={isSubmitting}
+            >
+              <option value="">Select a caller...</option>
+              {callers.map((caller) => (
+                <option key={caller.id} value={caller.id}>
+                  {caller.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
         <div className="space-y-2">
           <Label htmlFor="recipientName">Who should we call? *</Label>
           <Input
@@ -879,7 +936,7 @@ function CallRequestForm() {
         <div className="space-y-2">
           <Label htmlFor="ragebaitTrigger">
             If you wanted to ragebait them, you would say... *
-            <span className="text-muted-foreground text-xs ml-2">(spicy 🌶️)</span>
+            <span className="text-muted-foreground text-xs ml-2">(spicasdasdy 🌶️)</span>
           </Label>
           <Textarea
             id="ragebaitTrigger"
@@ -973,6 +1030,7 @@ function CallRequestForm() {
           phoneNumber: privacyMode === "fhenix" && fhenixVaultId 
             ? `fhenix:${fhenixVaultId}` 
             : formData.phoneNumber,
+          callerId: formData.callerId || undefined,
           targetGender: formData.targetGender,
           targetGenderCustom: formData.targetGenderCustom,
           targetAgeRange: formData.targetAgeRange,

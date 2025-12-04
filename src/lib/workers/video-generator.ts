@@ -4,6 +4,7 @@ import { createPostgresDriver } from "~/lib/db";
 import { env } from "~/env/server";
 import { calls } from "~/lib/db/schema/calls";
 import { user } from "~/lib/db/schema/auth.schema";
+import * as schema from "~/lib/db/schema";
 import { getBoss, JOB_TYPES } from "~/lib/queue/boss";
 import { downloadTwilioRecording } from "~/lib/twilio/recording";
 import { splitStereoAudio } from "~/lib/audio/split-channels";
@@ -107,6 +108,27 @@ export async function setupVideoGeneratorWorker() {
           });
         });
 
+        // Fetch caller data if callerId exists
+        let callerData: { appearanceDescription: string; defaultImageUrl: string } | undefined;
+        if (call.callerId) {
+          const [caller] = await db
+            .select({
+              appearanceDescription: schema.callers.appearanceDescription,
+              defaultImageUrl: schema.callers.defaultImageUrl,
+            })
+            .from(schema.callers)
+            .where(eq(schema.callers.id, call.callerId))
+            .limit(1);
+          
+          if (caller) {
+            callerData = {
+              appearanceDescription: caller.appearanceDescription,
+              defaultImageUrl: caller.defaultImageUrl,
+            };
+            console.log(`[Video Generator] 📞 Using caller appearance for image generation`);
+          }
+        }
+
         // Generate image prompt using Groq (only if not already generated)
         // This happens AFTER call completes, so we can generate it now
         let imagePrompt = call.imagePrompt;
@@ -138,6 +160,13 @@ export async function setupVideoGeneratorWorker() {
             videoStyle: call.videoStyle,
             // If user uploaded a photo, don't describe their appearance in the prompt
             hasUploadedImage: !!call.uploadedImageUrl,
+            // Include caller data for image generation
+            caller: callerData ? {
+              name: "", // Not needed for image generation
+              personality: "", // Not needed for image generation
+              speakingStyle: "", // Not needed for image generation
+              appearanceDescription: callerData.appearanceDescription,
+            } : undefined,
           };
           
           // Fail loudly if generation fails - no fallbacks during development
@@ -158,21 +187,36 @@ export async function setupVideoGeneratorWorker() {
         let finalImageUrl: string;
         
         if (call.uploadedImageUrl) {
-          // User uploaded an image - use WaveSpeed edit API to place them in scene
-          console.log(`[Video Generator] 📸 Using uploaded image for call ${callId}`);
-          const { editImageWithWavespeed } = await import("~/lib/image/wavespeed-image-generator");
-          const editResult = await editImageWithWavespeed({
-            sourceImageUrl: call.uploadedImageUrl,
-            prompt: imagePrompt, // Use generated prompt to describe the scene
-            callId,
-          });
-          finalImageUrl = editResult.url;
+          // User uploaded an image
+          if (callerData) {
+            // Caller selected + user uploaded image: use dual-image edit
+            // LEFT = caller's default headshot, RIGHT = user's uploaded target photo
+            console.log(`[Video Generator] 📸 Using dual-image edit (caller + target) for call ${callId}`);
+            const { editDualImageWithCaller } = await import("~/lib/image/wavespeed-image-generator");
+            const editResult = await editDualImageWithCaller({
+              callerImageUrl: callerData.defaultImageUrl,
+              targetImageUrl: call.uploadedImageUrl,
+              prompt: imagePrompt,
+              callId,
+            });
+            finalImageUrl = editResult.url;
+          } else {
+            // No caller selected, but user uploaded image - use single-image edit
+            console.log(`[Video Generator] 📸 Using uploaded image for call ${callId}`);
+            const { editImageWithWavespeed } = await import("~/lib/image/wavespeed-image-generator");
+            const editResult = await editImageWithWavespeed({
+              sourceImageUrl: call.uploadedImageUrl,
+              prompt: imagePrompt, // Use generated prompt to describe the scene
+              callId,
+            });
+            finalImageUrl = editResult.url;
+          }
         } else {
           // No uploaded image - generate from scratch using WavespeedAI nano-banana-pro
-        const imageResult = await generateImage({
-          prompt: imagePrompt,
-          callId,
-        });
+          const imageResult = await generateImage({
+            prompt: imagePrompt,
+            callId,
+          });
           finalImageUrl = imageResult.imageUrl;
         }
 
