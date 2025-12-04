@@ -134,36 +134,38 @@ function CallersDropdownContent({ isMobile = false }: { isMobile?: boolean }) {
   }
 
   return (
-    <div className="grid w-[500px] gap-3 p-4 md:w-[700px] md:grid-cols-4 lg:w-[900px]">
-      {callers.map((caller) => (
-        <NavigationMenuLink key={caller.id} asChild>
-          <Link
-            to="/callers/$slug"
-            params={{ slug: caller.slug }}
-            className={cn(
-              "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
-            )}
-          >
-            <div className="flex items-start space-x-4">
-              <img
-                src={caller.defaultImageUrl}
-                alt={caller.name}
-                className="h-12 w-12 rounded-full object-cover shrink-0"
-              />
-              <div className="space-y-1 flex-1 min-w-0">
-                <div className="text-base font-medium leading-tight">
-                  {caller.name}
+    <div className="w-[600px] md:w-[900px] lg:w-[1200px] max-h-[80vh] overflow-y-auto scrollbar-hide">
+      <div className="grid gap-3 p-4 pb-6 md:grid-cols-4">
+        {callers.map((caller) => (
+          <NavigationMenuLink key={caller.id} asChild>
+            <Link
+              to="/callers/$slug"
+              params={{ slug: caller.slug }}
+              className={cn(
+                "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground cursor-pointer"
+              )}
+            >
+              <div className="flex items-start space-x-4">
+                <img
+                  src={caller.defaultImageUrl}
+                  alt={caller.name}
+                  className="h-12 w-12 rounded-full object-cover shrink-0"
+                />
+                <div className="space-y-1 flex-1 min-w-0">
+                  <div className="text-base font-medium leading-tight">
+                    {caller.name}
+                  </div>
+                  {caller.tagline && (
+                    <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
+                      {caller.tagline}
+                    </p>
+                  )}
                 </div>
-                {caller.tagline && (
-                  <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                    {caller.tagline}
-                  </p>
-                )}
               </div>
-            </div>
-          </Link>
-        </NavigationMenuLink>
-      ))}
+            </Link>
+          </NavigationMenuLink>
+        ))}
+      </div>
     </div>
   )
 }
