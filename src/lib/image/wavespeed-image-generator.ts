@@ -246,15 +246,16 @@ export async function generateImage(
 }
 
 /**
- * Default prompt for split-screen call scenes
+ * Default prompt for split-screen call scenes (9:16 vertical)
+ * TOP = AI caller, BOTTOM = target person
+ * This is only used when NO image is uploaded
  */
 export function getDefaultCallImagePrompt(): string {
   return (
-    "Split-screen shot of two puppets on a phone call. " +
-    "Left side: a shaggy puppet with messy brown hair, a scruffy beard, and sleepy-looking white eyes, " +
-    "holding a phone to its ear while sitting in a cluttered room with posters on the wall. " +
-    "Right side: a puppet with long brown yarn hair, glasses, a teal beanie, colorful beaded necklace, " +
-    "and denim overalls, holding a bright green phone to its ear."
+    "Vertical split-screen shot (9:16 portrait) of two characters on a phone call. " +
+    "TOP half: a quirky AI caller character with exaggerated features, holding phone to ear, animated expression. " +
+    "BOTTOM half: the target person receiving the call, holding phone, surprised or engaged expression. " +
+    "Both characters actively talking on phones with animated, expressive faces."
   );
 }
 
@@ -283,8 +284,12 @@ async function submitImageEditJob(
   }
 
   // Edit prompt: transform the uploaded image into a vertical split-screen phone call scene
-  // TOP = caller (AI), BOTTOM = target (the person in the uploaded photo)
-  const editPrompt = `Transform this into a vertical split-screen phone call scene (9:16 portrait). TOP half: an AI caller character on phone. BOTTOM half: this person from the photo, holding phone to ear or on speakerphone, with animated talking expression. ${prompt}. Keep the person's face and identity in the bottom half.`;
+  // The uploaded image becomes the BOTTOM half (target person) rendered in the specified style
+  // TOP half is the AI caller character in the same style
+  const editPrompt = `Create a vertical split-screen phone call image (9:16 portrait). 
+TOP HALF: An AI caller character on the phone with animated expression, in this style: ${prompt}. 
+BOTTOM HALF: Transform the person in this photo into the same art style (${prompt}), holding a phone to their ear with an engaged/surprised expression. Preserve their likeness and features but render in the specified style.
+Both characters should be actively on a phone call with expressive, animated faces.`;
 
   const payload = {
     prompt: editPrompt,
