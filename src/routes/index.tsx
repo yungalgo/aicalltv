@@ -189,7 +189,7 @@ function HeroSection() {
         // Keep within 2-12 range
         return Math.max(2, Math.min(12, newValue));
       });
-    }, 3000 + Math.random() * 2000); // Change every 3-5 seconds
+    }, 60000 + Math.random() * 180000); // Change every 1-4 minutes (60,000ms + up to 180,000ms)
     return () => clearInterval(interval);
   }, []);
 
@@ -301,8 +301,8 @@ function HeroSection() {
               </div>
               
               {/* Active prankers status */}
-              <div className="flex justify-end mt-4">
-                <Status status="online" variant="outline" size="sm" className="border-0 gap-1.5">
+              <div className="flex justify-end mt-3">
+                <Status status="online" variant="outline" size="sm" className="border-0 gap-1.5 p-0">
                   <StatusIndicator ping />
                   <StatusLabel className="text-xs" style={{ color: '#1A1A1A', opacity: 0.6 }}>
                     {activePrankers} pranking right now
