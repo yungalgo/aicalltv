@@ -56,7 +56,12 @@ export const Route = createFileRoute("/api/stripe/checkout")({
           const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
           // Get base URL for redirects
-          const baseUrl = env.VITE_BASE_URL || "http://localhost:3000";
+          // IMPORTANT: For local development, always use localhost to avoid ngrok URL caching issues
+          // Stripe can redirect to localhost just fine, and it won't break when ngrok restarts
+          const configuredUrl = env.VITE_BASE_URL || "http://localhost:3000";
+          const isLocalDev = configuredUrl.includes("ngrok") || configuredUrl.includes("localhost");
+          const baseUrl = isLocalDev ? "http://localhost:3000" : configuredUrl;
+          console.log(`[Stripe] Using baseUrl for redirects: ${baseUrl} (configured: ${configuredUrl}, isLocalDev: ${isLocalDev})`);
 
           // Create Checkout Session with form data in metadata
           // Stripe metadata values must be strings and max 500 chars each
@@ -100,12 +105,15 @@ export const Route = createFileRoute("/api/stripe/checkout")({
               fhenixEnabled: String(callData.fhenixEnabled || false),
               fhenixVaultId: String(callData.fhenixVaultId || "").slice(0, 500),
             },
-            // Redirect URLs - go back to home page where the calls table is
-            success_url: `${baseUrl}/?payment=success`,
-            cancel_url: `${baseUrl}/?payment=cancelled`,
+            // Redirect URLs - go to your-calls page after successful payment
+            success_url: `${baseUrl}/your-calls?payment=success`,
+            cancel_url: `${baseUrl}/create?payment=cancelled`,
           });
 
           console.log(`[Stripe] Created checkout session ${checkoutSession.id} for user ${session.user.id}`);
+          console.log(`[Stripe] Success URL: ${checkoutSession.success_url}`);
+          console.log(`[Stripe] Cancel URL: ${checkoutSession.cancel_url}`);
+          console.log(`[Stripe] Checkout URL: ${checkoutSession.url}`);
 
           return new Response(
             JSON.stringify({ 

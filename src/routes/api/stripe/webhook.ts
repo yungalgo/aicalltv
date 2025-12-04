@@ -86,15 +86,37 @@ export const Route = createFileRoute("/api/stripe/webhook")({
             // Extract call data from metadata
             const recipientName = metadata.recipientName || "";
             const phoneNumber = metadata.phoneNumber || "";
-            const callerId = metadata.callerId || null; // Selected caller
+            // callerId might be empty string, so check for that too
+            const callerIdRaw = metadata.callerId || "";
+            const callerId = callerIdRaw.trim() || null; // Selected caller (null if empty)
             const targetGender = (metadata.targetGender || "male") as "male" | "female" | "prefer_not_to_say" | "other";
             const targetGenderCustom = metadata.targetGenderCustom || null;
             const targetAgeRange = metadata.targetAgeRange || null;
+            const targetCity = metadata.targetCity || null;
+            const targetHobby = metadata.targetHobby || null;
+            const targetProfession = metadata.targetProfession || null;
             const interestingPiece = metadata.interestingPiece || null;
+            const ragebaitTrigger = metadata.ragebaitTrigger || null;
             const videoStyle = metadata.videoStyle || "anime";
+            const uploadedImageUrl = metadata.uploadedImageUrl || null;
+            const uploadedImageS3Key = metadata.uploadedImageS3Key || null;
             // Fhenix FHE encryption data
             const fhenixEnabled = metadata.fhenixEnabled === "true";
             const fhenixVaultId = metadata.fhenixVaultId || null;
+            
+            // Log metadata for debugging
+            console.log(`[Stripe Webhook] Metadata received:`, {
+              recipientName,
+              phoneNumber,
+              callerIdRaw,
+              callerId,
+              targetGender,
+              videoStyle,
+              hasCallerId: !!callerId,
+              targetCity,
+              targetHobby,
+              targetProfession,
+            });
 
             // Validate required fields
             if (!recipientName || !phoneNumber) {
@@ -115,22 +137,70 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               return new Response("OK - Credit created, no call data", { status: 200 });
             }
 
-            // Generate OpenAI prompt
+            // Fetch caller data if callerId is provided
+            let callerData: { name: string; personality: string; speakingStyle: string; appearanceDescription?: string } | undefined;
+            if (callerId) {
+              const { eq } = await import("drizzle-orm");
+              const [caller] = await db
+                .select({
+                  name: schema.callers.name,
+                  personality: schema.callers.personality,
+                  speakingStyle: schema.callers.speakingStyle,
+                  appearanceDescription: schema.callers.appearanceDescription,
+                })
+                .from(schema.callers)
+                .where(eq(schema.callers.id, callerId))
+                .limit(1);
+              
+              if (caller) {
+                callerData = {
+                  name: caller.name,
+                  personality: caller.personality,
+                  speakingStyle: caller.speakingStyle,
+                  appearanceDescription: caller.appearanceDescription,
+                };
+                console.log(`[Stripe Webhook] 📞 Using caller: ${caller.name}`);
+              } else {
+                console.warn(`[Stripe Webhook] ⚠️ Caller ${callerId} not found, proceeding without caller personality`);
+              }
+            } else {
+              console.warn(`[Stripe Webhook] ⚠️ No callerId provided in metadata`);
+            }
+
+            // Generate OpenAI prompt and welcome greeting using the same function as createCall
             console.log(`[Stripe Webhook] 🕐 Generating OpenAI prompt...`);
             let openaiPrompt: string;
+            let welcomeGreeting: string;
             try {
-              const { generateOpenAIPrompt } = await import("~/lib/prompts/groq-generator");
-              openaiPrompt = await generateOpenAIPrompt({
+              const { generateCallPrompts } = await import("~/lib/prompts/groq-generator");
+              const prompts = await generateCallPrompts({
                 targetPerson: {
                   name: recipientName,
                   gender: targetGender,
                   genderCustom: targetGenderCustom || undefined,
                   ageRange: targetAgeRange || undefined,
+                  physicalDescription: undefined, // Not in metadata, will be generated from image if provided
+                  city: targetCity || undefined,
+                  hobby: targetHobby || undefined,
+                  profession: targetProfession || undefined,
                   interestingPiece: interestingPiece || undefined,
+                  ragebaitTrigger: ragebaitTrigger || undefined,
                 },
                 videoStyle,
+                hasUploadedImage: !!(uploadedImageUrl || uploadedImageS3Key),
+                caller: callerData,
               });
-              console.log(`[Stripe Webhook] ✅ Generated OpenAI prompt`);
+              openaiPrompt = prompts.systemPrompt;
+              welcomeGreeting = prompts.welcomeGreeting || "";
+              console.log(`[Stripe Webhook] ✅ Generated OpenAI prompt and welcome greeting`);
+              console.log(`[Stripe Webhook]    System prompt length: ${openaiPrompt.length}`);
+              console.log(`[Stripe Webhook]    Welcome greeting length: ${welcomeGreeting.length}`);
+              console.log(`[Stripe Webhook]    Welcome greeting: "${welcomeGreeting.substring(0, 100)}${welcomeGreeting.length > 100 ? '...' : ''}"`);
+              console.log(`[Stripe Webhook]    Full prompts object keys:`, Object.keys(prompts));
+              if (!welcomeGreeting || welcomeGreeting.trim().length === 0) {
+                console.error(`[Stripe Webhook] ❌ ERROR: welcomeGreeting is empty or missing!`);
+                console.error(`[Stripe Webhook]    prompts object:`, JSON.stringify(prompts, null, 2));
+              }
             } catch (error) {
               console.error(`[Stripe Webhook] ❌ Failed to generate prompt:`, error);
               // Create credit only - user can retry
@@ -149,8 +219,16 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               return new Response("OK - Credit created, prompt failed", { status: 200 });
             }
 
-            // Create the call
-            const encryptedHandle = `encrypted_${phoneNumber}`;
+            // Create the call with all fields (matching createCall function)
+            let encryptedHandle: string;
+            if (fhenixEnabled && fhenixVaultId) {
+              encryptedHandle = `fhenix:${fhenixVaultId}`;
+              console.log(`[Stripe Webhook] 🔐 Using Fhenix FHE encryption, vaultId: ${fhenixVaultId}`);
+            } else {
+              encryptedHandle = `encrypted_${phoneNumber}`;
+              console.log(`[Stripe Webhook] Using legacy phone encryption`);
+            }
+            
             const [newCall] = await db
               .insert(calls)
               .values({
@@ -160,9 +238,16 @@ export const Route = createFileRoute("/api/stripe/webhook")({
                 targetGender,
                 targetGenderCustom,
                 targetAgeRange,
+                targetCity,
+                targetHobby,
+                targetProfession,
                 interestingPiece,
+                ragebaitTrigger,
                 videoStyle,
+                uploadedImageUrl,
+                uploadedImageS3Key,
                 openaiPrompt,
+                welcomeGreeting: welcomeGreeting && welcomeGreeting.trim().length > 0 ? welcomeGreeting.trim() : null,
                 encryptedHandle,
                 paymentMethod: "credit_card",
                 isFree: false,
@@ -174,6 +259,13 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               .returning();
 
             console.log(`[Stripe Webhook] ✅ Created call ${newCall.id}`);
+            console.log(`[Stripe Webhook]    Caller ID: ${newCall.callerId || 'null'}`);
+            console.log(`[Stripe Webhook]    Welcome greeting variable before save: "${welcomeGreeting ? welcomeGreeting.substring(0, 50) : 'undefined/null'}"`);
+            console.log(`[Stripe Webhook]    Welcome greeting saved to DB: ${newCall.welcomeGreeting ? `"${newCall.welcomeGreeting.substring(0, 50)}..."` : 'null/empty'}`);
+            if (!newCall.welcomeGreeting && welcomeGreeting) {
+              console.error(`[Stripe Webhook] ❌ CRITICAL: welcomeGreeting was generated but NOT saved to database!`);
+              console.error(`[Stripe Webhook]    Generated value: "${welcomeGreeting}"`);
+            }
 
             // Create credit and mark it as consumed
             const [credit] = await db

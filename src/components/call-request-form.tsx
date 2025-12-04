@@ -279,21 +279,19 @@ export function CallRequestForm() {
     toast.success("Form filled! Click 'Buy a Call' below to proceed.");
   }, [handleAiFormFill]);
 
-  // Handle Stripe payment return - show toast and refresh calls
+  // Handle Stripe payment return - redirect to your-calls page
   useEffect(() => {
     if ((search as any).payment === "success") {
       toast.success("🎉 Payment successful! Your AI call is being processed.", {
         duration: 5000,
       });
-      // Force immediate refetch of calls table
-      queryClient.refetchQueries({ queryKey: ["calls"] });
-      // Clean up URL (remove ?payment=success)
-      window.history.replaceState({}, "", "/create");
+      // Redirect to your-calls page (Stripe already redirects there, but handle it here too)
+      window.location.href = "/your-calls";
     } else if ((search as any).payment === "cancelled") {
       toast.info("Payment was cancelled.", { duration: 3000 });
       window.history.replaceState({}, "", "/create");
     }
-  }, [(search as any).payment, queryClient]);
+  }, [(search as any).payment]);
 
   // Form validation using the same validation logic as API
   const validateForm = (): boolean => {

@@ -964,6 +964,7 @@ export function PaymentModal({
                       setPaymentStatus("processing");
                       try {
                         // Send call data to Stripe checkout so webhook can create the call
+                        // IMPORTANT: Include ALL fields needed for prompt generation!
                         const response = await fetch("/api/stripe/checkout", {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
@@ -975,8 +976,16 @@ export function PaymentModal({
                               targetGender: callDetails.targetGender,
                               targetGenderCustom: callDetails.targetGenderCustom,
                               targetAgeRange: callDetails.targetAgeRange,
+                              // Personalization fields - CRITICAL for prompt generation!
+                              targetCity: callDetails.targetCity,
+                              targetHobby: callDetails.targetHobby,
+                              targetProfession: callDetails.targetProfession,
                               interestingPiece: callDetails.interestingPiece,
+                              ragebaitTrigger: callDetails.ragebaitTrigger,
                               videoStyle: callDetails.videoStyle,
+                              // Optional uploaded image
+                              uploadedImageUrl: callDetails.uploadedImageUrl,
+                              uploadedImageS3Key: callDetails.uploadedImageS3Key,
                               // Fhenix FHE encryption
                               fhenixEnabled: callDetails.fhenixEnabled,
                               fhenixVaultId: callDetails.fhenixVaultId,

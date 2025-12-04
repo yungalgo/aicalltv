@@ -1,11 +1,12 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { Suspense } from "react";
+import { createFileRoute, redirect, useSearch } from "@tanstack/react-router";
+import { Suspense, useEffect } from "react";
 import { Navbar } from "~/components/navbar";
 import { Footer } from "~/components/footer";
 import { CallsTable } from "~/components/calls-table";
 import { authQueryOptions } from "~/lib/auth/queries";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LogoSpinner } from "~/components/logo";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/your-calls")({
   component: YourCallsPage,
@@ -24,6 +25,21 @@ export const Route = createFileRoute("/your-calls")({
 
 function YourCallsPage() {
   const { isLoading } = useQuery(authQueryOptions());
+  const search = useSearch({ from: "/your-calls" });
+  const queryClient = useQueryClient();
+
+  // Handle Stripe payment return - show toast and refresh calls
+  useEffect(() => {
+    if ((search as any).payment === "success") {
+      toast.success("🎉 Payment successful! Your AI call is being processed.", {
+        duration: 5000,
+      });
+      // Force immediate refetch of calls table
+      queryClient.refetchQueries({ queryKey: ["calls"] });
+      // Clean up URL (remove ?payment=success)
+      window.history.replaceState({}, "", "/your-calls");
+    }
+  }, [(search as any).payment, queryClient]);
 
   return (
     <div className="flex min-h-screen flex-col pb-24">
