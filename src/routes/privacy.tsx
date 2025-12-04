@@ -10,9 +10,9 @@ function PrivacyPage() {
     <div className="flex min-h-svh flex-col">
       <Navbar />
       <div className="container mx-auto max-w-3xl p-6">
-        <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <p className="text-muted-foreground mb-4">
+        <h1 className="text-3xl font-bold mb-6" style={{ color: '#1A1A1A' }}>Privacy Policy</h1>
+        <div className="prose prose-sm dark:prose-invert max-w-none" style={{ color: '#1A1A1A' }}>
+          <p className="mb-4" style={{ color: '#1A1A1A', opacity: 0.7 }}>
             Last updated: {new Date().toLocaleDateString()}
           </p>
           

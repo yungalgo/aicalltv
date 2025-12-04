@@ -21,9 +21,9 @@ function CallsPage() {
       <Navbar />
       <main className="flex-1">
         <div className="container mx-auto max-w-6xl p-6">
-          <h1 className="text-3xl font-bold mb-6">My Calls</h1>
+          <h1 className="text-3xl font-bold mb-6" style={{ color: '#1A1A1A' }}>My Calls</h1>
           
-          <Suspense fallback={<div className="py-6">Loading your calls...</div>}>
+          <Suspense fallback={<div className="py-6" style={{ color: '#1A1A1A' }}>Loading your calls...</div>}>
             <CallsTable />
           </Suspense>
         </div>

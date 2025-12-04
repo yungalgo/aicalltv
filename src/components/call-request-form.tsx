@@ -23,45 +23,11 @@ import { createCall } from "~/lib/calls/functions";
 import { VIDEO_STYLES } from "~/lib/constants/video-styles";
 import { PAYMENT_CONFIG } from "~/lib/web3/config";
 import { validateCallFormData } from "~/lib/validation/call-form";
-import { useTheme } from "~/components/theme-provider";
 
 type InputMode = "form" | "ai-chat";
 
 export function CallRequestForm() {
   const { data: user } = useSuspenseQuery(authQueryOptions());
-  const { theme } = useTheme();
-  
-  // Debug theme and CSS variables in production
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    
-    const debugInfo = {
-      theme,
-      htmlClasses: document.documentElement.className,
-      hasDarkClass: document.documentElement.classList.contains("dark"),
-      hasLightClass: document.documentElement.classList.contains("light"),
-      localStorageTheme: localStorage.getItem("theme"),
-      systemPrefersDark: window.matchMedia("(prefers-color-scheme: dark)").matches,
-      computedStyles: {
-        foreground: getComputedStyle(document.documentElement).getPropertyValue("--foreground"),
-        background: getComputedStyle(document.documentElement).getPropertyValue("--background"),
-        mutedForeground: getComputedStyle(document.documentElement).getPropertyValue("--muted-foreground"),
-      },
-    };
-    
-    console.log("🔍 [CallRequestForm] Theme Debug Info:", debugInfo);
-    
-    // Also log form element styles
-    const formElement = document.querySelector('[class*="Create AI Call"]') || 
-                        document.querySelector('form');
-    if (formElement) {
-      const formStyles = {
-        color: getComputedStyle(formElement).color,
-        backgroundColor: getComputedStyle(formElement).backgroundColor,
-      };
-      console.log("🔍 [CallRequestForm] Form Element Styles:", formStyles);
-    }
-  }, [theme]);
   const queryClient = useQueryClient();
   const search = useSearch({ from: "/create" });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -495,25 +461,7 @@ export function CallRequestForm() {
 
   return (
     <>
-      {/* DEBUG PANEL - Remove after debugging */}
-      {typeof window !== "undefined" && (
-        <div className="mb-4 p-3 rounded border-2 text-xs font-mono" style={{ 
-          backgroundColor: '#fffcf2', 
-          borderColor: '#1A1A1A',
-          color: '#1A1A1A'
-        }}>
-          <div><strong>Theme Debug:</strong></div>
-          <div>Theme: {theme}</div>
-          <div>HTML Classes: {document.documentElement.className}</div>
-          <div>Has Dark: {document.documentElement.classList.contains("dark") ? "YES" : "NO"}</div>
-          <div>Has Light: {document.documentElement.classList.contains("light") ? "YES" : "NO"}</div>
-          <div>LocalStorage: {localStorage.getItem("theme") || "null"}</div>
-          <div>System Prefers Dark: {window.matchMedia("(prefers-color-scheme: dark)").matches ? "YES" : "NO"}</div>
-          <div>--foreground: {getComputedStyle(document.documentElement).getPropertyValue("--foreground")}</div>
-          <div>--muted-foreground: {getComputedStyle(document.documentElement).getPropertyValue("--muted-foreground")}</div>
-        </div>
-      )}
-      
+      <div style={{ color: '#1A1A1A' }}> {/* Force dark text color regardless of theme */}
       {/* Input Mode Toggle - Segmented Control */}
       <div className="mb-6 flex justify-center">
         <div className="inline-flex rounded-lg border-2 p-1" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
@@ -559,14 +507,14 @@ export function CallRequestForm() {
       {/* Section 1: Basic Information */}
       <div className="space-y-6 pb-6 border-b">
         <div>
-          <h4 className="text-lg font-semibold mb-1">Basic Information</h4>
-          <p className="text-sm text-muted-foreground">Who are we calling and basic details</p>
+          <h4 className="text-lg font-semibold mb-1" style={{ color: '#1A1A1A' }}>Basic Information</h4>
+          <p className="text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>Who are we calling and basic details</p>
         </div>
         
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="recipientName">Who should we call? *</Label>
+              <Label htmlFor="recipientName" style={{ color: '#1A1A1A' }}>Who should we call? *</Label>
               <Input
                 id="recipientName"
                 value={formData.recipientName}
@@ -580,9 +528,9 @@ export function CallRequestForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Their phone number (US) *</Label>
+              <Label htmlFor="phoneNumber" style={{ color: '#1A1A1A' }}>Their phone number (US) *</Label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground font-medium">+1</span>
+                <span className="text-sm font-medium" style={{ color: '#1A1A1A', opacity: 0.7 }}>+1</span>
                 <Input
                   id="phoneNumber"
                   type="tel"
@@ -612,7 +560,7 @@ export function CallRequestForm() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="targetGender">Gender *</Label>
+              <Label htmlFor="targetGender" style={{ color: '#1A1A1A' }}>Gender *</Label>
               <Select
                 value={formData.targetGender}
                 onValueChange={(value) =>
@@ -638,7 +586,7 @@ export function CallRequestForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="targetAgeRange">Age Range *</Label>
+              <Label htmlFor="targetAgeRange" style={{ color: '#1A1A1A' }}>Age Range *</Label>
               <Select
                 value={formData.targetAgeRange}
                 onValueChange={(value) =>
@@ -666,7 +614,7 @@ export function CallRequestForm() {
 
           {formData.targetGender === "other" && (
             <div className="space-y-2">
-              <Label htmlFor="targetGenderCustom">Specify gender *</Label>
+              <Label htmlFor="targetGenderCustom" style={{ color: '#1A1A1A' }}>Specify gender *</Label>
               <Input
                 id="targetGenderCustom"
                 value={formData.targetGenderCustom}
@@ -685,7 +633,7 @@ export function CallRequestForm() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="targetCity">City/Area *</Label>
+              <Label htmlFor="targetCity" style={{ color: '#1A1A1A' }}>City/Area *</Label>
               <Input
                 id="targetCity"
                 value={formData.targetCity}
@@ -698,7 +646,7 @@ export function CallRequestForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="targetHobby">Hobby *</Label>
+              <Label htmlFor="targetHobby" style={{ color: '#1A1A1A' }}>Hobby *</Label>
               <Input
                 id="targetHobby"
                 value={formData.targetHobby}
@@ -711,7 +659,7 @@ export function CallRequestForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="targetProfession">Profession *</Label>
+              <Label htmlFor="targetProfession" style={{ color: '#1A1A1A' }}>Profession *</Label>
               <Input
                 id="targetProfession"
                 value={formData.targetProfession}
@@ -730,24 +678,24 @@ export function CallRequestForm() {
       {/* Section 2: Video Configuration */}
       <div className="space-y-6 py-6 border-b">
         <div>
-          <h4 className="text-lg font-semibold mb-1">Video Configuration</h4>
-          <p className="text-sm text-muted-foreground">Choose caller, style, and upload photo</p>
+          <h4 className="text-lg font-semibold mb-1" style={{ color: '#1A1A1A' }}>Video Configuration</h4>
+          <p className="text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>Choose caller, style, and upload photo</p>
         </div>
         
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-6 flex flex-col">
             <div className="space-y-2">
-              <Label htmlFor="callerId">Caller *</Label>
+              <Label htmlFor="callerId" style={{ color: '#1A1A1A' }}>Caller *</Label>
               {callersError ? (
                 <div className="flex h-10 w-full items-center rounded-md border border-destructive bg-background px-3 py-2 text-sm text-destructive">
                   Error loading callers: {callersError.message}
                 </div>
               ) : callersLoading ? (
-                <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+                <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                   Loading callers...
                 </div>
               ) : callers.length === 0 ? (
-                <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+                <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                   No callers available
                 </div>
               ) : (
@@ -774,7 +722,7 @@ export function CallRequestForm() {
             </div>
 
             <div className="space-y-2 flex-1">
-              <Label htmlFor="videoStyle">Video Style *</Label>
+              <Label htmlFor="videoStyle" style={{ color: '#1A1A1A' }}>Video Style *</Label>
               <Select
                 value={formData.videoStyle && VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number]) ? formData.videoStyle : formData.videoStyle ? "custom" : ""}
                 onValueChange={(value) => {
@@ -815,14 +763,14 @@ export function CallRequestForm() {
                   className="mt-2"
                 />
               )}
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                 Choose from suggested styles or enter your own custom aesthetic.
               </p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Upload their photo</Label>
+            <Label style={{ color: '#1A1A1A' }}>Upload their photo</Label>
             <input
               ref={fileInputRef}
               type="file"
@@ -851,14 +799,15 @@ export function CallRequestForm() {
               </div>
             ) : (
               <div
-                className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary cursor-pointer transition-colors h-[192px] flex flex-col items-center justify-center"
+                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors h-[192px] flex flex-col items-center justify-center"
+                style={{ borderColor: '#1A1A1A' }}
                 onClick={() => fileInputRef.current?.click()}
               >
-                <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground mb-1">
+                <Upload className="mx-auto h-8 w-8 mb-2" style={{ color: '#1A1A1A', opacity: 0.7 }} />
+                <p className="text-sm mb-1" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                   Click to upload
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                   PNG, JPG up to 5MB
                 </p>
               </div>
@@ -870,17 +819,17 @@ export function CallRequestForm() {
       {/* Section 3: Additional Information */}
       <div className="space-y-6 py-6 border-b">
         <div>
-          <h4 className="text-lg font-semibold mb-1">Additional Information</h4>
-          <p className="text-sm text-muted-foreground">Help us personalize the call</p>
+          <h4 className="text-lg font-semibold mb-1" style={{ color: '#1A1A1A' }}>Additional Information</h4>
+          <p className="text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>Help us personalize the call</p>
         </div>
         
         <div className="space-y-6">
           {/* Physical Description - Required if no image, Optional if image uploaded */}
           {!formData.uploadedImageUrl && (
             <div className="space-y-2">
-              <Label htmlFor="targetPhysicalDescription">
+              <Label htmlFor="targetPhysicalDescription" style={{ color: '#1A1A1A' }}>
                 Physical Description *
-                <span className="text-muted-foreground text-xs ml-2"></span>
+                <span className="text-xs ml-2" style={{ color: '#1A1A1A', opacity: 0.7 }}></span>
               </Label>
               <Textarea
                 id="targetPhysicalDescription"
@@ -893,16 +842,16 @@ export function CallRequestForm() {
                 required
                 disabled={isSubmitting}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                 Required if no photo uploaded but we really suggest you upload one.
               </p>
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="interestingPiece">
+            <Label htmlFor="interestingPiece" style={{ color: '#1A1A1A' }}>
               One thing virtually no one knows about them *
-              <span className="text-muted-foreground text-xs ml-2"></span>
+              <span className="text-xs ml-2" style={{ color: '#1A1A1A', opacity: 0.7 }}></span>
             </Label>
             <Textarea
               id="interestingPiece"
@@ -918,9 +867,9 @@ export function CallRequestForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ragebaitTrigger">
+            <Label htmlFor="ragebaitTrigger" style={{ color: '#1A1A1A' }}>
               If you wanted to ragebait them, you would say... *
-              <span className="text-muted-foreground text-xs ml-2"></span>
+              <span className="text-xs ml-2" style={{ color: '#1A1A1A', opacity: 0.7 }}></span>
             </Label>
             <Textarea
               id="ragebaitTrigger"
@@ -942,8 +891,8 @@ export function CallRequestForm() {
       {/* Privacy & Encryption Section - Show for both modes */}
       <div className="space-y-6 py-6 border-b">
         <div>
-          <h4 className="text-lg font-semibold mb-1">Privacy & Encryption</h4>
-          <p className="text-sm text-muted-foreground">Choose how your phone number is encrypted</p>
+          <h4 className="text-lg font-semibold mb-1" style={{ color: '#1A1A1A' }}>Privacy & Encryption</h4>
+          <p className="text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>Choose how your phone number is encrypted</p>
         </div>
         
         <FhenixPrivacyToggle
@@ -963,6 +912,10 @@ export function CallRequestForm() {
               ? "bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700" 
               : ""
           }`}
+          style={privacyMode === "fhenix" 
+            ? { color: 'white' }
+            : { backgroundColor: '#1A1A1A', color: 'white' }
+          }
           disabled={isSubmitting || isEncrypting}
         >
           {isEncrypting
@@ -976,22 +929,23 @@ export function CallRequestForm() {
       </div>
 
       {/* Terms notice */}
-      <p className="text-xs text-muted-foreground pt-4 text-center">
+      <p className="text-xs pt-4 text-center" style={{ color: '#1A1A1A', opacity: 0.7 }}>
         By clicking the button or purchasing, you agree to the{" "}
-        <Link to="/terms" className="underline hover:text-primary">
+        <Link to="/terms" className="underline hover:text-primary" style={{ color: '#1A1A1A' }}>
           Terms of Service
         </Link>{" "}
         and{" "}
-        <Link to="/privacy" className="underline hover:text-primary">
+        <Link to="/privacy" className="underline hover:text-primary" style={{ color: '#1A1A1A' }}>
           Privacy Policy
         </Link>
       </p>
 
       {/* NSFW Warning Footer */}
-      <p className="text-xs text-muted-foreground text-center">
+      <p className="text-xs text-center" style={{ color: '#1A1A1A', opacity: 0.7 }}>
         ⚠️ <strong>NSFW content is not supported.</strong> Calls with inappropriate content will fail.
       </p>
       </form>
+      </div>
       {/* Auth Modal - shown when not logged in */}
       <AuthModal
         open={showAuthModal}

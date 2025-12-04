@@ -3,7 +3,7 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { Navbar } from "~/components/navbar"
 import { Footer } from "~/components/footer"
-import { Button } from "~/components/ui/button"
+import { AnimatedButton } from "~/components/ui/animated-button"
 import { AuthModal } from "~/components/auth-modal"
 import { authQueryOptions } from "~/lib/auth/queries"
 
@@ -84,14 +84,15 @@ function HowItWorksPage() {
             </div>
 
             <div className="mt-12 text-center">
-              <Button 
-                size="lg" 
-                className="font-medium hover:opacity-90"
-                style={{ backgroundColor: '#86EE02', color: '#1A1A1A' }}
+              <AnimatedButton 
                 onClick={handleCreateCall}
+                icon={<span>📞</span>}
+                iconPosition="left"
+                className="font-medium py-5 px-12 text-base rounded-md"
+                style={{ backgroundColor: '#86EE02', color: '#1A1A1A' }}
               >
-                Prank your Friend
-              </Button>
+                Prank your Friend →
+              </AnimatedButton>
             </div>
           </div>
         </div>

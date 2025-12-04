@@ -64,8 +64,8 @@ export function CallsTable() {
 
   if (calls.length === 0) {
     return (
-      <div className="rounded-lg border p-8 text-center">
-        <p className="text-muted-foreground">No calls yet.</p>
+      <div className="rounded-lg border p-8 text-center" style={{ borderColor: '#1A1A1A' }}>
+        <p style={{ color: '#1A1A1A', opacity: 0.7 }}>No calls yet.</p>
       </div>
     );
   }
@@ -177,6 +177,12 @@ export function CallsTable() {
                     size="sm" 
                     variant="outline"
                     type="button"
+                    style={{ 
+                      color: '#1A1A1A',
+                      borderColor: '#1A1A1A',
+                      backgroundColor: 'transparent'
+                    }}
+                    className="hover:bg-[#1A1A1A]/10"
                     onClick={async (e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -213,8 +219,8 @@ export function CallsTable() {
                       }
                     }}
                   >
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
+                    <Download className="mr-2 h-4 w-4" style={{ color: '#1A1A1A' }} />
+                    <span style={{ color: '#1A1A1A' }}>Download</span>
                   </Button>
                 ) : (
                   <span className="text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>-</span>

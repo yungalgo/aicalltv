@@ -58,8 +58,8 @@ export function FhenixPrivacyToggle({
   };
 
   return (
-    <div className="space-y-3 rounded-xl border border-border/50 bg-card/30 p-4">
-      <Label className="text-sm font-medium flex items-center gap-2">
+    <div className="space-y-3 rounded-xl border p-4" style={{ borderColor: '#1A1A1A', backgroundColor: 'rgba(255, 252, 242, 0.3)' }}>
+      <Label className="text-sm font-medium flex items-center gap-2" style={{ color: '#1A1A1A' }}>
         <span>🔐</span>
         <span>Privacy Protection</span>
       </Label>
@@ -69,9 +69,13 @@ export function FhenixPrivacyToggle({
         <label
           className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
             value === "standard"
-              ? "border-primary/50 bg-primary/5"
-              : "border-border/50 hover:border-border"
+              ? ""
+              : ""
           } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+          style={{
+            borderColor: value === "standard" ? '#1A1A1A' : '#1A1A1A',
+            backgroundColor: value === "standard" ? 'rgba(26, 26, 26, 0.05)' : 'transparent'
+          }}
         >
           <input
             type="radio"
@@ -83,8 +87,8 @@ export function FhenixPrivacyToggle({
             className="mt-1"
           />
           <div className="flex-1">
-            <div className="font-medium text-sm">Standard</div>
-            <div className="text-xs text-muted-foreground mt-0.5">
+            <div className="font-medium text-sm" style={{ color: '#1A1A1A' }}>Standard</div>
+            <div className="text-xs mt-0.5" style={{ color: '#1A1A1A', opacity: 0.7 }}>
               Phone encrypted in our secure database. Fast & simple.
             </div>
           </div>
@@ -94,9 +98,13 @@ export function FhenixPrivacyToggle({
         <label
           className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
             value === "fhenix"
-              ? "border-violet-500/50 bg-violet-500/5"
-              : "border-border/50 hover:border-border"
+              ? ""
+              : ""
           } ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+          style={{
+            borderColor: value === "fhenix" ? '#8b5cf6' : '#1A1A1A',
+            backgroundColor: value === "fhenix" ? 'rgba(139, 92, 246, 0.05)' : 'transparent'
+          }}
         >
           <input
             type="radio"
@@ -108,16 +116,16 @@ export function FhenixPrivacyToggle({
             className="mt-1"
           />
           <div className="flex-1">
-            <div className="font-medium text-sm flex items-center gap-2">
+            <div className="font-medium text-sm flex items-center gap-2" style={{ color: '#1A1A1A' }}>
               <span>Fhenix + Base Sepolia</span>
-              <span className="text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-violet-500/20 text-violet-400">
+              <span className="text-[10px] font-normal px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(139, 92, 246, 0.2)', color: '#8b5cf6' }}>
                 FHE
               </span>
-              <span className="text-[10px] font-normal px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400">
+              <span className="text-[10px] font-normal px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#f59e0b' }}>
                 Testnet
               </span>
             </div>
-            <div className="text-xs text-muted-foreground mt-0.5">
+            <div className="text-xs mt-0.5" style={{ color: '#1A1A1A', opacity: 0.7 }}>
               Phone encrypted on-chain with Fully Homomorphic Encryption.
               Only you control decryption. Uses Base Sepolia testnet.
             </div>
@@ -126,14 +134,14 @@ export function FhenixPrivacyToggle({
 
         {/* Wallet Connection Section (shown when Fhenix selected) */}
         {value === "fhenix" && (
-          <div className="p-3 rounded-lg bg-violet-500/10 border border-violet-500/20 space-y-2">
+          <div className="p-3 rounded-lg border space-y-2" style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', borderColor: 'rgba(139, 92, 246, 0.2)' }}>
             {isConnected && isOnCorrectNetwork ? (
               /* Connected AND on correct network */
               <>
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-sm text-green-400">
+                    <span className="text-sm" style={{ color: '#22c55e' }}>
                       Connected: {truncateAddress(address!)}
                     </span>
                   </div>
@@ -142,19 +150,21 @@ export function FhenixPrivacyToggle({
                     variant="ghost"
                     size="sm"
                     onClick={() => disconnect()}
-                    className="text-xs h-7 text-muted-foreground hover:text-foreground"
+                    className="text-xs h-7"
+                    style={{ color: '#1A1A1A', opacity: 0.7 }}
                   >
                     Disconnect
                   </Button>
                 </div>
-                <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <div className="text-xs flex items-center gap-1.5" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                   <span>Network: Base Sepolia</span>
-                  <span className="text-muted-foreground/50">•</span>
+                  <span style={{ opacity: 0.5 }}>•</span>
                   <a 
                     href={FHENIX_FAUCET_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-violet-400 hover:text-violet-300 underline underline-offset-2"
+                    className="underline underline-offset-2"
+                    style={{ color: '#8b5cf6' }}
                   >
                     Get testnet ETH
                   </a>
@@ -166,7 +176,7 @@ export function FhenixPrivacyToggle({
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                    <span className="text-sm text-amber-400">
+                    <span className="text-sm" style={{ color: '#f59e0b' }}>
                       Wrong Network: {chain?.name || "Unknown"}
                     </span>
                   </div>
@@ -175,12 +185,13 @@ export function FhenixPrivacyToggle({
                     variant="ghost"
                     size="sm"
                     onClick={() => disconnect()}
-                    className="text-xs h-7 text-muted-foreground hover:text-foreground"
+                    className="text-xs h-7"
+                    style={{ color: '#1A1A1A', opacity: 0.7 }}
                   >
                     Disconnect
                   </Button>
                 </div>
-                <p className="text-xs text-amber-400/80">
+                <p className="text-xs" style={{ color: '#f59e0b', opacity: 0.8 }}>
                   Please switch to Base Sepolia to use FHE encryption
                 </p>
                 <Button
@@ -207,14 +218,15 @@ export function FhenixPrivacyToggle({
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                   Connect your wallet to enable FHE encryption on Base Sepolia
                 </p>
                 <Button
                   type="button"
                   onClick={handleConnect}
                   disabled={isPending || disabled}
-                  className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+                  className="w-full text-white"
+                  style={{ backgroundColor: '#8b5cf6' }}
                   size="sm"
                 >
                   {isPending ? (
@@ -251,13 +263,14 @@ export function FhenixPrivacyToggle({
                     </span>
                   )}
                 </Button>
-                <p className="text-xs text-muted-foreground/70 text-center">
+                <p className="text-xs text-center" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                   Need testnet ETH?{" "}
                   <a 
                     href={FHENIX_FAUCET_URL}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-violet-400 hover:text-violet-300 underline underline-offset-2"
+                    className="underline underline-offset-2"
+                    style={{ color: '#8b5cf6' }}
                   >
                     Get from faucet
                   </a>
