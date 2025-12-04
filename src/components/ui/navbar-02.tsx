@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useEffect, useState, useRef } from "react"
 import { BookOpenIcon, InfoIcon, LifeBuoyIcon } from "lucide-react"
-import { Link } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { Button } from "~/components/ui/button"
 import {
   NavigationMenu,
@@ -146,6 +146,7 @@ export const Navbar02 = React.forwardRef<HTMLElement, Navbar02Props>(
     },
     ref
   ) => {
+    const navigate = useNavigate()
     const [isMobile, setIsMobile] = useState(false)
     const containerRef = useRef<HTMLElement>(null)
 
@@ -332,7 +333,14 @@ export const Navbar02 = React.forwardRef<HTMLElement, Navbar02Props>(
                       <NavigationMenuItem key={index}>
                         {link.submenu ? (
                           <>
-                            <NavigationMenuTrigger>
+                            <NavigationMenuTrigger
+                              onClick={(e) => {
+                                if (link.href) {
+                                  // Navigate on click
+                                  navigate({ to: link.href });
+                                }
+                              }}
+                            >
                               {link.label}
                             </NavigationMenuTrigger>
                             <NavigationMenuContent>

@@ -177,17 +177,18 @@ export function Navbar() {
   const navigationLinks = useMemo<Navbar02NavItem[]>(
     () => {
       const links: Navbar02NavItem[] = [
-        {
-          label: "Callers",
-          submenu: true,
-          type: "simple",
-          customContent: <CallersDropdownContent isMobile={false} />,
-          mobileContent: <CallersDropdownContent isMobile={true} />,
-        },
-        {
-          href: "/how-it-works",
-          label: "How it Works",
-        },
+      {
+        href: "/callers",
+        label: "Callers",
+        submenu: true,
+        type: "simple",
+        customContent: <CallersDropdownContent isMobile={false} />,
+        mobileContent: <CallersDropdownContent isMobile={true} />,
+      },
+      {
+        href: "/how-it-works",
+        label: "How it Works",
+      },
       ];
       
       // Only show "Your Calls" if user is logged in
