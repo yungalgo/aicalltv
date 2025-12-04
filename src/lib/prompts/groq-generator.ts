@@ -111,6 +111,7 @@ Create an ENTERTAINING scenario. Use the details creatively. Return ONLY the JSO
         { role: "user", content: userPrompt },
       ],
       temperature: 0.8,
+      response_format: { type: "json_object" },
     }),
   });
 
@@ -129,15 +130,41 @@ Create an ENTERTAINING scenario. Use the details creatively. Return ONLY the JSO
   }
 
   try {
-    // Parse the JSON response
-    const parsed = JSON.parse(content.trim());
+    // Parse the JSON response - handle markdown code blocks
+    let jsonContent = content.trim();
+    
+    // Remove markdown code blocks if present
+    if (jsonContent.startsWith("```json")) {
+      jsonContent = jsonContent.slice(7);
+    } else if (jsonContent.startsWith("```")) {
+      jsonContent = jsonContent.slice(3);
+    }
+    if (jsonContent.endsWith("```")) {
+      jsonContent = jsonContent.slice(0, -3);
+    }
+    jsonContent = jsonContent.trim();
+    
+    // Try to find JSON object in the content
+    const jsonMatch = jsonContent.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonContent = jsonMatch[0];
+    }
+    
+    const parsed = JSON.parse(jsonContent);
+    
+    if (!parsed.systemPrompt) {
+      throw new Error("Missing systemPrompt in response");
+    }
+    
+    console.log("[Groq] ✅ Successfully parsed JSON response");
     return {
-      systemPrompt: parsed.systemPrompt || content.trim(),
+      systemPrompt: parsed.systemPrompt,
       welcomeGreeting: parsed.welcomeGreeting || "Hello, is this the person I'm looking for?",
     };
-  } catch {
+  } catch (error) {
     // Fallback if JSON parsing fails - use the content as system prompt
-    console.warn("[Groq] Failed to parse JSON, using content as system prompt");
+    console.warn("[Groq] Failed to parse JSON:", error instanceof Error ? error.message : error);
+    console.warn("[Groq] Raw content:", content.substring(0, 200));
     return {
       systemPrompt: content.trim(),
       welcomeGreeting: "Hello, is this the person I'm looking for?",
