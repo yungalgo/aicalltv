@@ -32,7 +32,7 @@ async function getOpenAIChatClient() {
   if (!OpenAIChatClientClass) {
     const module = await import("./src/lib/conversation-relay/openai-chat");
     OpenAIChatClientClass = module.OpenAIChatClient;
-  }
+}
   return OpenAIChatClientClass;
 }
 

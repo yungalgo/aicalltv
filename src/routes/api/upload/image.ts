@@ -6,16 +6,15 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { uploadToS3 } from "~/lib/storage/s3";
 import { auth } from "~/lib/auth/auth";
-import { getRequest } from "@tanstack/react-start/server";
 
 export const Route = createFileRoute("/api/upload/image")({
   server: {
     handlers: {
       POST: async ({ request }: { request: Request }) => {
         try {
-          // Check authentication
+          // Check authentication - use request.headers directly in route handlers
           const session = await auth.api.getSession({
-            headers: getRequest().headers,
+            headers: request.headers,
           });
 
           if (!session?.user) {
