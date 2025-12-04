@@ -276,7 +276,7 @@ export async function setupVideoGeneratorWorker() {
         if (userRecord?.email) {
           try {
             const { sendVideoReadyEmail } = await import("~/lib/email/resend");
-            const dashboardUrl = `${env.VITE_BASE_URL}/dashboard`;
+            const dashboardUrl = `${env.VITE_BASE_URL}/your-calls`;
             await sendVideoReadyEmail(
               userRecord.email,
               userRecord.name || "User",
