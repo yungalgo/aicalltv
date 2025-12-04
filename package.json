@@ -21,6 +21,7 @@
     "db": "drizzle-kit",
     "db:push": "bunx drizzle-kit push",
     "db:reset": "bun run scripts/reset-db.ts",
+    "db:audit": "bun run scripts/audit-db.ts",
     "deps": "bunx taze@latest -Ilw",
     "deps:major": "bunx taze@latest major -Ilw",
     "ui": "bunx shadcn@latest",
