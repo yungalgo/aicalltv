@@ -97,6 +97,7 @@ export interface PaymentModalProps {
   callDetails: {
     recipientName: string;
     phoneNumber?: string;
+    callerId?: string;
     targetGender?: string;
     targetGenderCustom?: string;
     targetAgeRange?: string;
@@ -802,6 +803,7 @@ export function PaymentModal({
                             callData: {
                               recipientName: callDetails.recipientName,
                               phoneNumber: callDetails.phoneNumber,
+                              callerId: callDetails.callerId,
                               targetGender: callDetails.targetGender,
                               targetGenderCustom: callDetails.targetGenderCustom,
                               targetAgeRange: callDetails.targetAgeRange,
