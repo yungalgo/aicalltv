@@ -185,6 +185,10 @@ export function Navbar() {
         href: "/how-it-works",
         label: "How it Works",
       },
+      {
+        href: "/your-calls",
+        label: "Your Calls",
+      },
     ],
     []
   )
