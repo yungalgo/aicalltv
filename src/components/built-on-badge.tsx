@@ -87,21 +87,21 @@ export function BuiltOnBadge({ className, href, variant = "near", forceDark }: B
       src={badgeSrc}
       alt={altText}
       className={cn("transition-transform hover:scale-105", className)}
-      style={{ height: "44px", width: "auto", transform: "scale(1.2)", transformOrigin: "center" }}
+      style={{ height: "35px", width: "auto", transform: "scale(0.96)", transformOrigin: "center" }}
     />
   ) : needsSmaller ? (
     <img
       src={badgeSrc}
       alt={altText}
-      className={cn("h-6 w-auto transition-transform hover:scale-105 object-contain", className)}
-      style={{ maxHeight: "24px", minHeight: "18px" }}
+      className={cn("h-5 w-auto transition-transform hover:scale-105 object-contain", className)}
+      style={{ maxHeight: "19px", minHeight: "14px" }}
     />
   ) : (
     <img
       src={badgeSrc}
       alt={altText}
-      className={cn("h-8 w-auto transition-transform hover:scale-105 object-contain", className)}
-      style={{ maxHeight: "32px", minHeight: "24px" }}
+      className={cn("h-6 w-auto transition-transform hover:scale-105 object-contain", className)}
+      style={{ maxHeight: "26px", minHeight: "19px" }}
     />
   );
 
@@ -111,13 +111,18 @@ export function BuiltOnBadge({ className, href, variant = "near", forceDark }: B
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center"
+        className="flex items-center justify-center shrink-0"
+        style={{ padding: "0 4px", margin: 0 }}
       >
         {badgeContent}
       </a>
     );
   }
 
-  return <div className="inline-flex items-center">{badgeContent}</div>;
+  return (
+    <div className="flex items-center justify-center shrink-0" style={{ padding: "0 4px", margin: 0 }}>
+      {badgeContent}
+    </div>
+  );
 }
 

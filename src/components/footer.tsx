@@ -59,11 +59,11 @@ export function Footer() {
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-50 w-full border-t border-white/10 py-4" style={{ backgroundColor: '#1A1A1A' }}>
       <div className="container mx-auto px-4">
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           {/* Top row: Logo, badges, and social icons */}
-          <div className="flex flex-row flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-row flex-wrap items-center justify-between gap-2">
             <Logo variant="full" className="h-8" forceDark />
-            <div className="flex-1 flex justify-center items-center gap-6 flex-wrap">
+            <div className="flex-1 flex justify-center items-center flex-wrap" style={{ gap: "0" }}>
               <BuiltOnBadge href="https://near.ai" variant="near" forceDark />
               <BuiltOnBadge href="https://zcash.com" variant="zcash" forceDark />
               <BuiltOnBadge href="https://starknet.io" variant="starknet" forceDark />
