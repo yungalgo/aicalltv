@@ -252,10 +252,10 @@ export async function generateImage(
  */
 export function getDefaultCallImagePrompt(): string {
   return (
-    "Vertical split-screen shot (9:16 portrait) of two characters on a phone call. " +
-    "TOP half: a quirky AI caller character with exaggerated features, holding phone to ear, animated expression. " +
-    "BOTTOM half: the target person receiving the call, holding phone, surprised or engaged expression. " +
-    "Both characters actively talking on phones with animated, expressive faces."
+    "Vertical split-screen shot (9:16 portrait) of two characters actively on a phone call. " +
+    "TOP half: a quirky AI caller character with exaggerated features, phone pressed to ear, mouth open mid-sentence, animated talking expression. " +
+    "BOTTOM half: the target person on the phone call, phone held to ear, mouth open responding, engaged conversation expression. " +
+    "IMPORTANT: Both characters must be ACTIVELY SPEAKING into phones with mouths open, not just holding phones."
   );
 }
 
@@ -287,9 +287,9 @@ async function submitImageEditJob(
   // The uploaded image becomes the BOTTOM half (target person) rendered in the specified style
   // TOP half is the AI caller character in the same style
   const editPrompt = `Create a vertical split-screen phone call image (9:16 portrait). 
-TOP HALF: An AI caller character on the phone with animated expression, in this style: ${prompt}. 
-BOTTOM HALF: Transform the person in this photo into the same art style (${prompt}), holding a phone to their ear with an engaged/surprised expression. Preserve their likeness and features but render in the specified style.
-Both characters should be actively on a phone call with expressive, animated faces.`;
+TOP HALF: An AI caller character ACTIVELY TALKING on the phone, mouth open mid-sentence, phone pressed to ear, in this style: ${prompt}. 
+BOTTOM HALF: Transform the person in this photo into the same art style (${prompt}), phone held to ear, mouth open responding, engaged in conversation. Preserve their likeness and features but render in the specified style.
+CRITICAL: Both characters must be ACTIVELY SPEAKING into phones with mouths open, not just holding phones passively.`;
 
   const payload = {
     prompt: editPrompt,
