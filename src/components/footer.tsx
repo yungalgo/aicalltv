@@ -95,10 +95,10 @@ export function Footer() {
                   className="h-8 w-8"
                 >
                   <a
-                    href={social.url}
+                  href={social.url}
                     aria-label={social.name}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   >
                     <IconComponent className="h-4 w-4" />
                   </a>
