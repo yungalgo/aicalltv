@@ -100,9 +100,8 @@ async function wipeAllData() {
     await driver.unsafe(`TRUNCATE TABLE "user" CASCADE;`);
     console.log("   ✅ user");
     
-    // Note: callers table might have seed data, but user wants everything wiped
-    await driver.unsafe(`TRUNCATE TABLE callers CASCADE;`);
-    console.log("   ✅ callers");
+    // Note: callers table is preserved - it contains seed data that should persist
+    console.log("   ⏭️  callers (preserved - seed data)");
     
     // Clear pg-boss tables if they exist
     if (pgbossTableNames.length > 0) {
@@ -142,11 +141,18 @@ async function wipeAllData() {
       }
     }
 
-    // Verify deletion
+    // Verify deletion (excluding callers table)
     console.log("");
     console.log("✅ Verification - counting records after deletion...");
     let totalRecords = 0;
     for (const tableName of tableNames) {
+      // Skip callers table in verification
+      if (tableName === "callers") {
+        const count = await driver.unsafe(`SELECT COUNT(*) as count FROM "${tableName}"`);
+        const recordCount = Number((count[0] as unknown as { count: string | number }).count);
+        console.log(`   ℹ️  ${tableName}: ${recordCount} records (preserved)`);
+        continue;
+      }
       try {
         const count = await driver.unsafe(`SELECT COUNT(*) as count FROM "${tableName}"`);
         const recordCount = Number((count[0] as unknown as { count: string | number }).count);
@@ -175,8 +181,9 @@ async function wipeAllData() {
     console.log("   - Calls");
     console.log("   - Credits");
     console.log("   - Call analytics");
-    console.log("   - Callers (seed data)");
     console.log("   - pg-boss queue jobs");
+    console.log("");
+    console.log("   ⚠️  Callers table was PRESERVED (contains seed data)");
     console.log("");
     console.log("💡 You can now start fresh with new data!");
 
