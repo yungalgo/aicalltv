@@ -1,138 +1,82 @@
-import { Link } from "@tanstack/react-router"
+import { Instagram, Twitter } from "lucide-react"
 import { Logo } from "~/components/logo"
+import { Button } from "~/components/ui/button"
+
+// TikTok icon SVG (lucide-react doesn't have TikTok)
+const TikTokIcon = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+  </svg>
+)
+
+// Twitch icon SVG (lucide-react doesn't have Twitch)
+const TwitchIcon = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={className}
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z" />
+  </svg>
+)
 
 const socialLinks = [
   {
     name: "TikTok",
     url: "https://www.tiktok.com/@aicall.tv",
-    icon: "🎵",
+    icon: TikTokIcon,
   },
   {
     name: "Twitch",
     url: "http://twitch.tv/aicalltv",
-    icon: "🎮",
+    icon: TwitchIcon,
   },
   {
     name: "Twitter",
     url: "https://x.com/aicalltv",
-    icon: "🐦",
+    icon: Twitter,
   },
   {
     name: "Instagram",
     url: "https://www.instagram.com/aicall.tv/",
-    icon: "📷",
+    icon: Instagram,
   },
 ]
 
-const productLinks = [
-  { text: "Features", url: "/" },
-  { text: "Pricing", url: "/" },
-  { text: "How it Works", url: "/how-it-works" },
-]
-
-const legalLinks = [
-  { text: "Privacy Policy", url: "/privacy" },
-  { text: "Terms of Service", url: "/terms" },
-  { text: "Contact", url: "/contact" },
-]
-
-const companyLinks = [
-  { text: "About", url: "/about" },
-  { text: "Blog", url: "/blog" },
-]
-
 export function Footer() {
-  const currentYear = new Date().getFullYear()
-
   return (
-    <footer className="flex flex-col gap-y-5 border-t bg-muted/50 px-7 py-5 md:px-10 mt-auto">
-      <div className="container mx-auto">
-        <div className="flex flex-col md:flex-row items-start justify-between gap-8 mb-8">
-          {/* Brand Section */}
-          <div className="flex flex-col gap-4">
-            <Logo variant="text" className="h-6" />
-            <p className="text-sm text-muted-foreground max-w-xs">
-              Personalized AI video calls with generated video content.
-            </p>
-            {/* Social Links */}
-            <div className="flex items-center gap-4 pt-2">
-              {socialLinks.map((social) => (
-                <a
+    <footer className="w-full border-t bg-muted/50 py-4 mt-auto">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-row flex-wrap items-center justify-center gap-x-10 gap-y-2 md:justify-between">
+          <Logo variant="full" className="h-8" />
+          <div className="flex gap-2">
+            {socialLinks.map((social) => {
+              const IconComponent = social.icon
+              return (
+                <Button
                   key={social.name}
-                  href={social.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground transition-colors text-xl"
-                  aria-label={social.name}
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
                 >
-                  {social.icon}
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Links Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
-            {/* Product Links */}
-            <div className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold">Product</h3>
-              <ul className="flex flex-col gap-2">
-                {productLinks.map((link) => (
-                  <li key={link.text}>
-                    <Link
-                      to={link.url}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.text}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Legal Links */}
-            <div className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold">Legal</h3>
-              <ul className="flex flex-col gap-2">
-                {legalLinks.map((link) => (
-                  <li key={link.text}>
-                    <Link
-                      to={link.url}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.text}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Company Links */}
-            <div className="flex flex-col gap-3">
-              <h3 className="text-sm font-semibold">Company</h3>
-              <ul className="flex flex-col gap-2">
-                {companyLinks.map((link) => (
-                  <li key={link.text}>
-                    <Link
-                      to={link.url}
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.text}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Section */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 pt-8 border-t">
-          <p className="text-sm text-muted-foreground">
-            © {currentYear} AI Call TV. All rights reserved.
-          </p>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>Made with ❤️ for creators</span>
+                  <a
+                    href={social.url}
+                    aria-label={social.name}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <IconComponent className="h-4 w-4" />
+                  </a>
+                </Button>
+              )
+            })}
           </div>
         </div>
       </div>
