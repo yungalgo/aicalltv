@@ -18,7 +18,9 @@ import type {
   ConversationSession,
 } from "./src/lib/conversation-relay/types";
 
-const PORT = process.env.WS_PORT ? parseInt(process.env.WS_PORT) : 3001;
+// Railway sets PORT automatically, fall back to WS_PORT or 3001
+const PORT = process.env.PORT ? parseInt(process.env.PORT) : 
+             process.env.WS_PORT ? parseInt(process.env.WS_PORT) : 3001;
 
 // Session storage
 const sessions = new Map<string, ConversationSession>();
