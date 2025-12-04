@@ -166,7 +166,7 @@ export function CallRequestForm() {
     }
     
     // Only clear sessionStorage after we've stored the ID in ref
-    sessionStorage.removeItem("selectedCallerSlug");
+          sessionStorage.removeItem("selectedCallerSlug");
     sessionStorage.removeItem("quickPrankForm");
   }, [callers, formData.callerId, callerSlugFromUrl]);
   

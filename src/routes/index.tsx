@@ -16,6 +16,7 @@ import { AuthModal } from "~/components/auth-modal";
 import { LogoSpinner } from "~/components/logo";
 import { IPhoneFrame } from "~/components/ui/iphone-frame";
 import { ShimmeringText } from "~/components/ui/shimmering-text";
+import { Status, StatusIndicator, StatusLabel } from "~/components/ui/status";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -175,6 +176,22 @@ function HeroSection() {
   const [friendNumber, setFriendNumber] = useState("");
   const [videoStyle, setVideoStyle] = useState("");
   const [selectedCaller, setSelectedCaller] = useState("");
+  
+  // Active prankers count (random between 2-12, fluctuates slightly)
+  const [activePrankers, setActivePrankers] = useState(() => Math.floor(Math.random() * 11) + 2);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActivePrankers((prev) => {
+        // Randomly change by -1, 0, or +1
+        const change = Math.floor(Math.random() * 3) - 1;
+        const newValue = prev + change;
+        // Keep within 2-12 range
+        return Math.max(2, Math.min(12, newValue));
+      });
+    }, 3000 + Math.random() * 2000); // Change every 3-5 seconds
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = () => {
     const formData = {
@@ -281,6 +298,16 @@ function HeroSection() {
               >
                 Prank your Friend →
               </Button>
+              </div>
+              
+              {/* Active prankers status */}
+              <div className="flex justify-end mt-4">
+                <Status status="online" variant="outline" size="sm" className="border-0 gap-1.5">
+                  <StatusIndicator ping />
+                  <StatusLabel className="text-xs" style={{ color: '#1A1A1A', opacity: 0.6 }}>
+                    {activePrankers} pranking right now
+                  </StatusLabel>
+                </Status>
               </div>
             </div>
           </div>
