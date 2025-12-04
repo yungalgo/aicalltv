@@ -13,7 +13,6 @@ import {
   PAYMENT_CONFIG,
   isEvmConfigured,
   isSolanaConfigured,
-  isPaymentTestMode,
   base,
 } from "~/lib/web3/config";
 import {
@@ -344,7 +343,14 @@ export function PaymentModal({
     }
   }, [isConfirmed, txHash, onPaymentComplete]);
 
-  const isTestMode = isPaymentTestMode();
+  // Fetch test mode from server (controlled by TESTING_MODE env var)
+  const [isTestMode, setIsTestMode] = useState(false);
+  useEffect(() => {
+    fetch("/api/config")
+      .then((res) => res.json())
+      .then((data) => setIsTestMode(data.testingMode))
+      .catch(() => setIsTestMode(false));
+  }, []);
 
   // Reset state when modal closes
   const handleOpenChange = (isOpen: boolean) => {

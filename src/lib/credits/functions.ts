@@ -124,8 +124,6 @@ export const getCreditBalance = createServerFn({ method: "GET" }).handler(
 /**
  * Consume a credit for a call (internal use - called by createCall)
  * Returns credit info if successful, throws if no credit available
- * 
- * In TESTING_MODE, bypasses credit requirement for easy testing
  */
 export async function consumeCredit(
   db: ReturnType<typeof drizzle>,
@@ -136,16 +134,6 @@ export async function consumeCredit(
   paymentMethod: string;
   isFree: boolean;
 }> {
-  // TESTING_MODE: Bypass credit requirement for testing in production
-  if (process.env.TESTING_MODE === "true") {
-    console.log(`[Credit] 🧪 TESTING_MODE: Bypassing credit requirement for call ${callId}`);
-    return {
-      creditId: "test-credit",
-      paymentMethod: "free",
-      isFree: true,
-    };
-  }
-
   // Find an unused credit for this user (oldest first)
   const [credit] = await db
     .select()

@@ -53,10 +53,6 @@ export const PAYMENT_CONFIG = {
   starknetVerifier: "0x02048def58e122c910f80619ebab076b0ef5513550d38afdfdf2d8a1710fa7c6" as const,
 };
 
-// Test mode - bypasses real payment for development
-export const isPaymentTestMode = () =>
-  import.meta.env.VITE_PAYMENT_TEST_MODE === "true";
-
 // Always enable payment options - will show error if env vars not configured
 export const isEvmConfigured = () => true;
 export const isSolanaConfigured = () => true;

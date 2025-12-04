@@ -14,6 +14,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as authenticatedRouteRouteImport } from './routes/(authenticated)/route'
 import { Route as authPagesRouteRouteImport } from './routes/(auth-pages)/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiConfigRouteImport } from './routes/api/config'
 import { Route as authPagesSignupRouteImport } from './routes/(auth-pages)/signup'
 import { Route as authPagesLoginRouteImport } from './routes/(auth-pages)/login'
 import { Route as ApiZcashPaymentRouteImport } from './routes/api/zcash/payment'
@@ -51,6 +52,11 @@ const authPagesRouteRoute = authPagesRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiConfigRoute = ApiConfigRouteImport.update({
+  id: '/api/config',
+  path: '/api/config',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authPagesSignupRoute = authPagesSignupRouteImport.update({
@@ -138,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/terms': typeof TermsRoute
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
+  '/api/config': typeof ApiConfigRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/near-ai/chat': typeof ApiNearAiChatRoute
   '/api/starknet/payment': typeof ApiStarknetPaymentRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/terms': typeof TermsRoute
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
+  '/api/config': typeof ApiConfigRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/near-ai/chat': typeof ApiNearAiChatRoute
   '/api/starknet/payment': typeof ApiStarknetPaymentRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/terms': typeof TermsRoute
   '/(auth-pages)/login': typeof authPagesLoginRoute
   '/(auth-pages)/signup': typeof authPagesSignupRoute
+  '/api/config': typeof ApiConfigRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/near-ai/chat': typeof ApiNearAiChatRoute
   '/api/starknet/payment': typeof ApiStarknetPaymentRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/login'
     | '/signup'
+    | '/api/config'
     | '/api/auth/$'
     | '/api/near-ai/chat'
     | '/api/starknet/payment'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/login'
     | '/signup'
+    | '/api/config'
     | '/api/auth/$'
     | '/api/near-ai/chat'
     | '/api/starknet/payment'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/terms'
     | '/(auth-pages)/login'
     | '/(auth-pages)/signup'
+    | '/api/config'
     | '/api/auth/$'
     | '/api/near-ai/chat'
     | '/api/starknet/payment'
@@ -266,6 +278,7 @@ export interface RootRouteChildren {
   authenticatedRouteRoute: typeof authenticatedRouteRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
+  ApiConfigRoute: typeof ApiConfigRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiNearAiChatRoute: typeof ApiNearAiChatRoute
   ApiStarknetPaymentRoute: typeof ApiStarknetPaymentRoute
@@ -316,6 +329,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/config': {
+      id: '/api/config'
+      path: '/api/config'
+      fullPath: '/api/config'
+      preLoaderRoute: typeof ApiConfigRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth-pages)/signup': {
@@ -446,6 +466,7 @@ const rootRouteChildren: RootRouteChildren = {
   authenticatedRouteRoute: authenticatedRouteRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
+  ApiConfigRoute: ApiConfigRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiNearAiChatRoute: ApiNearAiChatRoute,
   ApiStarknetPaymentRoute: ApiStarknetPaymentRoute,
