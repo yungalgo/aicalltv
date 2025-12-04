@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as YourCallsRouteImport } from './routes/your-calls'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
@@ -36,6 +37,11 @@ import { Route as ApiWebhooksTwilioRecordingStatusRouteImport } from './routes/a
 import { Route as ApiWebhooksTwilioConversationRelayCompleteRouteImport } from './routes/api/webhooks/twilio/conversation-relay-complete'
 import { Route as ApiWebhooksTwilioCallStatusRouteImport } from './routes/api/webhooks/twilio/call-status'
 
+const YourCallsRoute = YourCallsRouteImport.update({
+  id: '/your-calls',
+  path: '/your-calls',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
@@ -175,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/how-it-works': typeof HowItWorksRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/your-calls': typeof YourCallsRoute
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
   '/api/callers': typeof ApiCallersRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByTo {
   '/how-it-works': typeof HowItWorksRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/your-calls': typeof YourCallsRoute
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
   '/api/callers': typeof ApiCallersRoute
@@ -230,6 +238,7 @@ export interface FileRoutesById {
   '/how-it-works': typeof HowItWorksRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
+  '/your-calls': typeof YourCallsRoute
   '/(auth-pages)/login': typeof authPagesLoginRoute
   '/(auth-pages)/signup': typeof authPagesSignupRoute
   '/api/callers': typeof ApiCallersRoute
@@ -258,6 +267,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/privacy'
     | '/terms'
+    | '/your-calls'
     | '/login'
     | '/signup'
     | '/api/callers'
@@ -284,6 +294,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/privacy'
     | '/terms'
+    | '/your-calls'
     | '/login'
     | '/signup'
     | '/api/callers'
@@ -312,6 +323,7 @@ export interface FileRouteTypes {
     | '/how-it-works'
     | '/privacy'
     | '/terms'
+    | '/your-calls'
     | '/(auth-pages)/login'
     | '/(auth-pages)/signup'
     | '/api/callers'
@@ -341,6 +353,7 @@ export interface RootRouteChildren {
   HowItWorksRoute: typeof HowItWorksRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
+  YourCallsRoute: typeof YourCallsRoute
   ApiCallersRoute: typeof ApiCallersRoute
   ApiConfigRoute: typeof ApiConfigRoute
   CallersSlugRoute: typeof CallersSlugRoute
@@ -361,6 +374,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/your-calls': {
+      id: '/your-calls'
+      path: '/your-calls'
+      fullPath: '/your-calls'
+      preLoaderRoute: typeof YourCallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
@@ -569,6 +589,7 @@ const rootRouteChildren: RootRouteChildren = {
   HowItWorksRoute: HowItWorksRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
+  YourCallsRoute: YourCallsRoute,
   ApiCallersRoute: ApiCallersRoute,
   ApiConfigRoute: ApiConfigRoute,
   CallersSlugRoute: CallersSlugRoute,
