@@ -4,6 +4,7 @@ import { Footer } from "~/components/footer";
 import { CallRequestForm } from "~/components/call-request-form";
 import { authQueryOptions } from "~/lib/auth/queries";
 import { Suspense } from "react";
+import { Card } from "~/components/ui/card";
 
 export const Route = createFileRoute("/create")({
   component: CreateCallPage,
@@ -23,21 +24,28 @@ function CreateCallPage() {
     <div className="flex min-h-svh flex-col">
       <Navbar />
       <main className="flex-1">
-        <div className="container mx-auto max-w-4xl p-6">
-          <h1 className="text-3xl font-bold mb-6">Create a Prank Call</h1>
-          
-          {callerSlug && (
-            <div className="mb-6 p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground">
-                Selected caller: <span className="font-semibold">{callerSlug}</span>
+        <section className="container mx-auto py-16 max-w-4xl">
+          <Card className="w-full p-6 lg:p-8">
+            <div className="mb-6">
+              <h3 className="text-2xl font-semibold">Create AI Call</h3>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Fill in the details for your AI-powered prank call
               </p>
             </div>
-          )}
+            
+            {callerSlug && (
+              <div className="mb-6 p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  Selected caller: <span className="font-semibold">{callerSlug}</span>
+                </p>
+              </div>
+            )}
 
-          <Suspense fallback={<div className="py-6">Loading form...</div>}>
-            <CallRequestForm />
-          </Suspense>
-        </div>
+            <Suspense fallback={<div className="py-6">Loading form...</div>}>
+              <CallRequestForm />
+            </Suspense>
+          </Card>
+        </section>
       </main>
       <Footer />
     </div>
