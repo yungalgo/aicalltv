@@ -11,10 +11,15 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
+import { Route as CreateRouteImport } from './routes/create'
+import { Route as CallsRouteImport } from './routes/calls'
 import { Route as authenticatedRouteRouteImport } from './routes/(authenticated)/route'
 import { Route as authPagesRouteRouteImport } from './routes/(auth-pages)/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CallersSlugRouteImport } from './routes/callers.$slug'
 import { Route as ApiConfigRouteImport } from './routes/api/config'
+import { Route as ApiCallersRouteImport } from './routes/api/callers'
 import { Route as authPagesSignupRouteImport } from './routes/(auth-pages)/signup'
 import { Route as authPagesLoginRouteImport } from './routes/(auth-pages)/login'
 import { Route as ApiZcashPaymentRouteImport } from './routes/api/zcash/payment'
@@ -41,6 +46,21 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreateRoute = CreateRouteImport.update({
+  id: '/create',
+  path: '/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CallsRoute = CallsRouteImport.update({
+  id: '/calls',
+  path: '/calls',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const authenticatedRouteRoute = authenticatedRouteRouteImport.update({
   id: '/(authenticated)',
   getParentRoute: () => rootRouteImport,
@@ -54,9 +74,19 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CallersSlugRoute = CallersSlugRouteImport.update({
+  id: '/callers/$slug',
+  path: '/callers/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiConfigRoute = ApiConfigRouteImport.update({
   id: '/api/config',
   path: '/api/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCallersRoute = ApiCallersRouteImport.update({
+  id: '/api/callers',
+  path: '/api/callers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const authPagesSignupRoute = authPagesSignupRouteImport.update({
@@ -140,11 +170,16 @@ const ApiWebhooksTwilioCallStatusRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/calls': typeof CallsRoute
+  '/create': typeof CreateRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
+  '/api/callers': typeof ApiCallersRoute
   '/api/config': typeof ApiConfigRoute
+  '/callers/$slug': typeof CallersSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/near-ai/chat': typeof ApiNearAiChatRoute
   '/api/starknet/payment': typeof ApiStarknetPaymentRoute
@@ -161,11 +196,16 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/calls': typeof CallsRoute
+  '/create': typeof CreateRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/login': typeof authPagesLoginRoute
   '/signup': typeof authPagesSignupRoute
+  '/api/callers': typeof ApiCallersRoute
   '/api/config': typeof ApiConfigRoute
+  '/callers/$slug': typeof CallersSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/near-ai/chat': typeof ApiNearAiChatRoute
   '/api/starknet/payment': typeof ApiStarknetPaymentRoute
@@ -185,11 +225,16 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/(auth-pages)': typeof authPagesRouteRouteWithChildren
   '/(authenticated)': typeof authenticatedRouteRoute
+  '/calls': typeof CallsRoute
+  '/create': typeof CreateRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/(auth-pages)/login': typeof authPagesLoginRoute
   '/(auth-pages)/signup': typeof authPagesSignupRoute
+  '/api/callers': typeof ApiCallersRoute
   '/api/config': typeof ApiConfigRoute
+  '/callers/$slug': typeof CallersSlugRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/near-ai/chat': typeof ApiNearAiChatRoute
   '/api/starknet/payment': typeof ApiStarknetPaymentRoute
@@ -208,11 +253,16 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/calls'
+    | '/create'
+    | '/how-it-works'
     | '/privacy'
     | '/terms'
     | '/login'
     | '/signup'
+    | '/api/callers'
     | '/api/config'
+    | '/callers/$slug'
     | '/api/auth/$'
     | '/api/near-ai/chat'
     | '/api/starknet/payment'
@@ -229,11 +279,16 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/calls'
+    | '/create'
+    | '/how-it-works'
     | '/privacy'
     | '/terms'
     | '/login'
     | '/signup'
+    | '/api/callers'
     | '/api/config'
+    | '/callers/$slug'
     | '/api/auth/$'
     | '/api/near-ai/chat'
     | '/api/starknet/payment'
@@ -252,11 +307,16 @@ export interface FileRouteTypes {
     | '/'
     | '/(auth-pages)'
     | '/(authenticated)'
+    | '/calls'
+    | '/create'
+    | '/how-it-works'
     | '/privacy'
     | '/terms'
     | '/(auth-pages)/login'
     | '/(auth-pages)/signup'
+    | '/api/callers'
     | '/api/config'
+    | '/callers/$slug'
     | '/api/auth/$'
     | '/api/near-ai/chat'
     | '/api/starknet/payment'
@@ -276,9 +336,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   authPagesRouteRoute: typeof authPagesRouteRouteWithChildren
   authenticatedRouteRoute: typeof authenticatedRouteRoute
+  CallsRoute: typeof CallsRoute
+  CreateRoute: typeof CreateRoute
+  HowItWorksRoute: typeof HowItWorksRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
+  ApiCallersRoute: typeof ApiCallersRoute
   ApiConfigRoute: typeof ApiConfigRoute
+  CallersSlugRoute: typeof CallersSlugRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiNearAiChatRoute: typeof ApiNearAiChatRoute
   ApiStarknetPaymentRoute: typeof ApiStarknetPaymentRoute
@@ -310,6 +375,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create': {
+      id: '/create'
+      path: '/create'
+      fullPath: '/create'
+      preLoaderRoute: typeof CreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calls': {
+      id: '/calls'
+      path: '/calls'
+      fullPath: '/calls'
+      preLoaderRoute: typeof CallsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/(authenticated)': {
       id: '/(authenticated)'
       path: ''
@@ -331,11 +417,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/callers/$slug': {
+      id: '/callers/$slug'
+      path: '/callers/$slug'
+      fullPath: '/callers/$slug'
+      preLoaderRoute: typeof CallersSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/config': {
       id: '/api/config'
       path: '/api/config'
       fullPath: '/api/config'
       preLoaderRoute: typeof ApiConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/callers': {
+      id: '/api/callers'
+      path: '/api/callers'
+      fullPath: '/api/callers'
+      preLoaderRoute: typeof ApiCallersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/(auth-pages)/signup': {
@@ -464,9 +564,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   authPagesRouteRoute: authPagesRouteRouteWithChildren,
   authenticatedRouteRoute: authenticatedRouteRoute,
+  CallsRoute: CallsRoute,
+  CreateRoute: CreateRoute,
+  HowItWorksRoute: HowItWorksRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
+  ApiCallersRoute: ApiCallersRoute,
   ApiConfigRoute: ApiConfigRoute,
+  CallersSlugRoute: CallersSlugRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiNearAiChatRoute: ApiNearAiChatRoute,
   ApiStarknetPaymentRoute: ApiStarknetPaymentRoute,
