@@ -36,7 +36,7 @@ export default function FooterSimple01() {
           <div className="flex flex-col items-center md:items-start gap-2">
             <Logo variant="text" className="h-6" />
             <p className="text-foreground text-center md:text-left text-sm font-medium">
-              © {YEAR} AI Call TV. All rights reserved.
+              © {YEAR} aicall.tv. All rights reserved.
             </p>
           </div>
           <div className="flex gap-2">

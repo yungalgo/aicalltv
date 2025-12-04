@@ -5,10 +5,8 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
 } from "~/components/ui/dialog";
+import logoWithTextUrl from "~/assets/logos/logo-with-text.svg";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -37,43 +35,48 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "lo
   }
 
   const { mutate: emailLoginMutate, isPending: isLoginPending } = useMutation({
-    mutationFn: async (data: { email: string; password: string }) =>
-      await authClient.signIn.email(
-        {
+    mutationFn: async (data: { email: string; password: string }) => {
+      const result = await authClient.signIn.email({
           ...data,
           callbackURL: "/create",
+      });
+      if (result.error) {
+        throw new Error(result.error.message || "An error occurred while signing in.");
+      }
+      return result;
         },
-        {
-          onError: ({ error }) => {
+    onError: (error) => {
             toast.error(error.message || "An error occurred while signing in.");
           },
-          onSuccess: () => {
-            queryClient.removeQueries({ queryKey: authQueryOptions().queryKey });
+    onSuccess: async () => {
+      // Invalidate and refetch user data to ensure session is established
+      await queryClient.invalidateQueries({ queryKey: authQueryOptions().queryKey });
+      await queryClient.refetchQueries({ queryKey: authQueryOptions().queryKey });
             onOpenChange(false);
             onAuthSuccess?.();
           },
-        },
-      ),
   });
 
   const { mutate: signupMutate, isPending: isSignupPending } = useMutation({
     mutationFn: async (data: { name: string; email: string; password: string }) => {
-      await authClient.signUp.email(
-        {
+      const result = await authClient.signUp.email({
           ...data,
           callbackURL: "/create",
+      });
+      if (result.error) {
+        throw new Error(result.error.message || "An error occurred while signing up.");
+      }
+      return result;
         },
-        {
-          onError: ({ error }) => {
+    onError: (error) => {
             toast.error(error.message || "An error occurred while signing up.");
           },
-          onSuccess: () => {
-            queryClient.removeQueries({ queryKey: authQueryOptions().queryKey });
+    onSuccess: async () => {
+      // Invalidate and refetch user data to ensure session is established
+      await queryClient.invalidateQueries({ queryKey: authQueryOptions().queryKey });
+      await queryClient.refetchQueries({ queryKey: authQueryOptions().queryKey });
             onOpenChange(false);
             onAuthSuccess?.();
-          },
-        },
-      );
     },
   });
 
@@ -114,24 +117,17 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "lo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>
-            {isLogin ? "Welcome back" : "Create an account"}
-          </DialogTitle>
-          <DialogDescription>
-            {isLogin
-              ? "Sign in to complete your purchase"
-              : "Sign up to get started"}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[425px] border-2 rounded-2xl" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
+        <div className="flex justify-center mb-6">
+          <img src={logoWithTextUrl} alt="aicall.tv" className="h-10" />
+        </div>
 
         {isLogin ? (
           <div className="flex flex-col gap-6">
             <form onSubmit={handleLoginSubmit}>
               <div className="flex flex-col gap-5">
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email" style={{ color: '#1A1A1A' }}>Email</Label>
                   <Input
                     id="email"
                     name="email"
@@ -139,10 +135,12 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "lo
                     placeholder="hello@example.com"
                     readOnly={isPending}
                     required
+                    className="border-2"
+                    style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A', color: '#1A1A1A' }}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" style={{ color: '#1A1A1A' }}>Password</Label>
                   <Input
                     id="password"
                     name="password"
@@ -150,20 +148,23 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "lo
                     placeholder="Enter password here"
                     readOnly={isPending}
                     required
+                    className="border-2"
+                    style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A', color: '#1A1A1A' }}
                   />
                 </div>
-                <Button type="submit" className="mt-2 w-full" size="lg" disabled={isPending}>
+                <Button type="submit" className="mt-2 w-full font-medium hover:opacity-80" size="lg" disabled={isPending} style={{ backgroundColor: '#1A1A1A', color: 'white' }}>
                   {isPending && <LoaderCircle className="animate-spin" />}
                   {isPending ? "Logging in..." : "Login"}
                 </Button>
               </div>
             </form>
-            <div className="text-center text-sm">
+            <div className="text-center text-sm" style={{ color: '#1A1A1A' }}>
               Don&apos;t have an account?{" "}
               <button
                 type="button"
                 onClick={() => setIsLogin(false)}
-                className="underline underline-offset-4"
+                className="underline underline-offset-4 font-medium"
+                style={{ color: '#1A1A1A' }}
               >
                 Sign up
               </button>
@@ -174,7 +175,7 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "lo
             <form onSubmit={handleSignupSubmit}>
               <div className="flex flex-col gap-5">
                 <div className="grid gap-2">
-                  <Label htmlFor="signup-name">Name</Label>
+                  <Label htmlFor="signup-name" style={{ color: '#1A1A1A' }}>Name</Label>
                   <Input
                     id="signup-name"
                     name="name"
@@ -182,10 +183,12 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "lo
                     placeholder="John Doe"
                     readOnly={isPending}
                     required
+                    className="border-2"
+                    style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A', color: '#1A1A1A' }}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="signup-email">Email</Label>
+                  <Label htmlFor="signup-email" style={{ color: '#1A1A1A' }}>Email</Label>
                   <Input
                     id="signup-email"
                     name="email"
@@ -193,10 +196,12 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "lo
                     placeholder="hello@example.com"
                     readOnly={isPending}
                     required
+                    className="border-2"
+                    style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A', color: '#1A1A1A' }}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="signup-password">Password</Label>
+                  <Label htmlFor="signup-password" style={{ color: '#1A1A1A' }}>Password</Label>
                   <Input
                     id="signup-password"
                     name="password"
@@ -204,10 +209,12 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "lo
                     placeholder="Password"
                     readOnly={isPending}
                     required
+                    className="border-2"
+                    style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A', color: '#1A1A1A' }}
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="signup-confirm-password">Confirm Password</Label>
+                  <Label htmlFor="signup-confirm-password" style={{ color: '#1A1A1A' }}>Confirm Password</Label>
                   <Input
                     id="signup-confirm-password"
                     name="confirm_password"
@@ -215,20 +222,23 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "lo
                     placeholder="Confirm Password"
                     readOnly={isPending}
                     required
+                    className="border-2"
+                    style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A', color: '#1A1A1A' }}
                   />
                 </div>
-                <Button type="submit" className="mt-2 w-full" size="lg" disabled={isPending}>
+                <Button type="submit" className="mt-2 w-full font-medium hover:opacity-80" size="lg" disabled={isPending} style={{ backgroundColor: '#1A1A1A', color: 'white' }}>
                   {isPending && <LoaderCircle className="animate-spin" />}
                   {isPending ? "Signing up..." : "Sign up"}
                 </Button>
               </div>
             </form>
-            <div className="text-center text-sm">
+            <div className="text-center text-sm" style={{ color: '#1A1A1A' }}>
               Already have an account?{" "}
               <button
                 type="button"
                 onClick={() => setIsLogin(true)}
-                className="underline underline-offset-4"
+                className="underline underline-offset-4 font-medium"
+                style={{ color: '#1A1A1A' }}
               >
                 Login
               </button>

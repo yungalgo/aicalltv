@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { GalleryVerticalEnd, LoaderCircle } from "lucide-react";
 import { toast } from "sonner";
 import { SignInSocialButton } from "~/components/sign-in-social-button";
@@ -20,25 +20,26 @@ function SignupForm() {
   const { redirectUrl } = Route.useSearch();
   const finalRedirectUrl = redirectUrl || "/";
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
 
   const { mutate: signupMutate, isPending } = useMutation({
     mutationFn: async (data: { name: string; email: string; password: string }) => {
-      await authClient.signUp.email(
-        {
+      const result = await authClient.signUp.email({
           ...data,
           callbackURL: finalRedirectUrl,
+      });
+      if (result.error) {
+        throw new Error(result.error.message || "An error occurred while signing up.");
+      }
+      return result;
         },
-        {
-          onError: ({ error }) => {
+    onError: (error) => {
             toast.error(error.message || "An error occurred while signing up.");
           },
-          onSuccess: () => {
-            queryClient.removeQueries({ queryKey: authQueryOptions().queryKey });
-            navigate({ to: finalRedirectUrl });
-          },
-        },
-      );
+    onSuccess: async () => {
+      // Invalidate and refetch user data to ensure session is established
+      await queryClient.invalidateQueries({ queryKey: authQueryOptions().queryKey });
+      await queryClient.refetchQueries({ queryKey: authQueryOptions().queryKey });
+      window.location.href = finalRedirectUrl;
     },
   });
 

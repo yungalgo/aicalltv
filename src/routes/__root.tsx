@@ -17,6 +17,8 @@ import appCss from "~/styles.css?url";
 
 import { ThemeProvider } from "~/components/theme-provider";
 import { Toaster } from "~/components/ui/sonner";
+import { WarpedNoiseShaders } from "~/components/ui/warped-noise-shaders";
+import { LogoSpinner } from "~/components/logo";
 
 // Lazy load Web3Provider to avoid SSR bundling issues
 const Web3Provider = lazy(() =>
@@ -65,14 +67,19 @@ export const Route = createRootRouteWithContext<{
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "React TanStarter",
+        title: "aicall.tv | prank call your friends with ai and get a video instantly",
       },
       {
         name: "description",
-        content: "A minimal starter template for 🏝️ TanStack Start.",
+        content: "prank call your friends with ai and get a video instantly. choose from unique ai caller personalities, pay per call, share the laughs!",
       },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" },
+      { rel: "stylesheet", href: appCss },
+    ],
   }),
   component: RootComponent,
 });
@@ -85,6 +92,11 @@ function RootComponent() {
   );
 }
 
+// Loading spinner component shown over shader
+function LoadingSpinner() {
+  return <LogoSpinner fixed size="lg" />;
+}
+
 function RootDocument({ children }: { readonly children: React.ReactNode }) {
   return (
     // suppress since we're updating the "dark" class in ThemeProvider
@@ -92,13 +104,28 @@ function RootDocument({ children }: { readonly children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
-        <Suspense fallback={null}>
+      <body className="relative">
+        {/* Warped noise shader background - always visible, outside Suspense */}
+        <div className="fixed inset-0 z-0" style={{ willChange: 'transform', transform: 'translateZ(0)', isolation: 'isolate' }}>
+          <WarpedNoiseShaders
+            speed={0.4}
+            scale={1.0}
+            warpStrength={1.2}
+            colorIntensity={0.8}
+            noiseDetail={1.5}
+            className="h-full w-full"
+          />
+        </div>
+
+        <Suspense fallback={<LoadingSpinner />}>
           <Web3Provider>
             <SolanaProvider>
               <StarknetProvider>
               <ThemeProvider>
-                {children}
+                {/* Main content - positioned above background */}
+                <div className="relative z-10">
+                  {children}
+                </div>
                 <Toaster richColors />
               </ThemeProvider>
               </StarknetProvider>

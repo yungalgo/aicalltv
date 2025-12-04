@@ -17,8 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { Switch } from "~/components/ui/switch";
-import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import { toast } from "sonner";
 import { authQueryOptions } from "~/lib/auth/queries";
 import { createCall } from "~/lib/calls/functions";
@@ -45,9 +43,7 @@ export function CallRequestForm() {
     queryFn: async () => {
       const res = await fetch("/api/callers");
       if (!res.ok) throw new Error("Failed to fetch callers");
-      const data = await res.json();
-      console.log("[Callers] Fetched callers:", data.length);
-      return data;
+      return res.json();
     },
   });
   
@@ -61,12 +57,8 @@ export function CallRequestForm() {
   // Store the vault callId after encryption (used instead of raw phone)
   const [fhenixVaultId, setFhenixVaultId] = useState<string | null>(null);
   
-  // Get caller from URL params or sessionStorage
+  // Get caller from URL params
   const callerSlugFromUrl = (search as { caller?: string }).caller;
-  const callerSlugFromStorage = typeof window !== "undefined" 
-    ? sessionStorage.getItem("selectedCallerSlug")
-    : null;
-  const callerSlug = callerSlugFromUrl || callerSlugFromStorage;
   
   const [formData, setFormData] = useState({
     recipientName: "",
@@ -88,19 +80,95 @@ export function CallRequestForm() {
     uploadedImageS3Key: "",
   });
   
-  // Set caller ID when callers are loaded and we have a slug
+  // Use ref to track if we've processed sessionStorage (persists across renders within same mount)
+  const hasProcessedStorage = useRef(false);
+  // Store the loaded caller ID in a ref so it survives state resets
+  const loadedCallerIdRef = useRef<string | null>(null);
+  
+  // Apply sessionStorage data once callers are loaded
   useEffect(() => {
-    if (callerSlug && callers.length > 0 && !formData.callerId) {
-      const selectedCaller = callers.find((c: { slug: string }) => c.slug === callerSlug);
+    if (typeof window === "undefined") return;
+    if (callers.length === 0) return; // Wait for callers to load
+    
+    // If we already have a caller set in state, we're done
+    if (formData.callerId) {
+      // Clear sessionStorage since we have the data
+      sessionStorage.removeItem("selectedCallerSlug");
+      sessionStorage.removeItem("quickPrankForm");
+      return;
+    }
+    
+    // If we previously loaded a caller ID from storage, re-apply it
+    if (loadedCallerIdRef.current && !formData.callerId) {
+      setFormData((prev) => ({ ...prev, callerId: loadedCallerIdRef.current }));
+      return;
+    }
+    
+    // Check URL first
+    if (callerSlugFromUrl) {
+      const selectedCaller = callers.find((c: { slug: string }) => c.slug === callerSlugFromUrl);
       if (selectedCaller) {
+        loadedCallerIdRef.current = selectedCaller.id;
         setFormData((prev) => ({ ...prev, callerId: selectedCaller.id }));
-        // Clear sessionStorage after successfully setting the caller
-        if (typeof window !== "undefined" && callerSlugFromStorage) {
-          sessionStorage.removeItem("selectedCallerSlug");
-        }
+        return;
       }
     }
-  }, [callerSlug, callers, formData.callerId, callerSlugFromStorage]);
+    
+    // Only read sessionStorage once per page load
+    if (hasProcessedStorage.current) return;
+    
+    // Read directly from sessionStorage
+    const savedCallerSlug = sessionStorage.getItem("selectedCallerSlug");
+    const quickFormDataStr = sessionStorage.getItem("quickPrankForm");
+    
+    if (!savedCallerSlug && !quickFormDataStr) {
+      hasProcessedStorage.current = true;
+      return;
+    }
+    
+    const updates: Partial<typeof formData> = {};
+    
+    // Check sessionStorage for caller slug (from caller page)
+    if (savedCallerSlug) {
+      const selectedCaller = callers.find((c) => c.slug === savedCallerSlug);
+      if (selectedCaller) {
+        updates.callerId = selectedCaller.id;
+        loadedCallerIdRef.current = selectedCaller.id;
+      }
+    }
+    
+    // Check quickPrankForm for all form data (from home page)
+    if (quickFormDataStr) {
+      try {
+        const parsed = JSON.parse(quickFormDataStr);
+        
+        if (parsed.recipientName) updates.recipientName = parsed.recipientName;
+        if (parsed.recipientPhone) updates.phoneNumber = parsed.recipientPhone;
+        if (parsed.videoStyle) updates.videoStyle = parsed.videoStyle;
+        
+        if (parsed.callerSlug && !updates.callerId) {
+          const selectedCaller = callers.find((c: { slug: string }) => c.slug === parsed.callerSlug);
+          if (selectedCaller) {
+            updates.callerId = selectedCaller.id;
+            loadedCallerIdRef.current = selectedCaller.id;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse quickPrankForm:", e);
+      }
+    }
+    
+    hasProcessedStorage.current = true;
+    
+    // Apply updates
+    if (Object.keys(updates).length > 0) {
+      setFormData((prev) => ({ ...prev, ...updates }));
+    }
+    
+    // Only clear sessionStorage after we've stored the ID in ref
+    sessionStorage.removeItem("selectedCallerSlug");
+    sessionStorage.removeItem("quickPrankForm");
+  }, [callers, formData.callerId, callerSlugFromUrl]);
   
   // Image upload state
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -395,15 +463,16 @@ export function CallRequestForm() {
     <>
       {/* Input Mode Toggle - Segmented Control */}
       <div className="mb-6 flex justify-center">
-        <div className="inline-flex rounded-lg border bg-muted p-1">
+        <div className="inline-flex rounded-lg border-2 p-1" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
           <button
             type="button"
             onClick={() => setInputMode("form")}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
               inputMode === "form"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? "shadow-sm"
+                : "hover:opacity-70"
             }`}
+            style={inputMode === "form" ? { backgroundColor: '#1A1A1A', color: 'white' } : { color: '#1A1A1A', opacity: 0.7 }}
           >
             📝 Manual Form
           </button>
@@ -412,9 +481,10 @@ export function CallRequestForm() {
             onClick={() => setInputMode("ai-chat")}
             className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
               inputMode === "ai-chat"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? "shadow-sm"
+                : "hover:opacity-70"
             }`}
+            style={inputMode === "ai-chat" ? { backgroundColor: '#1A1A1A', color: 'white' } : { color: '#1A1A1A', opacity: 0.7 }}
           >
             ✨ NEAR AI Assistant
           </button>

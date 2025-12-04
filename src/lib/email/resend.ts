@@ -43,7 +43,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
   try {
     // Always use the verified domain email
     // Make sure DNS is configured in Resend dashboard: https://resend.com/domains
-    const fromEmail = options.from || "AI Call TV <noreply@aicall.tv>";
+    const fromEmail = options.from || "aicall.tv <noreply@aicall.tv>";
 
     const result = await resend.emails.send({
       from: fromEmail,
@@ -93,7 +93,7 @@ export async function sendVideoReadyEmail(
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto;">
           <tr>
             <td style="padding: 20px 0; border-bottom: 1px solid #e5e5e5;">
-              <strong style="font-size: 18px; color: #1a1a1a;">AI Call TV</strong>
+              <strong style="font-size: 18px; color: #1a1a1a;">aicall.tv</strong>
             </td>
           </tr>
           <tr>
@@ -119,11 +119,11 @@ export async function sendVideoReadyEmail(
           <tr>
             <td style="padding: 20px 0; border-top: 1px solid #e5e5e5;">
               <p style="margin: 0; color: #8a8a8a; font-size: 12px;">
-                You received this email because you requested a video from AI Call TV.
+                You received this email because you requested a video from aicall.tv.
                 If you did not make this request, you can safely ignore this email.
               </p>
               <p style="margin: 10px 0 0 0; color: #8a8a8a; font-size: 12px;">
-                AI Call TV
+                aicall.tv
               </p>
             </td>
           </tr>

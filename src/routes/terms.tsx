@@ -18,12 +18,12 @@ function TermsPage() {
           
           <h2>1. Acceptance of Terms</h2>
           <p>
-            By accessing and using AI Call TV, you accept and agree to be bound by the terms and provision of this agreement.
+            By accessing and using aicall.tv, you accept and agree to be bound by the terms and provision of this agreement.
           </p>
 
           <h2>2. Use License</h2>
           <p>
-            Permission is granted to temporarily use AI Call TV for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:
+            Permission is granted to temporarily use aicall.tv for personal, non-commercial transitory viewing only. This is the grant of a license, not a transfer of title, and under this license you may not:
           </p>
           <ul>
             <li>modify or copy the materials</li>
@@ -34,7 +34,7 @@ function TermsPage() {
 
           <h2>3. Service Description</h2>
           <p>
-            AI Call TV provides AI-powered call services. Each call is charged at $5 per call. Users may have free call credits available.
+            aicall.tv provides AI-powered prank call services. Each call is charged at $5 per call. Users may have free call credits available.
           </p>
 
           <h2>4. User Responsibilities</h2>
@@ -44,7 +44,7 @@ function TermsPage() {
 
           <h2>5. Limitation of Liability</h2>
           <p>
-            AI Call TV shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of the service.
+            aicall.tv shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use of the service.
           </p>
         </div>
       </div>

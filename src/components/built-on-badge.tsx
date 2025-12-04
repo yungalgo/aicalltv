@@ -17,12 +17,17 @@ interface BuiltOnBadgeProps {
   className?: string;
   href?: string;
   variant?: "near" | "zcash" | "starknet" | "solana" | "base" | "fhenix";
+  /** Force dark mode styling (for use on dark backgrounds) */
+  forceDark?: boolean;
 }
 
-export function BuiltOnBadge({ className, href, variant = "near" }: BuiltOnBadgeProps) {
+export function BuiltOnBadge({ className, href, variant = "near", forceDark }: BuiltOnBadgeProps) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
+    // Skip theme detection if forceDark is set
+    if (forceDark !== undefined) return;
+    
     // Check initial theme
     const checkTheme = () => {
       if (typeof window !== "undefined") {
@@ -43,19 +48,22 @@ export function BuiltOnBadge({ className, href, variant = "near" }: BuiltOnBadge
 
       return () => observer.disconnect();
     }
-  }, []);
+  }, [forceDark]);
 
+  // Use forceDark if provided, otherwise use detected theme
+  const useDarkVariant = forceDark !== undefined ? forceDark : isDark;
+  
   const badgeSrc = variant === "zcash" 
-    ? (isDark ? builtOnZcashDarkUrl : builtOnZcashUrl)
+    ? (useDarkVariant ? builtOnZcashDarkUrl : builtOnZcashUrl)
     : variant === "starknet"
-    ? (isDark ? builtOnStarknetDarkUrl : builtOnStarknetUrl)
+    ? (useDarkVariant ? builtOnStarknetDarkUrl : builtOnStarknetUrl)
     : variant === "solana"
-    ? (isDark ? builtOnSolanaDarkUrl : builtOnSolanaUrl)
+    ? (useDarkVariant ? builtOnSolanaDarkUrl : builtOnSolanaUrl)
     : variant === "base"
-    ? (isDark ? builtOnBaseDarkUrl : builtOnBaseUrl)
+    ? (useDarkVariant ? builtOnBaseDarkUrl : builtOnBaseUrl)
     : variant === "fhenix"
-    ? (isDark ? builtOnFhenixDarkUrl : builtOnFhenixUrl)
-    : (isDark ? builtOnNearDarkUrl : builtOnNearUrl);
+    ? (useDarkVariant ? builtOnFhenixDarkUrl : builtOnFhenixUrl)
+    : (useDarkVariant ? builtOnNearDarkUrl : builtOnNearUrl);
 
   const altText = variant === "zcash" 
     ? "Built on Zcash" 
@@ -78,21 +86,21 @@ export function BuiltOnBadge({ className, href, variant = "near" }: BuiltOnBadge
     <img
       src={badgeSrc}
       alt={altText}
-      className={cn("opacity-70 hover:opacity-100 transition-opacity", className)}
+      className={cn("transition-transform hover:scale-105", className)}
       style={{ height: "44px", width: "auto", transform: "scale(1.2)", transformOrigin: "center" }}
     />
   ) : needsSmaller ? (
     <img
       src={badgeSrc}
       alt={altText}
-      className={cn("h-6 w-auto opacity-70 hover:opacity-100 transition-opacity object-contain", className)}
+      className={cn("h-6 w-auto transition-transform hover:scale-105 object-contain", className)}
       style={{ maxHeight: "24px", minHeight: "18px" }}
     />
   ) : (
     <img
       src={badgeSrc}
       alt={altText}
-      className={cn("h-8 w-auto opacity-70 hover:opacity-100 transition-opacity object-contain", className)}
+      className={cn("h-8 w-auto transition-transform hover:scale-105 object-contain", className)}
       style={{ maxHeight: "32px", minHeight: "24px" }}
     />
   );

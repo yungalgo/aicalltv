@@ -386,11 +386,12 @@ export function NearAiChat({ onFormFill, onComplete }: NearAiChatProps) {
           {messages.map((message) => (
             <Message key={message.id} from={message.role}>
               <MessageContent
-                className={
-                  message.role === "user"
-                    ? "bg-primary/10 dark:bg-primary/20 text-foreground border border-primary/20 dark:border-primary/30"
-                    : "bg-muted text-foreground border"
-                }
+                className="border-2"
+                style={{ 
+                  backgroundColor: '#fffcf2', 
+                  borderColor: '#1A1A1A',
+                  color: '#1A1A1A'
+                }}
               >
                 <p className="text-sm whitespace-pre-wrap leading-relaxed">
                   {message.content}
@@ -402,24 +403,24 @@ export function NearAiChat({ onFormFill, onComplete }: NearAiChatProps) {
                 className={
                   message.role === "user"
                     ? undefined
-                    : "bg-white"
+                    : "bg-white border-2 border-[#1A1A1A]"
                 }
               />
             </Message>
           ))}
           {isLoading && (
             <Message from="assistant">
-              <MessageContent className="bg-muted text-muted-foreground border">
+              <MessageContent className="border-2" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
                 <div className="flex gap-1.5 items-center">
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-pulse" />
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-pulse" style={{ animationDelay: "0.2s" }} />
-                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-pulse" style={{ animationDelay: "0.4s" }} />
+                  <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#1A1A1A' }} />
+                  <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#1A1A1A', animationDelay: "0.2s" }} />
+                  <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#1A1A1A', animationDelay: "0.4s" }} />
                 </div>
               </MessageContent>
               <MessageAvatar
                 name="NEAR AI"
                 src={nearLogoUrl}
-                className="bg-white"
+                className="bg-white border-2 border-[#1A1A1A]"
               />
             </Message>
           )}

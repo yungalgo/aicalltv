@@ -42,7 +42,7 @@ export const callCredits = pgTable("call_credits", {
   // Network/chain (e.g., "base", "solana", "lemon_squeezy")
   network: text("network"),
   
-  // Amount in USD cents (e.g., 900 = $9.00)
+  // Amount in USD cents (e.g., 500 = $5.00)
   amountCents: integer("amount_cents").notNull(),
   
   // Which call consumed this credit (set when state changes to "consumed")

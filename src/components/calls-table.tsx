@@ -65,7 +65,7 @@ export function CallsTable() {
   if (calls.length === 0) {
     return (
       <div className="rounded-lg border p-8 text-center">
-        <p className="text-muted-foreground">No calls yet. Buy your first AI call above!</p>
+        <p className="text-muted-foreground">No calls yet.</p>
       </div>
     );
   }
@@ -123,21 +123,21 @@ export function CallsTable() {
   };
 
   return (
-    <div className="rounded-lg border">
+    <div className="rounded-lg border-2" style={{ borderColor: '#1A1A1A' }}>
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Recipient</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Video</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
+          <TableRow style={{ borderColor: '#1A1A1A' }}>
+            <TableHead style={{ color: '#1A1A1A' }}>Recipient</TableHead>
+            <TableHead style={{ color: '#1A1A1A' }}>Status</TableHead>
+            <TableHead style={{ color: '#1A1A1A' }}>Video</TableHead>
+            <TableHead style={{ color: '#1A1A1A' }}>Created</TableHead>
+            <TableHead className="text-right" style={{ color: '#1A1A1A' }}>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {calls.map((call) => (
-            <TableRow key={call.id}>
-              <TableCell className="font-medium">{call.recipientName}</TableCell>
+            <TableRow key={call.id} style={{ borderColor: '#1A1A1A' }}>
+              <TableCell className="font-medium" style={{ color: '#1A1A1A' }}>{call.recipientName}</TableCell>
               <TableCell>{getStatusBadge(call.status, call.videoStatus)}</TableCell>
               <TableCell>
                 {call.videoUrl ? (
@@ -161,14 +161,14 @@ export function CallsTable() {
                     View Video
                   </button>
                 ) : (
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                     {call.videoStatus === "generating" ? "Generating..." : 
                      call.videoStatus === "failed" ? "Failed" :
                      call.status === "call_complete" ? "Pending" : "Not started"}
                   </span>
                 )}
               </TableCell>
-              <TableCell className="text-sm text-muted-foreground">
+              <TableCell className="text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                 {formatDate(call.createdAt)}
               </TableCell>
               <TableCell className="text-right">
@@ -217,7 +217,7 @@ export function CallsTable() {
                       Download
                   </Button>
                 ) : (
-                  <span className="text-sm text-muted-foreground">-</span>
+                  <span className="text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>-</span>
                 )}
               </TableCell>
             </TableRow>

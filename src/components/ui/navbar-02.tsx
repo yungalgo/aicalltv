@@ -218,9 +218,10 @@ export const Navbar02 = React.forwardRef<HTMLElement, Navbar02Props>(
       <header
         ref={combinedRef}
         className={cn(
-          "sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 md:px-6 [&_*]:no-underline",
+          "sticky top-0 z-50 w-full border-b border-white/10 px-4 md:px-6 [&_*]:no-underline",
           className
         )}
+        style={{ backgroundColor: '#1A1A1A' }}
         {...(props as any)}
       >
         <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between gap-4">
@@ -231,7 +232,7 @@ export const Navbar02 = React.forwardRef<HTMLElement, Navbar02Props>(
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
-                    className="group h-9 w-9 hover:bg-accent hover:text-accent-foreground"
+                    className="group h-9 w-9 text-white hover:bg-white/10 hover:text-white"
                     variant="ghost"
                     size="icon"
                   >
@@ -321,9 +322,9 @@ export const Navbar02 = React.forwardRef<HTMLElement, Navbar02Props>(
             <div className="flex items-center gap-6">
               <Link
                 to={logoHref}
-                className="flex items-center space-x-2 text-primary hover:text-primary/90 transition-colors cursor-pointer"
+                className="flex items-center space-x-2 text-white hover:text-white/90 transition-colors cursor-pointer"
               >
-                {logo && <div className="text-2xl">{logo}</div>}
+                {logo && <div className="flex items-center">{logo}</div>}
               </Link>
               {/* Navigation menu */}
               {!isMobile && (
@@ -354,7 +355,7 @@ export const Navbar02 = React.forwardRef<HTMLElement, Navbar02Props>(
                                         className="flex h-full w-full select-none flex-col justify-center items-center text-center rounded-md bg-gradient-to-b from-muted/50 to-muted p-6 no-underline outline-none focus:shadow-md cursor-pointer"
                                       >
                                         <div className="mb-3 text-xl font-medium">
-                                          AI Call TV
+                                          aicall.tv
                                         </div>
                                         <p className="text-sm leading-tight text-muted-foreground">
                                           Personalized AI video calls with generated video content.
@@ -417,16 +418,15 @@ export const Navbar02 = React.forwardRef<HTMLElement, Navbar02Props>(
                             </NavigationMenuContent>
                           </>
                         ) : (
-                          <NavigationMenuLink
-                            href={link.href}
+                          <Link 
+                            to={link.href || "#"}
                             className={cn(
                               navigationMenuTriggerStyle(),
-                              "cursor-pointer"
+                              "cursor-pointer bg-[#86EE02] text-[#1A1A1A]"
                             )}
-                            asChild
                           >
-                            <Link to={link.href || "#"}>{link.label}</Link>
-                          </NavigationMenuLink>
+                            {link.label}
+                          </Link>
                         )}
                       </NavigationMenuItem>
                     ))}

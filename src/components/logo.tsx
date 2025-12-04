@@ -14,12 +14,17 @@ interface LogoProps {
   className?: string;
   href?: string;
   onClick?: () => void;
+  /** Force dark mode styling (for use on dark backgrounds) */
+  forceDark?: boolean;
 }
 
-export function Logo({ variant = "full", className = "", href, onClick }: LogoProps) {
+export function Logo({ variant = "full", className = "", href, onClick, forceDark }: LogoProps) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
+    // Skip theme detection if forceDark is set
+    if (forceDark !== undefined) return;
+    
     // Check initial theme
     const checkTheme = () => {
       if (typeof window !== "undefined") {
@@ -40,10 +45,11 @@ export function Logo({ variant = "full", className = "", href, onClick }: LogoPr
 
       return () => observer.disconnect();
     }
-  }, []);
+  }, [forceDark]);
 
   const getLogoSrc = () => {
-    const isDarkMode = isDark;
+    // Use forceDark if provided, otherwise use detected theme
+    const isDarkMode = forceDark !== undefined ? forceDark : isDark;
     
     switch (variant) {
       case "icon":
@@ -60,12 +66,12 @@ export function Logo({ variant = "full", className = "", href, onClick }: LogoPr
   const getLogoAlt = () => {
     switch (variant) {
       case "icon":
-        return "AI Call TV";
+        return "aicall.tv";
       case "text":
-        return "AI Call TV";
+        return "aicall.tv";
       case "full":
       default:
-        return "AI Call TV";
+        return "aicall.tv";
     }
   };
 
@@ -110,5 +116,76 @@ export function Logo({ variant = "full", className = "", href, onClick }: LogoPr
   }
 
   return <div className="inline-flex items-center">{logoContent}</div>;
+}
+
+// Pulsing logo spinner for loading states
+interface LogoSpinnerProps {
+  size?: "sm" | "md" | "lg";
+  className?: string;
+  /** If true, positions fixed in center of viewport */
+  fixed?: boolean;
+}
+
+// Animated dots component
+function AnimatedDots() {
+  return (
+    <span className="inline-flex">
+      <span className="animate-[bounce_1s_ease-in-out_infinite]">.</span>
+      <span className="animate-[bounce_1s_ease-in-out_0.2s_infinite]">.</span>
+      <span className="animate-[bounce_1s_ease-in-out_0.4s_infinite]">.</span>
+    </span>
+  );
+}
+
+export function LogoSpinner({ size = "md", className = "", fixed = false }: LogoSpinnerProps) {
+  const sizeClasses = {
+    sm: "w-6 h-6",
+    md: "w-12 h-12",
+    lg: "w-[72px] h-[72px]",
+  };
+
+  const spinner = (
+    <div className={cn("flex flex-col items-center gap-4", className)}>
+      <img 
+        src={logoIconUrl} 
+        alt="Loading..." 
+        className={cn(sizeClasses[size], "animate-[pulse-scale_1.5s_ease-in-out_infinite]")}
+        style={{
+          animation: "pulse-scale 1.5s ease-in-out infinite",
+        }}
+      />
+      <p className="text-[#1A1A1A] font-semibold text-lg">
+        Loading<AnimatedDots />
+      </p>
+    </div>
+  );
+
+  // Add the keyframes style
+  const keyframesStyle = `
+    @keyframes pulse-scale {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.15); }
+    }
+  `;
+
+  if (fixed) {
+    return (
+      <>
+        <style>{keyframesStyle}</style>
+        <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
+          <div className="flex flex-col items-center gap-6 p-8 rounded-2xl border-2" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
+            {spinner}
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <style>{keyframesStyle}</style>
+      {spinner}
+    </>
+  );
 }
 

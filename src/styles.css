@@ -152,14 +152,32 @@
   --dark-purple-foreground: oklch(0.98 0 0);
 }
 
+/* Hide scrollbar globally */
+html, body {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    @apply bg-transparent text-foreground;
+    font-family: "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  /* Prevent Radix UI scroll lock from causing layout shift */
+  body[data-scroll-locked] {
+    padding-right: 0 !important;
+    margin-right: 0 !important;
+    overflow: visible !important;
   }
   button:not(:disabled),
   [role="button"]:not(:disabled) {

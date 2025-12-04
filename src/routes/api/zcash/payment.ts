@@ -16,7 +16,7 @@ const ZCASH_SERVICE_URL = env.ZCASH_SERVICE_URL || "http://localhost:8080";
 // YWallet receiving address (funds go here)
 const RECEIVING_ADDRESS = "u1smm22fj85e68exdv77vnxds8agpd2kq0fc0lj2aft0mkkjzffe55t8acyzntq8yqr5dun47drcf0kgusyekdvuy0f0cpcyp357ny6v7jla3cde0hzmjzgy8m72k2p6uk680vxde4cryqv02t3h0he0jn2js43czswsnypuzedq5d3tynevg9paa95pzscw4nxxh2s9wtkdvhk3h7ey4";
 
-// Payment amount in ZEC ($9.00 / $350 per ZEC = 0.0257 ZEC)
+// Payment amount in ZEC ($5.00 / $350 per ZEC = 0.014 ZEC)
 const ZEC_AMOUNT = PAYMENT_CONFIG.priceZEC;
 
 // Pending payments (in production, use Redis or database)

@@ -16,7 +16,7 @@ const createCreditSchema = z.object({
   paymentMethod: z.enum(["free", "sol_usdc", "base_usdc", "zcash", "ztarknet", "credit_card"]),
   paymentRef: z.string().optional(), // tx hash, Stripe session ID, etc.
   network: z.string().optional(), // "base", "solana", "credit_card", "zcash", "ztarknet"
-  amountCents: z.number().int().positive(), // e.g., 900 = $9.00
+  amountCents: z.number().int().positive(), // e.g., 500 = $5.00
 });
 
 export type CreateCreditInput = z.infer<typeof createCreditSchema>;

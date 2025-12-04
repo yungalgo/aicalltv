@@ -270,15 +270,15 @@ export function EmblaCarousel2() {
             alt={testimonial.name}
             className="absolute top-0 left-0 -z-10 h-full w-full rounded-xl object-cover"
           />
-          <div className="flex h-fit w-full flex-col gap-y-2 rounded-xl border border-neutral-200/50 p-5 text-white backdrop-blur-sm">
-            <h2 className="text-left text-base leading-6 font-medium text-balance">
+          <div className="flex h-fit w-full flex-col gap-y-2 rounded-xl border-2 p-5 backdrop-blur-sm" style={{ borderColor: '#1A1A1A', backgroundColor: 'rgba(255,252,242,0.1)' }}>
+            <h2 className="text-left text-base leading-6 font-medium text-balance" style={{ color: '#fffcf2' }}>
               {testimonial.text}
             </h2>
             <div className="flex flex-col gap-y-0.5">
-              <p className="text-left text-sm font-semibold text-balance">
+              <p className="text-left text-sm font-semibold text-balance" style={{ color: '#fffcf2' }}>
                 {testimonial.name}
               </p>
-              <p className="text-left text-xs font-medium text-balance">
+              <p className="text-left text-xs font-medium text-balance" style={{ color: '#fffcf2', opacity: 0.8 }}>
                 {testimonial.role}
               </p>
             </div>

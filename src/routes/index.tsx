@@ -1,19 +1,20 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { Suspense, useEffect, useState } from "react";
-import type React from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useState, useRef, useEffect } from "react";
 import { Navbar } from "~/components/navbar";
 import { Footer } from "~/components/footer";
 import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
 import { EmblaCarousel } from "~/components/ui/carousel-1";
 import { Component as FAQ } from "~/components/ui/faq-4";
 import { HomePricing } from "~/components/home-pricing";
 import { authQueryOptions } from "~/lib/auth/queries";
-import { PAYMENT_CONFIG } from "~/lib/web3/config";
 import { EmblaOptionsType } from "embla-carousel";
-import useEmblaCarousel from "embla-carousel-react";
-import Autoplay from "embla-carousel-autoplay";
 import { AuthModal } from "~/components/auth-modal";
+import { LogoSpinner } from "~/components/logo";
+import { IPhoneFrame } from "~/components/ui/iphone-frame";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -38,18 +39,19 @@ function CallerCard({ caller, onClick }: { caller: any; onClick?: () => void }) 
       </div>
 
       {/* Frosted Glass Content */}
-      <div className="relative z-10 flex h-full w-full flex-col items-start justify-end p-6">
-        <div className="rounded-xl border border-white/20 bg-white/10 p-5 backdrop-blur-md w-full">
-          <h3 className="text-xl font-bold text-white mb-2">{caller.name}</h3>
-          <p className="text-sm text-white/90 mb-3">{caller.tagline}</p>
-          <span className="px-3 py-1 rounded-full bg-white/20 text-white text-xs">
+      <div className="relative z-10 flex h-full w-full flex-col items-start justify-end p-3">
+        <div className="rounded-lg border-2 p-3 backdrop-blur-md w-full" style={{ borderColor: '#1A1A1A', backgroundColor: 'rgba(255,252,242,0.1)' }}>
+          <h3 className="text-base font-bold text-white mb-1">{caller.name}</h3>
+          <p className="text-xs text-white/90 mb-2 line-clamp-2">{caller.tagline}</p>
+          <span className="px-2 py-0.5 rounded-full bg-white/20 text-white text-xs">
             {caller.gender}
-            </span>
+          </span>
         </div>
       </div>
     </div>
   );
 }
+
 
 // Callers Carousel Component (smooth scroll left)
 function CallersCarousel() {
@@ -79,25 +81,30 @@ function CallersCarousel() {
   ));
 
     return (
-    <section className="py-16">
+    <section className="py-8">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-2">Choose Your Caller</h2>
-          <p className="text-muted-foreground">
-            Select from our collection of AI callers, each with unique personalities
-          </p>
+        <div className="text-center mb-4">
+          <div className="inline-block rounded-2xl border-2 px-8 py-4" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
+            <h2 className="text-3xl font-bold mb-2" style={{ color: '#1A1A1A' }}>choose your caller</h2>
+            <p style={{ color: '#1A1A1A', opacity: 0.7 }}>
+              each ai caller has a unique personality, voice, and vibe
+            </p>
+          </div>
         </div>
-        <EmblaCarousel
-          slides={slides}
-          options={OPTIONS}
-          autoplay={true}
-          autoplayDelay={3000}
-          showIndicators={false}
-          showArrows={false}
-          className="w-full"
-        />
-        <div className="text-center mt-8">
-          <Button asChild size="lg">
+      </div>
+      {/* Carousel outside container for edge-to-edge */}
+      <EmblaCarousel
+        slides={slides}
+        options={OPTIONS}
+        autoplay={true}
+        autoplayDelay={3000}
+        showIndicators={false}
+        showArrows={false}
+        className="w-full"
+      />
+      <div className="container mx-auto px-4">
+        <div className="text-center mt-4">
+          <Button asChild size="lg" className="font-medium hover:opacity-80" style={{ backgroundColor: '#1A1A1A', color: 'white' }}>
             <Link to="/callers">Browse All Callers</Link>
           </Button>
         </div>
@@ -106,8 +113,34 @@ function CallersCarousel() {
   );
 }
 
-// Calls Carousel Component (smooth scroll right - reverse, same cards as callers)
-function CallsCarousel() {
+// Video style options
+const VIDEO_STYLES = [
+  { value: "anime", label: "anime" },
+  { value: "pixar", label: "pixar / 3d" },
+  { value: "realistic", label: "realistic" },
+  { value: "comic", label: "comic book" },
+  { value: "watercolor", label: "watercolor" },
+];
+
+// Weird placeholder names for the friend's name input
+const WEIRD_NAMES = [
+  "morgenstein phillips",
+  "garboothius melogus",
+  "prith quosop",
+  "mclellan bottomsby",
+  "bartholomew crinklesworth",
+  "fenwick pumpernickel",
+  "thaddeus wobblekins",
+  "gertrude snickerbottom",
+  "reginald fluffernutter",
+  "percival dingleberry",
+  "horatio bumblebee",
+  "cornelius finklebine",
+];
+
+// Hero Section - Clean layout with text/CTA left, phone frame right
+function HeroSection() {
+  const { data: user } = useQuery(authQueryOptions());
   const { data: callers = [] } = useQuery({
     queryKey: ["callers"],
     queryFn: async () => {
@@ -116,121 +149,190 @@ function CallsCarousel() {
       return res.json();
     },
   });
-  
-  const OPTIONS: EmblaOptionsType = {
-    loop: true,
-    align: "start",
-    duration: 25, // Smooth scroll duration
-  };
-
-  const [emblaRef, emblaApi] = useEmblaCarousel(OPTIONS);
-
-  // Smooth reverse autoplay - scroll backwards every 3 seconds
-  useEffect(() => {
-    if (!emblaApi) return;
-    const interval = setInterval(() => {
-      emblaApi.scrollPrev();
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [emblaApi]);
-
-  const slides = callers.map((caller: any) => (
-    <CallerCard
-      key={caller.id}
-      caller={caller}
-      onClick={() => {
-        window.location.href = `/callers/${caller.slug}`;
-      }}
-    />
-  ));
-
-  return (
-    <section className="py-16 bg-muted/30">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold mb-2">Calls</h2>
-          <p className="text-muted-foreground">
-            Browse our collection of AI callers
-          </p>
-        </div>
-        <div className="overflow-visible py-10" ref={emblaRef}>
-          <div className="embla__container flex">
-            {slides.map((slide: React.ReactNode, index: number) => (
-              <div
-                className="embla__slide [flex:0_0_20rem] pl-4 max-[350px]:[flex:0_0_18rem]"
-                key={index}
-              >
-                <div className="embla__slide__content h-full min-h-[25rem] w-full">
-                  {slide}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="text-center mt-8">
-          <CreateYourOwnButton />
-        </div>
-          </div>
-    </section>
-  );
-}
-
-function CreateYourOwnButton() {
-  const { data: user } = useSuspenseQuery(authQueryOptions());
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const leftColumnRef = useRef<HTMLDivElement>(null);
+  const [leftColumnHeight, setLeftColumnHeight] = useState<number | null>(null);
+  
+  // Measure left column height
+  useEffect(() => {
+    const updateHeight = () => {
+      if (leftColumnRef.current) {
+        setLeftColumnHeight(leftColumnRef.current.offsetHeight);
+      }
+    };
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
+  
+  // Random placeholder name (changes on refresh)
+  const [nameIndex] = useState(() => Math.floor(Math.random() * WEIRD_NAMES.length));
+  
+  // Form state
+  const [friendName, setFriendName] = useState("");
+  const [friendNumber, setFriendNumber] = useState("");
+  const [videoStyle, setVideoStyle] = useState("");
+  const [selectedCaller, setSelectedCaller] = useState("");
 
-  const handleClick = () => {
+  const handleSubmit = () => {
+    const formData = {
+      recipientName: friendName,
+      recipientPhone: friendNumber,
+      videoStyle: videoStyle,
+      callerSlug: selectedCaller,
+    };
+    sessionStorage.setItem("quickPrankForm", JSON.stringify(formData));
+    
     if (user) {
-      // Navigate to create page (calls form)
       navigate({ to: "/create" });
     } else {
-      // Open auth modal if not logged in
       setShowAuthModal(true);
     }
   };
 
   return (
-    <>
-        <Button
-        onClick={handleClick}
-          size="lg"
-        className="bg-primary text-primary-foreground"
-      >
-        Create Your Own
-        </Button>
+    <section className="py-12 md:py-20">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col items-center lg:flex-row lg:items-start lg:justify-center gap-8 lg:gap-12 max-w-4xl mx-auto">
+          {/* Left side - Hero Text + Form */}
+          <div ref={leftColumnRef} className="w-full max-w-xl flex flex-col">
+            {/* Hero Text Card */}
+            <div className="rounded-2xl border-2 p-6 md:p-8 mb-4" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight" style={{ color: '#1A1A1A' }}>
+                prank call your friends with ai
+              </h1>
+              <p className="text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>
+                fill out a few details and an ai will prank call your friend live. we'll send you a video of the recording afterwards. web3 payment rails with fhe pii encryption.
+              </p>
+            </div>
+            
+            {/* Quick Form Card */}
+            <div className="rounded-2xl border-2 p-6" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
+              <h3 className="text-lg font-bold mb-4" style={{ color: '#1A1A1A' }}>quick call</h3>
+              
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                  <Label htmlFor="friendName" className="text-xs" style={{ color: '#1A1A1A' }}>friend's name</Label>
+                  <Input
+                    id="friendName"
+                    placeholder={WEIRD_NAMES[nameIndex]}
+                    value={friendName}
+                    onChange={(e) => setFriendName(e.target.value)}
+                    className="mt-1 border-2 h-9 text-sm"
+                    style={{ borderColor: '#1A1A1A', backgroundColor: 'white' }}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="friendNumber" className="text-xs" style={{ color: '#1A1A1A' }}>phone number</Label>
+                  <Input
+                    id="friendNumber"
+                    placeholder="+1 555-123-4567"
+                    value={friendNumber}
+                    onChange={(e) => setFriendNumber(e.target.value)}
+                    className="mt-1 border-2 h-9 text-sm"
+                    style={{ borderColor: '#1A1A1A', backgroundColor: 'white' }}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="videoStyle" className="text-xs" style={{ color: '#1A1A1A' }}>video style</Label>
+                  <Select value={videoStyle} onValueChange={setVideoStyle}>
+                    <SelectTrigger className="mt-1 border-2 h-9 text-sm" style={{ borderColor: '#1A1A1A', backgroundColor: 'white' }}>
+                      <SelectValue placeholder="choose style" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {VIDEO_STYLES.map((style) => (
+                        <SelectItem key={style.value} value={style.value}>
+                          {style.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="caller" className="text-xs" style={{ color: '#1A1A1A' }}>caller</Label>
+                  <Select value={selectedCaller} onValueChange={setSelectedCaller}>
+                    <SelectTrigger className="mt-1 border-2 h-9 text-sm" style={{ borderColor: '#1A1A1A', backgroundColor: 'white' }}>
+                      <SelectValue placeholder="select caller" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {callers.map((caller: any) => (
+                        <SelectItem key={caller.slug} value={caller.slug}>
+                          {caller.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+              <Button 
+                onClick={handleSubmit}
+                  className="font-semibold hover:opacity-90 py-5 px-12 text-base"
+                style={{ backgroundColor: '#86EE02', color: '#1A1A1A' }}
+              >
+                Prank your Friend →
+              </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right side - iPhone Frame with Video */}
+          <div className="hidden lg:block flex-shrink-0">
+            <IPhoneFrame 
+              videoSrc="/call-1174c834-3e26-4299-b67b-53d3b0d9b5db-video.mp4" 
+              height={leftColumnHeight || undefined}
+            />
+          </div>
+        </div>
+      </div>
       <AuthModal
         open={showAuthModal}
         onOpenChange={setShowAuthModal}
         onAuthSuccess={() => {
           setShowAuthModal(false);
-          navigate({ to: "/create" });
+          window.location.href = "/create";
         }}
         initialMode="signup"
       />
-    </>
+    </section>
   );
 }
 
 function HomePage() {
-  const { data: user } = useSuspenseQuery(authQueryOptions());
+  // Check if callers data is loaded
+  const { isLoading: callersLoading } = useQuery({
+    queryKey: ["callers"],
+    queryFn: async () => {
+      const res = await fetch("/api/callers");
+      if (!res.ok) throw new Error("Failed to fetch callers");
+      return res.json();
+    },
+  });
+
+  const isLoading = callersLoading;
 
   return (
-    <div className="flex min-h-svh flex-col">
+    <div className="flex min-h-svh flex-col pb-24 overflow-x-hidden"> {/* padding for fixed footer */}
       <Navbar />
-      <main className="flex-1">
-        <Suspense fallback={<div className="py-16 text-center">Loading...</div>}>
-          <CallersCarousel />
-        </Suspense>
-        <CallsCarousel />
-        <section className="py-16 bg-muted/30">
-          <FAQ />
-        </section>
-        <section className="py-16">
-          <HomePricing />
-        </section>
+      <main className="flex-1 overflow-x-hidden">
+        {isLoading ? (
+          <LogoSpinner fixed size="lg" />
+        ) : (
+          <>
+            <HeroSection />
+            <CallersCarousel />
+            <section className="py-8">
+              <FAQ />
+            </section>
+            <section className="py-8">
+              <HomePricing />
+            </section>
+          </>
+        )}
       </main>
       <Footer />
-        </div>
+    </div>
   );
 }

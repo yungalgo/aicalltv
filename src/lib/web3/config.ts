@@ -11,10 +11,10 @@ import { connectorsForWallets } from "@rainbow-me/rainbowkit";
 // Payment configuration
 // SINGLE SOURCE OF TRUTH for pricing - all other values are derived from priceUSD
 export const PAYMENT_CONFIG = {
-  priceUSD: 9.00, // $9.00 per call
+  priceUSD: 5.00, // $5.00 per call
 
   // ZEC price (ZEC is currently ~$350 per coin)
-  // $9 / $350 = 0.025714 ZEC ≈ 0.0257 ZEC
+  // $5 / $350 = 0.0142857 ZEC ≈ 0.014 ZEC
   ZEC_PRICE_PER_USD: 350, // Current ZEC price in USD
 
   // Derived values - computed from priceUSD
@@ -26,11 +26,11 @@ export const PAYMENT_CONFIG = {
     return Math.round(this.priceUSD * 1_000_000);
   },
   get priceDisplay(): string {
-    // Format for display (e.g., "9" or "9.00")
+    // Format for display (e.g., "5" or "5.00")
     return this.priceUSD % 1 === 0 ? String(this.priceUSD) : this.priceUSD.toFixed(2);
   },
   get priceZEC(): string {
-    // Calculate ZEC equivalent: $9 / $350 = 0.025714 ZEC
+    // Calculate ZEC equivalent: $5 / $350 = 0.0143 ZEC
     const zecAmount = this.priceUSD / this.ZEC_PRICE_PER_USD;
     // Round to 4 decimal places for display
     return zecAmount.toFixed(4);
@@ -74,7 +74,7 @@ const connectors = connectorsForWallets(
     },
   ],
   {
-    appName: "AI Call TV",
+    appName: "aicall.tv",
     projectId: "optional", // Not actually used without WalletConnect wallets
   },
 );

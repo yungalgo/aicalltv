@@ -4,7 +4,8 @@ import { Navbar } from "~/components/navbar";
 import { Footer } from "~/components/footer";
 import { CallsTable } from "~/components/calls-table";
 import { authQueryOptions } from "~/lib/auth/queries";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { LogoSpinner } from "~/components/logo";
 
 export const Route = createFileRoute("/your-calls")({
   component: YourCallsPage,
@@ -20,22 +21,25 @@ export const Route = createFileRoute("/your-calls")({
   },
 });
 
+
 function YourCallsPage() {
-  useSuspenseQuery(authQueryOptions()); // Ensure user is loaded
+  const { isLoading } = useQuery(authQueryOptions());
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col pb-24">
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-16 max-w-6xl">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Your Calls</h1>
-          <p className="text-muted-foreground">
-            View and manage all your AI call requests
-          </p>
+        <div className="rounded-2xl border-2 p-8" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2" style={{ color: '#1A1A1A' }}>Your Calls</h1>
+            <p style={{ color: '#1A1A1A', opacity: 0.7 }}>
+              View and manage all your AI call requests
+            </p>
+          </div>
+          <Suspense fallback={<div className="flex items-center justify-center py-12"><LogoSpinner size="md" /></div>}>
+            <CallsTable />
+          </Suspense>
         </div>
-        <Suspense fallback={<div className="rounded-lg border p-8 text-center">Loading...</div>}>
-          <CallsTable />
-        </Suspense>
       </main>
       <Footer />
     </div>

@@ -17,7 +17,7 @@ export const Route = createFileRoute("/calls")({
 
 function CallsPage() {
   return (
-    <div className="flex min-h-svh flex-col">
+    <div className="flex min-h-svh flex-col pb-24">
       <Navbar />
       <main className="flex-1">
         <div className="container mx-auto max-w-6xl p-6">
