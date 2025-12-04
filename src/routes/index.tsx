@@ -15,6 +15,7 @@ import { EmblaOptionsType } from "embla-carousel";
 import { AuthModal } from "~/components/auth-modal";
 import { LogoSpinner } from "~/components/logo";
 import { IPhoneFrame } from "~/components/ui/iphone-frame";
+import { ShimmeringText } from "~/components/ui/shimmering-text";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -200,7 +201,13 @@ function HeroSection() {
             {/* Hero Text Card */}
             <div className="rounded-2xl border-2 p-6 md:p-8 mb-4" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 leading-tight" style={{ color: '#1A1A1A' }}>
-                prank call your friends with ai
+                <ShimmeringText
+                  text="prank call your friends with ai"
+                  duration={3}
+                  wave={false}
+                  color="#1A1A1A"
+                  shimmeringColor="#86EE02"
+                />
               </h1>
               <p className="text-sm" style={{ color: '#1A1A1A', opacity: 0.7 }}>
                 fill out a few details and an ai will prank call your friend live. we'll send you a video of the recording afterwards. web3 payment rails with fhe pii encryption.
