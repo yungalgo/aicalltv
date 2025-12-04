@@ -116,7 +116,7 @@ wss.on("connection", (ws: WebSocket, req) => {
   
   let currentSession: ConversationSession | null = null;
   let chatClient: InstanceType<typeof import("./src/lib/conversation-relay/openai-chat").OpenAIChatClient> | null = null;
-
+  
   ws.on("message", async (data: Buffer) => {
     const rawData = data.toString();
     
@@ -167,17 +167,17 @@ wss.on("connection", (ws: WebSocket, req) => {
       console.error("[WS] Error processing message:", error);
     }
   });
-
+  
   ws.on("close", (code) => {
     console.log(`[WS] 🔌 Connection closed (code: ${code})`);
     if (currentSession) {
       sessions.delete(currentSession.sessionId);
     }
-  });
+});
 
   ws.on("error", (error) => {
     console.error("[WS] ❌ Error:", error);
-  });
+});
 
   // Handle setup message
   async function handleSetup(ws: WebSocket, message: SetupMessage) {
@@ -196,18 +196,18 @@ wss.on("connection", (ws: WebSocket, req) => {
       // Fallback to DB query
       console.log(`[WS] ⚠️ Cache miss, querying DB...`);
       try {
-        const postgres = (await import("postgres")).default;
-        const { drizzle } = await import("drizzle-orm/postgres-js");
-        const { eq } = await import("drizzle-orm");
-        const { calls } = await import("./src/lib/db/schema/calls");
-        const schema = await import("./src/lib/db/schema");
-        
-        const driver = postgres(process.env.DATABASE_URL!);
-        const db = drizzle({ client: driver, schema, casing: "snake_case" });
-        
-        const [call] = await db.select().from(calls).where(eq(calls.callSid, callSid)).limit(1);
-        await driver.end();
-        
+    const postgres = (await import("postgres")).default;
+    const { drizzle } = await import("drizzle-orm/postgres-js");
+    const { eq } = await import("drizzle-orm");
+    const { calls } = await import("./src/lib/db/schema/calls");
+    const schema = await import("./src/lib/db/schema");
+    
+    const driver = postgres(process.env.DATABASE_URL!);
+    const db = drizzle({ client: driver, schema, casing: "snake_case" });
+    
+    const [call] = await db.select().from(calls).where(eq(calls.callSid, callSid)).limit(1);
+    await driver.end();
+    
         if (call?.openaiPrompt) {
           openaiPrompt = call.openaiPrompt;
         }
@@ -235,8 +235,8 @@ wss.on("connection", (ws: WebSocket, req) => {
     sessions.set(sessionId, currentSession);
 
     console.log(`[WS] ✅ Ready - waiting for user speech...`);
-  }
-
+    }
+    
   // Handle prompt (user speech transcribed)
   async function handlePrompt(ws: WebSocket, message: PromptMessage) {
     if (!currentSession || !chatClient) {
@@ -248,7 +248,7 @@ wss.on("connection", (ws: WebSocket, req) => {
       console.log("[WS] ⏳ Already processing, ignoring");
       return;
     }
-
+    
     const userText = message.voicePrompt;
 
     // Add user turn to conversation
@@ -257,7 +257,7 @@ wss.on("connection", (ws: WebSocket, req) => {
       content: userText,
       timestamp: Date.now(),
     });
-
+    
     currentSession.isProcessing = true;
 
     try {
@@ -357,7 +357,7 @@ wss.on("connection", (ws: WebSocket, req) => {
           wasInterrupted: true,
           interruptedAt: utteranceUntilInterrupt,
         };
-      }
+    }
     }
 
     currentSession.isProcessing = false;
