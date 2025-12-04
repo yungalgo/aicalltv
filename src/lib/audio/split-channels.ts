@@ -1,9 +1,13 @@
 /**
  * Audio processing utilities for splitting stereo audio
  * 
- * Naming convention:
- * - caller = The AI making the call (left channel)
- * - target = The person being called/pranked (right channel)
+ * Twilio dual-channel recording layout:
+ * - LEFT channel = target (the person being called/pranked)
+ * - RIGHT channel = caller (the AI making the call)
+ * 
+ * Image/Video layout:
+ * - TOP = caller (AI)
+ * - BOTTOM = target (person)
  */
 
 import ffmpeg from "fluent-ffmpeg";
@@ -19,10 +23,11 @@ export interface SplitAudioResult {
 }
 
 /**
- * Split stereo audio file into left (caller) and right (target) channels
+ * Split stereo audio file into caller and target channels
  * 
- * - Left channel = caller (AI)
- * - Right channel = target (person being called)
+ * Twilio dual-channel layout:
+ * - LEFT channel (FL) = target (person being called)
+ * - RIGHT channel (FR) = caller (AI)
  * 
  * @param inputPath - Path to input stereo audio file
  * @param callId - Call ID for naming output files
@@ -37,16 +42,14 @@ export async function splitStereoAudio(
 
   console.log(`[Audio Split] Splitting stereo audio for call ${callId}`);
 
-  // Extract left channel (caller/AI) as mono with 1 second silence prepended
-  // The stereo file: left = caller (AI), right = target (person)
-  // We use adelay filter to delay audio by 1 second (prepends silence)
+  // Extract RIGHT channel = caller (AI) audio
+  // Twilio dual-channel: RIGHT = the "from" party (our AI caller)
   await retryWithBackoff(
     () =>
       new Promise<void>((resolve, reject) => {
         ffmpeg(inputPath)
           .audioFilters([
-            "pan=mono|c0=FL", // Extract left channel (caller/AI) as mono
-            "adelay=1000" // Delay by 1000ms (1 second) - prepends silence
+            "pan=mono|c0=FR", // Extract RIGHT channel (caller/AI) as mono
           ])
           .output(callerAudioPath)
           .on("end", () => {
@@ -61,16 +64,14 @@ export async function splitStereoAudio(
     { maxRetries: 2, initialDelay: 1000 },
   );
 
-  // Extract right channel (target/person) as mono with 1 second silence prepended
-  // The stereo file: left = caller (AI), right = target (person)
-  // We use adelay filter to delay audio by 1 second (prepends silence)
+  // Extract LEFT channel = target (person being called) audio
+  // Twilio dual-channel: LEFT = the "to" party (target person)
   await retryWithBackoff(
     () =>
       new Promise<void>((resolve, reject) => {
         ffmpeg(inputPath)
           .audioFilters([
-            "pan=mono|c0=FR", // Extract right channel (target/person) as mono
-            "adelay=1000" // Delay by 1000ms (1 second) - prepends silence
+            "pan=mono|c0=FL", // Extract LEFT channel (target/person) as mono
           ])
           .output(targetAudioPath)
           .on("end", () => {

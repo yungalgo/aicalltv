@@ -175,11 +175,12 @@ export async function setupVideoGeneratorWorker() {
 
         // Generate multi-person video with WavespeedAI using the image
         // Layout: TOP = caller (AI), BOTTOM = target (person)
+        // WavespeedAI: left_audio → BOTTOM, right_audio → TOP
         const videoResult = await generateMultiPersonVideo(
-          callerS3Url,
-          targetS3Url,
+          targetS3Url,  // → left_audio → BOTTOM (target/person)
+          callerS3Url,  // → right_audio → TOP (caller/AI)
           callId,
-          finalImageUrl, // Use either edited or generated image
+          finalImageUrl,
           audioDuration,
         );
 

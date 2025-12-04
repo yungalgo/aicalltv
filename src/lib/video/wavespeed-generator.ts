@@ -1,8 +1,12 @@
 /**
  * WavespeedAI infinitetalk-fast multi video generation integration
  * 
- * Converts image + left/right audio into dual-person talking avatar videos
+ * Converts image + audio into dual-person talking avatar videos
  * https://wavespeed.ai/models/infinitetalk-fast/multi
+ * 
+ * Audio-to-image mapping for vertical split (TOP/BOTTOM) images:
+ * - left_audio  → BOTTOM person (target)
+ * - right_audio → TOP person (caller/AI)
  */
 
 import { env } from "~/env/server";
@@ -23,10 +27,14 @@ export interface WavespeedVideoResult {
 
 /**
  * Submit multi-person video generation job to WavespeedAI
+ * 
+ * WavespeedAI mapping for vertical (TOP/BOTTOM) images:
+ * - left_audio  → BOTTOM person
+ * - right_audio → TOP person
  */
 async function submitWavespeedMultiJob(
-  leftAudioUrl: string,
-  rightAudioUrl: string,
+  leftAudioUrl: string,   // → BOTTOM person (target)
+  rightAudioUrl: string,  // → TOP person (caller/AI)
   imageUrl: string,
   seed: number = -1,
 ): Promise<string> {
@@ -43,8 +51,8 @@ async function submitWavespeedMultiJob(
       Authorization: `Bearer ${env.WAVESPEED_API_KEY}`,
     },
     body: JSON.stringify({
-      left_audio: leftAudioUrl,
-      right_audio: rightAudioUrl,
+      left_audio: leftAudioUrl,    // → BOTTOM person (target)
+      right_audio: rightAudioUrl,  // → TOP person (caller/AI)
       image: imageUrl,
       order: "meanwhile",
       seed: seed,
@@ -168,13 +176,18 @@ async function pollWavespeedJob(jobId: string): Promise<WavespeedVideoResult> {
 
 /**
  * Generate multi-person video using WavespeedAI infinitetalk-fast/multi
- * Takes left and right audio channels and generates a dual-person video
+ * 
+ * Image layout: TOP = caller (AI), BOTTOM = target (person)
+ * 
+ * WavespeedAI mapping:
+ * - left_audio  → BOTTOM person (target)
+ * - right_audio → TOP person (caller/AI)
  */
 export async function generateMultiPersonVideo(
-  leftAudioUrl: string,
-  rightAudioUrl: string,
+  bottomAudioUrl: string, // Target (person) audio → left_audio → BOTTOM
+  topAudioUrl: string,    // Caller (AI) audio → right_audio → TOP
   callId: string,
-  imageUrl: string, // Required - no fallbacks during development
+  imageUrl: string,
   audioDuration?: number,
 ): Promise<WavespeedVideoResult> {
   if (!env.WAVESPEED_API_KEY) {
@@ -195,8 +208,10 @@ export async function generateMultiPersonVideo(
   console.log(`[WavespeedAI] Generating multi-person video for call ${callId}`);
 
   // Submit job with retry
+  // bottomAudioUrl → left_audio → BOTTOM person (target)
+  // topAudioUrl → right_audio → TOP person (caller/AI)
   const jobId = await retryWithBackoff(
-    () => submitWavespeedMultiJob(leftAudioUrl, rightAudioUrl, finalImageUrl),
+    () => submitWavespeedMultiJob(bottomAudioUrl, topAudioUrl, finalImageUrl),
     { maxRetries: 2, initialDelay: 1000 },
   );
 
