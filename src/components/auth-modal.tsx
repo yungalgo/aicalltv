@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { LoaderCircle } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -24,14 +24,17 @@ interface AuthModalProps {
 
 export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "login" }: AuthModalProps) {
   const [isLogin, setIsLogin] = useState(initialMode === "login");
+  const [prevOpen, setPrevOpen] = useState(open);
   const queryClient = useQueryClient();
 
-  // Reset to initialMode when modal opens
-  useEffect(() => {
-    if (open) {
-      setIsLogin(initialMode === "login");
-    }
-  }, [open, initialMode]);
+  // Reset to initialMode when modal opens (from closed to open)
+  // Using derived state pattern to avoid useEffect + setState
+  if (open && !prevOpen) {
+    setIsLogin(initialMode === "login");
+  }
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+  }
 
   const { mutate: emailLoginMutate, isPending: isLoginPending } = useMutation({
     mutationFn: async (data: { email: string; password: string }) =>

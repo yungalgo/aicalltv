@@ -4,9 +4,13 @@
  * Converts image + audio into dual-person talking avatar videos
  * https://wavespeed.ai/models/infinitetalk-fast/multi
  * 
- * Audio-to-image mapping for vertical split (TOP/BOTTOM) images:
- * - left_audio  → TOP person (caller/AI)
- * - right_audio → BOTTOM person (target)
+ * Image layout: 16:9 LANDSCAPE with LEFT = caller (AI), RIGHT = target
+ * Audio mapping:
+ * - left_audio  → LEFT person (caller/AI)
+ * - right_audio → RIGHT person (target)
+ * 
+ * After video generation, we rotate the output:
+ * LEFT→TOP, RIGHT→BOTTOM for final 9:16 portrait output
  */
 
 import { env } from "~/env/server";
@@ -28,13 +32,13 @@ export interface WavespeedVideoResult {
 /**
  * Submit multi-person video generation job to WavespeedAI
  * 
- * WavespeedAI mapping for vertical (TOP/BOTTOM) images:
- * - left_audio  → TOP person (caller/AI)
- * - right_audio → BOTTOM person (target)
+ * WavespeedAI mapping for horizontal (LEFT/RIGHT) images:
+ * - left_audio  → LEFT person (caller/AI)
+ * - right_audio → RIGHT person (target)
  */
 async function submitWavespeedMultiJob(
-  leftAudioUrl: string,   // → TOP person (caller/AI)
-  rightAudioUrl: string,  // → BOTTOM person (target)
+  leftAudioUrl: string,   // → LEFT person (caller/AI)
+  rightAudioUrl: string,  // → RIGHT person (target)
   imageUrl: string,
   seed: number = -1,
 ): Promise<string> {
@@ -51,8 +55,8 @@ async function submitWavespeedMultiJob(
       Authorization: `Bearer ${env.WAVESPEED_API_KEY}`,
     },
     body: JSON.stringify({
-      left_audio: leftAudioUrl,    // → TOP person (caller/AI)
-      right_audio: rightAudioUrl,  // → BOTTOM person (target)
+      left_audio: leftAudioUrl,    // → LEFT person (caller/AI)
+      right_audio: rightAudioUrl,  // → RIGHT person (target)
       image: imageUrl,
       order: "meanwhile",
       seed: seed,
@@ -177,15 +181,17 @@ async function pollWavespeedJob(jobId: string): Promise<WavespeedVideoResult> {
 /**
  * Generate multi-person video using WavespeedAI infinitetalk-fast/multi
  * 
- * Image layout: TOP = caller (AI), BOTTOM = target (person)
+ * Image layout: 16:9 LANDSCAPE with LEFT = caller (AI), RIGHT = target
  * 
  * WavespeedAI mapping:
- * - left_audio  → TOP person (caller/AI)
- * - right_audio → BOTTOM person (target)
+ * - left_audio  → LEFT person (caller/AI)
+ * - right_audio → RIGHT person (target)
+ * 
+ * After generation, call rotateVideoToPortrait() to convert LEFT→TOP, RIGHT→BOTTOM
  */
 export async function generateMultiPersonVideo(
-  topAudioUrl: string,    // Caller (AI) audio → left_audio → TOP
-  bottomAudioUrl: string, // Target (person) audio → right_audio → BOTTOM
+  leftAudioUrl: string,   // Caller (AI) audio → left_audio → LEFT
+  rightAudioUrl: string,  // Target (person) audio → right_audio → RIGHT
   callId: string,
   imageUrl: string,
   audioDuration?: number,
@@ -208,10 +214,10 @@ export async function generateMultiPersonVideo(
   console.log(`[WavespeedAI] Generating multi-person video for call ${callId}`);
 
   // Submit job with retry
-  // topAudioUrl → left_audio → TOP person (caller/AI)
-  // bottomAudioUrl → right_audio → BOTTOM person (target)
+  // leftAudioUrl → left_audio → LEFT person (caller/AI)
+  // rightAudioUrl → right_audio → RIGHT person (target)
   const jobId = await retryWithBackoff(
-    () => submitWavespeedMultiJob(topAudioUrl, bottomAudioUrl, finalImageUrl),
+    () => submitWavespeedMultiJob(leftAudioUrl, rightAudioUrl, finalImageUrl),
     { maxRetries: 2, initialDelay: 1000 },
   );
 
@@ -268,5 +274,64 @@ export async function downloadWavespeedVideo(
   console.log(`[WavespeedAI] ✅ Downloaded video (${(buffer.length / 1024 / 1024).toFixed(1)}MB)`);
 
   return tempPath;
+}
+
+/**
+ * Rotate a 16:9 landscape video to 9:16 portrait
+ * 
+ * Takes a side-by-side video (LEFT | RIGHT) and converts it to
+ * a stacked video (TOP / BOTTOM) where LEFT→TOP and RIGHT→BOTTOM
+ * 
+ * Input: 16:9 landscape (e.g., 1920x1080) with LEFT=caller, RIGHT=target
+ * Output: 9:16 portrait (e.g., 1080x1920) with TOP=caller, BOTTOM=target
+ */
+export async function rotateVideoToPortrait(
+  inputPath: string,
+  callId: string,
+): Promise<string> {
+  const ffmpeg = (await import("fluent-ffmpeg")).default;
+  const { getTempFilePath } = await import("~/lib/utils/temp-cleanup");
+  
+  const outputPath = getTempFilePath(callId, "video-portrait", "mp4");
+  
+  console.log(`[WavespeedAI] 🔄 Rotating video to portrait (LEFT→TOP, RIGHT→BOTTOM)`);
+  
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      // Use filter_complex to:
+      // 1. Split input into two streams
+      // 2. Crop left half from first stream
+      // 3. Crop right half from second stream
+      // 4. Stack them vertically (left on top, right on bottom)
+      .complexFilter([
+        // Split the input
+        '[0:v]split=2[left][right]',
+        // Crop left half (caller) - from x=0, width=half
+        '[left]crop=iw/2:ih:0:0[top]',
+        // Crop right half (target) - from x=half, width=half
+        '[right]crop=iw/2:ih:iw/2:0[bottom]',
+        // Stack vertically: top (left/caller) over bottom (right/target)
+        '[top][bottom]vstack=inputs=2[v]'
+      ])
+      .outputOptions([
+        '-map', '[v]',
+        '-map', '0:a', // Keep audio
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', '23',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+      ])
+      .output(outputPath)
+      .on('end', () => {
+        console.log(`[WavespeedAI] ✅ Rotated to portrait`);
+        resolve(outputPath);
+      })
+      .on('error', (err: Error) => {
+        console.error(`[WavespeedAI] ❌ Rotation failed:`, err);
+        reject(err);
+      })
+      .run();
+  });
 }
 

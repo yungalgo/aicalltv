@@ -4,8 +4,10 @@
  * Generates images from prompts using Google's nano-banana-pro model
  * https://wavespeed.ai/models/google/nano-banana-pro
  * 
- * Image format: 9:16 vertical portrait
- * Layout: TOP = caller (AI), BOTTOM = target (person being called)
+ * Image format: 16:9 landscape (required for WavespeedAI multi model)
+ * Layout: LEFT = caller (AI), RIGHT = target (person being called)
+ * 
+ * After video generation, we rotate: LEFT→TOP, RIGHT→BOTTOM for 9:16 portrait output
  */
 
 import { env } from "~/env/server";
@@ -29,8 +31,11 @@ export interface GenerateImageOptions {
 
 /**
  * Submit image generation job to WavespeedAI nano-banana-pro
- * Always uses: PNG format, 9:16 aspect ratio (vertical), 4k resolution
- * Layout: TOP = caller (AI), BOTTOM = target (person)
+ * Always uses: PNG format, 16:9 aspect ratio (landscape), 4k resolution
+ * Layout: LEFT = caller (AI), RIGHT = target (person)
+ * 
+ * Note: We use 16:9 because WavespeedAI multi model expects LEFT/RIGHT layout.
+ * The final video is rotated to 9:16 portrait (LEFT→TOP, RIGHT→BOTTOM) after generation.
  */
 async function submitImageGenerationJob(
   prompt: string,
@@ -44,7 +49,7 @@ async function submitImageGenerationJob(
   const payload = {
     prompt: prompt,
     resolution: "4k",
-    aspect_ratio: "9:16", // Vertical portrait - TOP=caller, BOTTOM=target
+    aspect_ratio: "16:9", // Landscape - LEFT=caller, RIGHT=target (for WavespeedAI multi model)
     output_format: "png",
     enable_sync_mode: false,
     enable_base64_output: false,
@@ -213,7 +218,7 @@ export async function generateImage(
 
   const { prompt, callId } = options;
 
-  console.log(`[WavespeedAI Image] 🎨 Generating image for call ${callId} (PNG, 9:16 vertical, 4k)`);
+  console.log(`[WavespeedAI Image] 🎨 Generating image for call ${callId} (PNG, 16:9 landscape, 4k)`);
 
   // Submit job with retry (always PNG, 16:9, 4k)
   const requestId = await retryWithBackoff(
@@ -246,17 +251,20 @@ export async function generateImage(
 }
 
 /**
- * Default prompt for split-screen call scenes (9:16 vertical)
- * TOP = AI caller, BOTTOM = target person
+ * Default prompt for split-screen call scenes (16:9 landscape)
+ * LEFT = AI caller, RIGHT = target person
  * 
  * NOTE: This is ONLY used in test scripts (scripts/test-video-generation.ts)
  * Production uses Groq-generated prompts from groq-generator.ts
+ * 
+ * We use 16:9 landscape because WavespeedAI multi model expects LEFT/RIGHT layout.
+ * The final video is rotated to 9:16 portrait after generation.
  */
 export function getDefaultCallImagePrompt(): string {
   return (
-    "Vertical split-screen shot (9:16 portrait) of two characters actively on a phone call. " +
-    "TOP half: a quirky AI caller character with exaggerated features, phone pressed to ear, mouth open mid-sentence, animated talking expression. " +
-    "BOTTOM half: the target person on the phone call, phone held to ear, mouth open responding, engaged conversation expression. " +
+    "Horizontal split-screen shot (16:9 landscape) of two characters actively on a phone call. " +
+    "LEFT half: a quirky AI caller character with exaggerated features, phone pressed to ear, mouth open mid-sentence, animated talking expression. " +
+    "RIGHT half: the target person on the phone call, phone held to ear, mouth open responding, engaged conversation expression. " +
     "IMPORTANT: Both characters must be ACTIVELY SPEAKING into phones with mouths open, not just holding phones."
   );
 }
@@ -273,7 +281,10 @@ export interface EditImageOptions {
 /**
  * Submit image edit job to WavespeedAI nano-banana-pro/edit
  * Takes a user's uploaded photo and edits it into a phone call scene
- * Layout: 9:16 vertical - TOP = caller (AI), BOTTOM = target (person from photo)
+ * Layout: 16:9 landscape - LEFT = caller (AI), RIGHT = target (person from photo)
+ * 
+ * Note: We use 16:9 because WavespeedAI multi model expects LEFT/RIGHT layout.
+ * The final video is rotated to 9:16 portrait (LEFT→TOP, RIGHT→BOTTOM) after generation.
  */
 async function submitImageEditJob(
   sourceImageUrl: string,
@@ -285,20 +296,17 @@ async function submitImageEditJob(
     );
   }
 
-  // Edit prompt: use the Groq-generated prompt but add instructions to preserve the uploaded person's likeness
-  // The prompt already contains: caller description, target description, style, and layout
-  // We just need to add the instruction to use the uploaded photo for the BOTTOM half
+  // The Groq-generated prompt already specifies that RIGHT uses the uploaded photo
+  // Just reinforce the key editing instructions
   const editPrompt = `${prompt}
 
-IMPORTANT EDIT INSTRUCTION: Use the uploaded photo as reference for the BOTTOM half character. 
-Preserve their face, likeness, and identity while rendering them in the specified art style.
-Both characters must be ACTIVELY SPEAKING on phones with mouths open.`;
+EDIT INSTRUCTIONS: Preserve the uploaded person's face, likeness, and identity in the RIGHT half while applying the art style. Both characters must be actively speaking on phones.`;
 
   const payload = {
     prompt: editPrompt,
     images: [sourceImageUrl], // Array of image URLs
     resolution: "4k",
-    aspect_ratio: "9:16", // Vertical portrait - TOP=caller, BOTTOM=target
+    aspect_ratio: "16:9", // Landscape - LEFT=caller, RIGHT=target (for WavespeedAI multi model)
     output_format: "png",
     enable_sync_mode: false,
     enable_base64_output: false,

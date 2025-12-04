@@ -10,6 +10,7 @@ import { splitStereoAudio } from "~/lib/audio/split-channels";
 import {
   generateMultiPersonVideo,
   downloadWavespeedVideo,
+  rotateVideoToPortrait,
 } from "~/lib/video/wavespeed-generator";
 import { generateImage } from "~/lib/image/wavespeed-image-generator";
 import { uploadFileToS3 } from "~/lib/storage/s3";
@@ -135,6 +136,8 @@ export async function setupVideoGeneratorWorker() {
               ragebaitTrigger: call.ragebaitTrigger || undefined,
             },
             videoStyle: call.videoStyle,
+            // If user uploaded a photo, don't describe their appearance in the prompt
+            hasUploadedImage: !!call.uploadedImageUrl,
           };
           
           // Fail loudly if generation fails - no fallbacks during development
@@ -174,21 +177,26 @@ export async function setupVideoGeneratorWorker() {
         }
 
         // Generate multi-person video with WavespeedAI using the image
-        // Layout: TOP = caller (AI), BOTTOM = target (person)
-        // WavespeedAI: left_audio → TOP, right_audio → BOTTOM
+        // Image layout: 16:9 LANDSCAPE with LEFT = caller (AI), RIGHT = target
+        // WavespeedAI: left_audio → LEFT, right_audio → RIGHT
         const videoResult = await generateMultiPersonVideo(
-          callerS3Url,  // → left_audio → TOP (caller/AI)
-          targetS3Url,  // → right_audio → BOTTOM (target/person)
+          callerS3Url,  // → left_audio → LEFT (caller/AI)
+          targetS3Url,  // → right_audio → RIGHT (target/person)
           callId,
           finalImageUrl,
           audioDuration,
         );
 
-        // Download video from WavespeedAI
-        const videoPath = await downloadWavespeedVideo(
+        // Download video from WavespeedAI (16:9 landscape)
+        const landscapeVideoPath = await downloadWavespeedVideo(
           videoResult.videoUrl,
           callId,
         );
+        tempFiles.push(landscapeVideoPath);
+        
+        // Rotate video from 16:9 landscape to 9:16 portrait
+        // This converts LEFT→TOP, RIGHT→BOTTOM for phone-style vertical video
+        const videoPath = await rotateVideoToPortrait(landscapeVideoPath, callId);
         tempFiles.push(videoPath);
 
         // Upload final video to S3

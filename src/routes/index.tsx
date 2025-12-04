@@ -210,6 +210,17 @@ function CallRequestForm() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Must be logged in to upload images
+    if (!user) {
+      toast.error("Please log in to upload an image");
+      setShowAuthModal(true);
+      // Clear the file input so they can try again after logging in
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
     // Validate file type
     if (!file.type.startsWith("image/")) {
       toast.error("Please upload an image file");
