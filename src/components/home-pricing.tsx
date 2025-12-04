@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "~/components/ui/button";
 import { CheckIcon } from "@radix-ui/react-icons";
 import { PAYMENT_CONFIG } from "~/lib/web3/config";
 import { authQueryOptions } from "~/lib/auth/queries";
 import { AuthModal } from "~/components/auth-modal";
+import { AnimatedButton } from "~/components/ui/animated-button";
 
 function CreateCallButton() {
   const { data: user } = useQuery(authQueryOptions());
@@ -21,14 +21,15 @@ function CreateCallButton() {
   return (
     <>
       <div className="flex justify-center">
-      <Button 
+      <AnimatedButton 
         onClick={handleClick}
-        size="lg" 
-          className="font-medium hover:opacity-80 px-12" 
+        icon={<span>📞</span>}
+        iconPosition="left"
+        className="font-medium px-12 py-3 text-lg rounded-md" 
         style={{ backgroundColor: '#1A1A1A', color: 'white' }}
       >
           Let's Do It
-      </Button>
+      </AnimatedButton>
       </div>
       <AuthModal
         open={showAuthModal}

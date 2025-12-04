@@ -17,6 +17,7 @@ import { LogoSpinner } from "~/components/logo";
 import { IPhoneFrame } from "~/components/ui/iphone-frame";
 import { ShimmeringText } from "~/components/ui/shimmering-text";
 import { Status, StatusIndicator, StatusLabel } from "~/components/ui/status";
+import { AnimatedButton } from "~/components/ui/animated-button";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -291,18 +292,20 @@ function HeroSection() {
               </div>
 
               <div className="flex justify-center">
-              <Button 
+              <AnimatedButton 
                 onClick={handleSubmit}
-                  className="font-semibold hover:opacity-90 py-5 px-12 text-base"
+                icon={<span>📞</span>}
+                iconPosition="left"
+                className="font-semibold py-5 px-12 text-base rounded-md"
                 style={{ backgroundColor: '#86EE02', color: '#1A1A1A' }}
               >
                 Prank your Friend →
-              </Button>
+              </AnimatedButton>
               </div>
               
               {/* Active prankers status */}
               <div className="flex justify-end mt-3">
-                <Status status="online" variant="outline" size="sm" className="border-0 gap-1.5 p-0">
+                <Status status="online" variant="outline" size="sm" className="border-0 gap-1.5">
                   <StatusIndicator ping />
                   <StatusLabel className="text-xs" style={{ color: '#1A1A1A', opacity: 0.6 }}>
                     {activePrankers} pranking right now

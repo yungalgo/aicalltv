@@ -9,6 +9,7 @@ import { Button } from "~/components/ui/button"
 import { Navbar02, type Navbar02NavItem } from "~/components/ui/navbar-02"
 import { NavigationMenuLink } from "~/components/ui/navigation-menu"
 import { authQueryOptions } from "~/lib/auth/queries"
+import { AnimatedButton } from "~/components/ui/animated-button"
 
 function NavbarActions() {
   const { data: user } = useQuery(authQueryOptions())
@@ -88,14 +89,15 @@ function CreateCallButton() {
 
   return (
     <>
-      <Button
+      <AnimatedButton
         onClick={handleClick}
-        size="sm"
-        className="font-medium hover:opacity-90 px-4 h-9 rounded-md"
+        icon={<span className="text-sm">📞</span>}
+        iconPosition="left"
+        className="font-medium px-4 h-9 rounded-md text-sm"
         style={{ backgroundColor: '#86EE02', color: '#1A1A1A' }}
       >
         Prank your Friend
-      </Button>
+      </AnimatedButton>
       <AuthModal
         open={showAuthModal}
         onOpenChange={setShowAuthModal}
