@@ -129,6 +129,9 @@ Create an ENTERTAINING scenario. Use the details creatively. Return ONLY the JSO
     throw new Error("Groq API returned no content");
   }
 
+  // Log raw response for debugging
+  console.log("[Groq] Raw response:", content.substring(0, 500));
+
   try {
     // Parse the JSON response - handle markdown code blocks
     let jsonContent = content.trim();
