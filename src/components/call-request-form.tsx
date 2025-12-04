@@ -115,7 +115,7 @@ export function CallRequestForm() {
   const isFhenixReady = useFhenixReady(privacyMode);
   
   // Fetch callers
-  const { data: callers = [], isLoading: callersLoading, error: callersError } = useQuery<Array<{ id: string; name: string }>>({
+  const { data: callers = [], isLoading: callersLoading, error: callersError } = useQuery<Array<{ id: string; name: string; slug: string }>>({
     queryKey: ["callers"],
     queryFn: async () => {
       const res = await fetch("/api/callers");
@@ -136,6 +136,13 @@ export function CallRequestForm() {
   // Store the vault callId after encryption (used instead of raw phone)
   const [fhenixVaultId, setFhenixVaultId] = useState<string | null>(null);
   
+  // Get caller from URL params or sessionStorage
+  const callerSlugFromUrl = (search as { caller?: string }).caller;
+  const callerSlugFromStorage = typeof window !== "undefined" 
+    ? sessionStorage.getItem("selectedCallerSlug")
+    : null;
+  const callerSlug = callerSlugFromUrl || callerSlugFromStorage;
+  
   const [formData, setFormData] = useState({
     recipientName: "",
     phoneNumber: "",
@@ -155,6 +162,20 @@ export function CallRequestForm() {
     uploadedImageUrl: "",
     uploadedImageS3Key: "",
   });
+  
+  // Set caller ID when callers are loaded and we have a slug
+  useEffect(() => {
+    if (callerSlug && callers.length > 0 && !formData.callerId) {
+      const selectedCaller = callers.find((c: { slug: string }) => c.slug === callerSlug);
+      if (selectedCaller) {
+        setFormData((prev) => ({ ...prev, callerId: selectedCaller.id }));
+        // Clear sessionStorage after successfully setting the caller
+        if (typeof window !== "undefined" && callerSlugFromStorage) {
+          sessionStorage.removeItem("selectedCallerSlug");
+        }
+      }
+    }
+  }, [callerSlug, callers, formData.callerId, callerSlugFromStorage]);
   
   // Image upload state
   const [isUploadingImage, setIsUploadingImage] = useState(false);

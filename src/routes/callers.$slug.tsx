@@ -1,9 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { useSuspenseQuery, useQuery } from "@tanstack/react-query"
+import { useState } from "react"
 import { Navbar } from "~/components/navbar"
 import { Footer } from "~/components/footer"
 import { Button } from "~/components/ui/button"
 import { Link } from "@tanstack/react-router"
+import { AuthModal } from "~/components/auth-modal"
+import { authQueryOptions } from "~/lib/auth/queries"
 
 export const Route = createFileRoute("/callers/$slug")({
   component: CallerDetailPage,
@@ -11,17 +14,41 @@ export const Route = createFileRoute("/callers/$slug")({
 
 function CallerDetailPage() {
   const { slug } = Route.useParams()
+  const navigate = useNavigate()
+  const { data: user } = useSuspenseQuery(authQueryOptions())
+  const [showAuthModal, setShowAuthModal] = useState(false)
   
-  // Fetch caller details
+  // Fetch caller details from dedicated API endpoint
   const { data: caller } = useSuspenseQuery({
     queryKey: ["caller", slug],
     queryFn: async () => {
-      const res = await fetch(`/api/callers`)
-      if (!res.ok) throw new Error("Failed to fetch callers")
-      const callers = await res.json()
-      return callers.find((c: { slug: string }) => c.slug === slug)
+      const res = await fetch(`/api/callers/${slug}`)
+      if (!res.ok) throw new Error("Failed to fetch caller")
+      return res.json()
     },
   })
+  
+  // Handle "Use this caller" button click
+  const handleUseCaller = () => {
+    if (user) {
+      // User is authenticated, go directly to create page with caller pre-selected
+      navigate({ to: "/create", search: { caller: slug } })
+    } else {
+      // User not authenticated, save caller selection and show auth modal
+      sessionStorage.setItem("selectedCallerSlug", slug)
+      setShowAuthModal(true)
+    }
+  }
+  
+  // Handle successful auth - redirect to create with saved caller
+  // Note: We keep the caller in sessionStorage and let the form read it
+  // because better-auth might do a hard redirect that loses search params
+  const handleAuthSuccess = () => {
+    setShowAuthModal(false)
+    // Don't remove sessionStorage here - let the form read it and clear it
+    // Navigate to create - the form will read from sessionStorage if search params are lost
+    navigate({ to: "/create" })
+  }
 
   if (!caller) {
     return (
@@ -63,7 +90,7 @@ function CallerDetailPage() {
 
               <div className="space-y-4">
                 <div>
-                  <h2 className="text-lg font-semibold mb-2">About</h2>
+                  <h2 className="text-lg font-semibold mb-2">Personality</h2>
                   <p className="text-muted-foreground">
                     {caller.personality || "A unique AI caller ready to make your prank call."}
                   </p>
@@ -76,23 +103,45 @@ function CallerDetailPage() {
                   </p>
                 </div>
 
-                <div>
+                {caller.appearanceDescription && (
+                  <div>
+                    <h2 className="text-lg font-semibold mb-2">Appearance</h2>
+                    <p className="text-muted-foreground">
+                      {caller.appearanceDescription}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-2">
                   <span className="inline-block px-3 py-1 rounded-full bg-muted text-sm">
                     {caller.gender}
                   </span>
+                  {caller.voiceName && (
+                    <span className="inline-block px-3 py-1 rounded-full bg-muted text-sm">
+                      Voice: {caller.voiceName}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              <Link to="/create" search={{ caller: slug }}>
-                <Button size="lg" className="w-full md:w-auto">
-                  Select This Caller
-                </Button>
-              </Link>
+              <Button 
+                size="lg" 
+                className="w-full md:w-auto"
+                onClick={handleUseCaller}
+              >
+                Use This Caller
+              </Button>
             </div>
           </div>
         </div>
       </main>
       <Footer />
+      <AuthModal
+        open={showAuthModal}
+        onOpenChange={setShowAuthModal}
+        onAuthSuccess={handleAuthSuccess}
+        initialMode="signup"
+      />
     </div>
   )
 }
