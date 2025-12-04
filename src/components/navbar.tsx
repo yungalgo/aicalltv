@@ -172,25 +172,35 @@ function CallersDropdownContent({ isMobile = false }: { isMobile?: boolean }) {
 }
 
 export function Navbar() {
+  const { data: user } = useSuspenseQuery(authQueryOptions());
+  
   const navigationLinks = useMemo<Navbar02NavItem[]>(
-    () => [
-      {
-        label: "Callers",
-        submenu: true,
-        type: "simple",
-        customContent: <CallersDropdownContent isMobile={false} />,
-        mobileContent: <CallersDropdownContent isMobile={true} />,
-      },
-      {
-        href: "/how-it-works",
-        label: "How it Works",
-      },
-      {
-        href: "/your-calls",
-        label: "Your Calls",
-      },
-    ],
-    []
+    () => {
+      const links: Navbar02NavItem[] = [
+        {
+          label: "Callers",
+          submenu: true,
+          type: "simple",
+          customContent: <CallersDropdownContent isMobile={false} />,
+          mobileContent: <CallersDropdownContent isMobile={true} />,
+        },
+        {
+          href: "/how-it-works",
+          label: "How it Works",
+        },
+      ];
+      
+      // Only show "Your Calls" if user is logged in
+      if (user) {
+        links.push({
+          href: "/your-calls",
+          label: "Your Calls",
+        });
+      }
+      
+      return links;
+    },
+    [user]
   )
 
   return (
