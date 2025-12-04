@@ -11,8 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as PrivacyRouteImport } from './routes/privacy'
-import { Route as IndexOldRouteImport } from './routes/index-old'
-import { Route as IndexNewRouteImport } from './routes/index-new'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as CreateRouteImport } from './routes/create'
 import { Route as CallsRouteImport } from './routes/calls'
@@ -46,16 +44,6 @@ const TermsRoute = TermsRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexOldRoute = IndexOldRouteImport.update({
-  id: '/index-old',
-  path: '/index-old',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexNewRoute = IndexNewRouteImport.update({
-  id: '/index-new',
-  path: '/index-new',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HowItWorksRoute = HowItWorksRouteImport.update({
@@ -185,8 +173,6 @@ export interface FileRoutesByFullPath {
   '/calls': typeof CallsRoute
   '/create': typeof CreateRoute
   '/how-it-works': typeof HowItWorksRoute
-  '/index-new': typeof IndexNewRoute
-  '/index-old': typeof IndexOldRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/login': typeof authPagesLoginRoute
@@ -213,8 +199,6 @@ export interface FileRoutesByTo {
   '/calls': typeof CallsRoute
   '/create': typeof CreateRoute
   '/how-it-works': typeof HowItWorksRoute
-  '/index-new': typeof IndexNewRoute
-  '/index-old': typeof IndexOldRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/login': typeof authPagesLoginRoute
@@ -244,8 +228,6 @@ export interface FileRoutesById {
   '/calls': typeof CallsRoute
   '/create': typeof CreateRoute
   '/how-it-works': typeof HowItWorksRoute
-  '/index-new': typeof IndexNewRoute
-  '/index-old': typeof IndexOldRoute
   '/privacy': typeof PrivacyRoute
   '/terms': typeof TermsRoute
   '/(auth-pages)/login': typeof authPagesLoginRoute
@@ -274,8 +256,6 @@ export interface FileRouteTypes {
     | '/calls'
     | '/create'
     | '/how-it-works'
-    | '/index-new'
-    | '/index-old'
     | '/privacy'
     | '/terms'
     | '/login'
@@ -302,8 +282,6 @@ export interface FileRouteTypes {
     | '/calls'
     | '/create'
     | '/how-it-works'
-    | '/index-new'
-    | '/index-old'
     | '/privacy'
     | '/terms'
     | '/login'
@@ -332,8 +310,6 @@ export interface FileRouteTypes {
     | '/calls'
     | '/create'
     | '/how-it-works'
-    | '/index-new'
-    | '/index-old'
     | '/privacy'
     | '/terms'
     | '/(auth-pages)/login'
@@ -363,8 +339,6 @@ export interface RootRouteChildren {
   CallsRoute: typeof CallsRoute
   CreateRoute: typeof CreateRoute
   HowItWorksRoute: typeof HowItWorksRoute
-  IndexNewRoute: typeof IndexNewRoute
-  IndexOldRoute: typeof IndexOldRoute
   PrivacyRoute: typeof PrivacyRoute
   TermsRoute: typeof TermsRoute
   ApiCallersRoute: typeof ApiCallersRoute
@@ -399,20 +373,6 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/index-old': {
-      id: '/index-old'
-      path: '/index-old'
-      fullPath: '/index-old'
-      preLoaderRoute: typeof IndexOldRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/index-new': {
-      id: '/index-new'
-      path: '/index-new'
-      fullPath: '/index-new'
-      preLoaderRoute: typeof IndexNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/how-it-works': {
@@ -607,8 +567,6 @@ const rootRouteChildren: RootRouteChildren = {
   CallsRoute: CallsRoute,
   CreateRoute: CreateRoute,
   HowItWorksRoute: HowItWorksRoute,
-  IndexNewRoute: IndexNewRoute,
-  IndexOldRoute: IndexOldRoute,
   PrivacyRoute: PrivacyRoute,
   TermsRoute: TermsRoute,
   ApiCallersRoute: ApiCallersRoute,
