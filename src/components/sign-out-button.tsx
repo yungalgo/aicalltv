@@ -16,6 +16,8 @@ export function SignOutButton({ size = "lg" }: { size?: "sm" | "lg" }) {
               // manually set to null to avoid unnecessary refetching
               queryClient.setQueryData(authQueryOptions().queryKey, null);
               await router.invalidate();
+              // Redirect to home page after logout
+              await router.navigate({ to: "/" });
             },
           },
         });
