@@ -41,7 +41,7 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "lo
       await authClient.signIn.email(
         {
           ...data,
-          callbackURL: "/",
+          callbackURL: "/create",
         },
         {
           onError: ({ error }) => {
@@ -61,7 +61,7 @@ export function AuthModal({ open, onOpenChange, onAuthSuccess, initialMode = "lo
       await authClient.signUp.email(
         {
           ...data,
-          callbackURL: "/",
+          callbackURL: "/create",
         },
         {
           onError: ({ error }) => {

@@ -17,7 +17,7 @@ export const Route = createFileRoute("/(auth-pages)/login")({
 
 function LoginForm() {
   const { redirectUrl } = Route.useSearch();
-  const finalRedirectUrl = redirectUrl || "/";
+  const finalRedirectUrl = redirectUrl || "/create";
 
   const { mutate: emailLoginMutate, isPending } = useMutation({
     mutationFn: async (data: { email: string; password: string }) =>
