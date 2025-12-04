@@ -25,6 +25,10 @@ import {
 import { Button } from "~/components/ui/button";
 import { useWalletUi, useWalletUiSigner, type UiWalletAccount } from "@wallet-ui/react";
 import { useWalletUiGill } from "@wallet-ui/react-gill";
+import baseIconUrl from "~/assets/payment-icons/base-icon.svg";
+import solanaIconUrl from "~/assets/payment-icons/solana-icon.svg";
+import zcashIconUrl from "~/assets/payment-icons/zcash-icon.svg";
+import ztarknetIconUrl from "~/assets/payment-icons/ztarknet-icon.svg";
 import {
   address as toAddress,
   getBase58Decoder,
@@ -121,11 +125,16 @@ export interface PaymentModalProps {
 function PhantomConnectButton({
   phantomWallets,
   onConnect,
+  connect,
+  currentAccount,
 }: {
   phantomWallets: ReturnType<typeof useWalletUi>['wallets'];
   onConnect: (account: UiWalletAccount) => void;
+  connect: ReturnType<typeof useWalletUi>['connect'];
+  currentAccount: UiWalletAccount | null | undefined;
 }) {
   const [isConnecting, setIsConnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleConnect = async () => {
     if (phantomWallets.length === 0) {
@@ -135,36 +144,175 @@ function PhantomConnectButton({
 
     const phantom = phantomWallets[0];
     setIsConnecting(true);
+    setError(null);
     
     try {
-      // Connect to Phantom and get accounts
+      console.log("[Phantom] Attempting to connect...", { 
+        wallet: phantom.name, 
+        walletId: (phantom as any).id,
+        features: Object.keys(phantom.features || {}),
+        featureDetails: phantom.features ? Object.keys(phantom.features).map(key => ({
+          key,
+          type: typeof (phantom.features as any)[key],
+          hasConnect: typeof (phantom.features as any)[key]?.connect === 'function'
+        })) : [],
+        hasConnect: !!connect
+      });
+      
+      // Try using the standard:connect feature directly first (more reliable)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const connectFeature = (phantom.features as any)['standard:connect'];
-      if (connectFeature) {
-        const result = await connectFeature.connect();
-        if (result.accounts.length > 0) {
-          onConnect(result.accounts[0] as UiWalletAccount);
+      const connectFeature = (phantom.features as any)?.['standard:connect'];
+      console.log("[Phantom] connectFeature check:", {
+        exists: !!connectFeature,
+        type: typeof connectFeature,
+        hasConnect: typeof connectFeature?.connect === 'function'
+      });
+      
+      if (connectFeature && typeof connectFeature.connect === 'function') {
+        console.log("[Phantom] Using standard:connect feature");
+        try {
+          const result = await connectFeature.connect();
+          console.log("[Phantom] Connect result:", result);
+          if (result?.accounts && result.accounts.length > 0) {
+            const account = result.accounts[0] as UiWalletAccount;
+            console.log("[Phantom] ✅ Connected account:", account.address);
+            onConnect(account);
+            // Also try to sync with useWalletUi's connect function
+            if (connect) {
+              try {
+                // connect expects a UiWalletAccount, but we have the account from standard:connect
+                await connect(account);
+                console.log("[Phantom] ✅ Synced with useWalletUi");
+              } catch (syncErr) {
+                console.warn("[Phantom] Sync with useWalletUi failed (non-critical):", syncErr);
+              }
+            }
+            return;
+          } else {
+            throw new Error("No accounts returned from wallet connection");
+          }
+        } catch (featureErr) {
+          console.error("[Phantom] standard:connect failed:", featureErr);
+          // Fall through to try useWalletUi connect
+        }
+      } else {
+        console.log("[Phantom] standard:connect feature not available, trying useWalletUi connect");
+      }
+      
+      // Fallback: Try using Phantom's native Solana provider directly
+      // According to Phantom docs: https://phantom-e50e2e68.mintlify.app/solana/establishing-a-connection
+      const phantomProvider = (window as any).solana;
+      if (phantomProvider && phantomProvider.isPhantom) {
+        console.log("[Phantom] Using native Phantom provider");
+        try {
+          // Use Phantom's native connect() method
+          const response = await phantomProvider.connect();
+          console.log("[Phantom] Native connect() response:", response);
+          
+          if (response?.publicKey) {
+            // Convert Phantom's PublicKey to our UiWalletAccount format
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const account = {
+              address: response.publicKey.toBase58(),
+              chains: [],
+              icon: phantom.icon,
+              label: phantom.name,
+            } as any as UiWalletAccount;
+            console.log("[Phantom] ✅ Connected via native provider:", account.address);
+            onConnect(account);
+            
+            // Also try to sync with useWalletUi's connect function if available
+            if (connect) {
+              try {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await (connect as any)(phantom);
+                console.log("[Phantom] ✅ Synced with useWalletUi");
+              } catch (syncErr) {
+                console.warn("[Phantom] Sync with useWalletUi failed (non-critical):", syncErr);
+              }
+            }
+            return;
+          } else {
+            throw new Error("No public key returned from Phantom connection");
+          }
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error 
+            ? (err as Error).message 
+            : typeof err === 'string' 
+              ? err 
+              : 'Unknown error';
+          console.error("[Phantom] Native connect() failed:", errorMessage);
+          throw new Error(`Connection failed: ${errorMessage}`);
         }
       }
+      
+      // Last fallback: Try using the connect function from useWalletUi
+      if (connect) {
+        console.log("[Phantom] Using connect function from useWalletUi as last resort");
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const result = await (connect as any)(phantom);
+          console.log("[Phantom] connect() result:", result);
+          
+          // Wait a moment for the account to be set by the hook
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Check if account was set
+          const accountAddress = currentAccount?.address;
+          if (accountAddress && currentAccount) {
+            console.log("[Phantom] ✅ Account set via useWalletUi:", accountAddress);
+            onConnect(currentAccount);
+            return;
+          } else {
+            console.warn("[Phantom] ⚠️ Account not set after connect()");
+            // Check if there's a result with accounts
+            if (result?.accounts && result.accounts.length > 0) {
+              const account = result.accounts[0] as UiWalletAccount;
+              console.log("[Phantom] ✅ Got account from result:", account.address);
+              onConnect(account);
+              return;
+            }
+            throw new Error("Connection completed but no account was returned. Please try again.");
+          }
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error 
+            ? (err as Error).message 
+            : typeof err === 'string' 
+              ? err 
+              : 'Unknown error';
+          console.error("[Phantom] connect() failed:", errorMessage);
+          throw new Error(`Connection failed: ${errorMessage}`);
+        }
+      }
+      
+      // If neither method works, throw error
+      throw new Error("Wallet connection method not available. Please ensure Phantom wallet is installed and unlocked, then refresh the page.");
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to connect to Phantom wallet";
       console.error("[Phantom] Connect error:", err);
+      setError(errorMessage);
     } finally {
       setIsConnecting(false);
     }
   };
 
   return (
-    <Button
-      onClick={handleConnect}
-      disabled={isConnecting}
-      className="h-12 w-full text-lg"
-    >
-      {isConnecting 
-        ? "Connecting..." 
-        : phantomWallets.length > 0 
-          ? "Connect Phantom" 
-          : "Install Phantom Wallet"}
-    </Button>
+    <div className="space-y-2">
+      <Button
+        onClick={handleConnect}
+        disabled={isConnecting}
+        className="h-12 w-full text-lg"
+      >
+        {isConnecting 
+          ? "Connecting..." 
+          : phantomWallets.length > 0 
+            ? "Connect Phantom" 
+            : "Install Phantom Wallet"}
+      </Button>
+      {error && (
+        <p className="text-sm text-red-600 text-center">{error}</p>
+      )}
+    </div>
   );
 }
 
@@ -401,6 +549,13 @@ export function PaymentModal({
   
   // Filter to only Phantom wallet
   const phantomWallets = wallets.filter(w => w.name.toLowerCase().includes('phantom'));
+  
+  // Handle account connection callback (when using standard:connect feature)
+  const handleSolanaConnect = (account: UiWalletAccount) => {
+    console.log("[PaymentModal] Solana account connected via standard:connect:", account.address);
+    // When using standard:connect, we get the account directly
+    // But useWalletUi should also update automatically, so this is mainly for logging
+  };
 
   // Test mode bypass
   if (isTestMode) {
@@ -507,7 +662,7 @@ export function PaymentModal({
                 onClick={() => setStep("pay-base")}
                 disabled={!isEvmConfigured()}
               >
-                <span className="text-xl">🔵</span>
+                <img src={baseIconUrl} alt="Base" className="h-6 w-6 shrink-0 object-contain" />
                 <div className="text-left">
                   <div className="font-medium">Pay on Base</div>
                   <div className="text-xs text-muted-foreground">
@@ -523,7 +678,7 @@ export function PaymentModal({
                 onClick={() => setStep("pay-solana")}
                 disabled={!isSolanaConfigured()}
               >
-                <span className="text-xl">◎</span>
+                <img src={solanaIconUrl} alt="Solana" className="h-6 w-6 shrink-0 object-contain" />
                 <div className="text-left">
                   <div className="font-medium">Pay on Solana</div>
                   <div className="text-xs text-muted-foreground">
@@ -538,7 +693,7 @@ export function PaymentModal({
                 className="h-14 w-full justify-start gap-3"
                 onClick={() => setStep("pay-starknet")}
               >
-                <span className="text-xl">⬡</span>
+                <img src={ztarknetIconUrl} alt="Ztarknet" className="h-6 w-6 shrink-0 object-contain" />
                 <div className="text-left">
                   <div className="font-medium">Pay on Ztarknet</div>
                   <div className="text-xs text-muted-foreground">
@@ -553,7 +708,7 @@ export function PaymentModal({
                 className="h-14 w-full justify-start gap-3"
                 onClick={() => setStep("pay-zcash")}
               >
-                <span className="text-xl">🔒</span>
+                <img src={zcashIconUrl} alt="ZCash" className="h-6 w-6 shrink-0 object-contain" />
                 <div className="text-left">
                   <div className="font-medium">Pay on ZCash</div>
                   <div className="text-xs text-muted-foreground">
@@ -710,7 +865,9 @@ export function PaymentModal({
                   {!solanaAccount ? (
                     <PhantomConnectButton 
                       phantomWallets={phantomWallets}
-                      onConnect={connect}
+                      onConnect={handleSolanaConnect}
+                      connect={connect}
+                      currentAccount={solanaAccount}
                     />
                   ) : (
                     <SolanaPayButton

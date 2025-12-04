@@ -167,6 +167,7 @@ export async function consumeCredit(
     creditId: credit.id,
     paymentMethod: credit.paymentMethod,
     isFree: credit.paymentMethod === "free",
+    paymentRef: credit.paymentRef, // Transaction hash or payment reference
   };
 }
 

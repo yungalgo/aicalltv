@@ -206,7 +206,7 @@ export const createCall = createServerFn({ method: "POST" }).handler(
       const creditInfo = await consumeCredit(db, userId, newCall.id);
       console.log(`[Create Call] ✅ Credit consumed for call ${newCall.id} (method: ${creditInfo.paymentMethod})`);
       
-      // Update call with actual payment method from credit
+      // Update call with actual payment method and transaction hash from credit
       const { eq } = await import("drizzle-orm");
       // Cast payment method to the enum type
       type PaymentMethod = "free" | "sol_usdc" | "base_usdc" | "zcash" | "ztarknet" | "credit_card";
@@ -214,6 +214,7 @@ export const createCall = createServerFn({ method: "POST" }).handler(
         .set({
           paymentMethod: creditInfo.paymentMethod as PaymentMethod,
           isFree: creditInfo.isFree,
+          paymentTxHash: creditInfo.paymentRef || null, // Store transaction hash from credit
         })
         .where(eq(calls.id, newCall.id));
       
