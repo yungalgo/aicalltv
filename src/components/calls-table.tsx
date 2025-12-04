@@ -64,7 +64,7 @@ export function CallsTable() {
 
   if (calls.length === 0) {
     return (
-      <div className="rounded-lg border p-8 text-center" style={{ borderColor: '#1A1A1A' }}>
+      <div className="rounded-lg border-2 p-8 text-center" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
         <p style={{ color: '#1A1A1A', opacity: 0.7 }}>No calls yet.</p>
       </div>
     );
@@ -123,7 +123,7 @@ export function CallsTable() {
   };
 
   return (
-    <div className="rounded-lg border-2" style={{ borderColor: '#1A1A1A' }}>
+    <div className="rounded-lg border-2 overflow-hidden" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
       <Table>
         <TableHeader>
           <TableRow style={{ borderColor: '#1A1A1A' }}>
