@@ -1,4 +1,4 @@
-import { Instagram, Twitter } from "lucide-react"
+import { Github, Instagram, Twitter } from "lucide-react"
 import { Logo } from "~/components/logo"
 import { Button } from "~/components/ui/button"
 
@@ -47,14 +47,42 @@ const socialLinks = [
     url: "https://www.instagram.com/aicall.tv/",
     icon: Instagram,
   },
+  {
+    name: "GitHub",
+    url: "https://github.com/yungalgo/aicalltv",
+    icon: Github,
+  },
 ]
 
 export function Footer() {
   return (
     <footer className="w-full border-t bg-muted/50 py-4 mt-auto">
       <div className="container mx-auto px-4">
-        <div className="flex flex-row flex-wrap items-center justify-center gap-x-10 gap-y-2 md:justify-between">
+        <div className="flex flex-row flex-wrap items-center justify-between gap-4">
           <Logo variant="full" className="h-8" />
+          <div className="flex-1 flex justify-center items-center text-sm text-muted-foreground min-w-0">
+            <span className="text-center whitespace-nowrap">
+              Made by{" "}
+              <a
+                href="https://x.com/yungalgorithm"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground transition-colors underline"
+              >
+                yung algorithm
+              </a>{" "}
+              for the{" "}
+              <a
+                href="https://zypherpunk.xyz"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground transition-colors underline"
+              >
+                zypherpunk
+              </a>{" "}
+              hackathon
+            </span>
+          </div>
           <div className="flex gap-2">
             {socialLinks.map((social) => {
               const IconComponent = social.icon
