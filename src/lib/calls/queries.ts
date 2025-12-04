@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { desc, eq } from "drizzle-orm";
 import { createPostgresDriver } from "~/lib/db";
 import { calls } from "~/lib/db/schema/calls";
+import { callers } from "~/lib/db/schema/callers";
 import * as schema from "~/lib/db/schema";
 import { auth } from "~/lib/auth/auth";
 import { getRequest } from "@tanstack/react-start/server";
@@ -64,10 +65,54 @@ export const getUserCalls = createServerFn({ method: "GET" }).handler(
     const driver = createPostgresDriver();
     const db = drizzle({ client: driver, schema, casing: "snake_case" });
 
-    // Fetch user's calls, ordered by most recent first
+    // Fetch user's calls with caller information, ordered by most recent first
     const userCalls = await db
-      .select()
+      .select({
+        // All call fields
+        id: calls.id,
+        userId: calls.userId,
+        status: calls.status,
+        recipientName: calls.recipientName,
+        callerId: calls.callerId,
+        callerName: callers.name, // Join caller name
+        targetGender: calls.targetGender,
+        targetGenderCustom: calls.targetGenderCustom,
+        targetAgeRange: calls.targetAgeRange,
+        targetPhysicalDescription: calls.targetPhysicalDescription,
+        targetCity: calls.targetCity,
+        targetHobby: calls.targetHobby,
+        targetProfession: calls.targetProfession,
+        interestingPiece: calls.interestingPiece,
+        ragebaitTrigger: calls.ragebaitTrigger,
+        videoStyle: calls.videoStyle,
+        openaiPrompt: calls.openaiPrompt,
+        imagePrompt: calls.imagePrompt,
+        script: calls.script,
+        attempts: calls.attempts,
+        maxAttempts: calls.maxAttempts,
+        firstAttemptAt: calls.firstAttemptAt,
+        lastAttemptAt: calls.lastAttemptAt,
+        daysSinceFirstAttempt: calls.daysSinceFirstAttempt,
+        nextRetryAt: calls.nextRetryAt,
+        isFree: calls.isFree,
+        paymentMethod: calls.paymentMethod,
+        paymentTxHash: calls.paymentTxHash,
+        paymentAmount: calls.paymentAmount,
+        encryptedHandle: calls.encryptedHandle,
+        callSid: calls.callSid,
+        recordingUrl: calls.recordingUrl,
+        recordingSid: calls.recordingSid,
+        duration: calls.duration,
+        videoUrl: calls.videoUrl,
+        videoS3Key: calls.videoS3Key,
+        videoStatus: calls.videoStatus,
+        wavespeedJobId: calls.wavespeedJobId,
+        videoErrorMessage: calls.videoErrorMessage,
+        createdAt: calls.createdAt,
+        updatedAt: calls.updatedAt,
+      })
       .from(calls)
+      .leftJoin(callers, eq(calls.callerId, callers.id))
       .where(eq(calls.userId, userId))
       .orderBy(desc(calls.createdAt));
 
