@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Header } from "~/components/header";
+import { Navbar } from "~/components/navbar";
 
 export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
@@ -8,7 +8,7 @@ export const Route = createFileRoute("/privacy")({
 function PrivacyPage() {
   return (
     <div className="flex min-h-svh flex-col">
-      <Header />
+      <Navbar />
       <div className="container mx-auto max-w-3xl p-6">
         <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
         <div className="prose prose-sm dark:prose-invert max-w-none">

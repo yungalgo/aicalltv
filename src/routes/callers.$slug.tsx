@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { Header } from "~/components/header"
+import { Navbar } from "~/components/navbar"
 import { Footer } from "~/components/footer"
 import { Button } from "~/components/ui/button"
 import { Link } from "@tanstack/react-router"
@@ -26,7 +26,7 @@ function CallerDetailPage() {
   if (!caller) {
     return (
       <div className="flex min-h-svh flex-col">
-        <Header />
+        <Navbar />
         <div className="container mx-auto max-w-4xl p-6">
           <h1 className="text-3xl font-bold mb-4">Caller Not Found</h1>
           <p className="text-muted-foreground">The caller you're looking for doesn't exist.</p>
@@ -41,7 +41,7 @@ function CallerDetailPage() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <Header />
+      <Navbar />
       <main className="flex-1">
         <div className="container mx-auto max-w-4xl p-6">
           <div className="grid gap-8 md:grid-cols-2">

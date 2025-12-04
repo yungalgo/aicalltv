@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { Header } from "~/components/header"
+import { Navbar } from "~/components/navbar"
 import { Footer } from "~/components/footer"
 import { authQueryOptions } from "~/lib/auth/queries"
 
@@ -19,7 +19,7 @@ function CreateCallPage() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <Header />
+      <Navbar />
       <main className="flex-1">
         <div className="container mx-auto max-w-4xl p-6">
           <h1 className="text-3xl font-bold mb-6">Create a Prank Call</h1>

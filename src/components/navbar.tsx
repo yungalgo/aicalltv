@@ -19,53 +19,30 @@ import { cn } from "~/lib/utils"
 function NavbarActions() {
   const { data: user } = useSuspenseQuery(authQueryOptions())
   const [showAuthModal, setShowAuthModal] = useState(false)
-  const [authMode, setAuthMode] = useState<"login" | "signup">("login")
 
-  const openLogin = () => {
-    setAuthMode("login")
+  const openAuth = () => {
     setShowAuthModal(true)
-  }
-
-  const openSignup = () => {
-    setAuthMode("signup")
-    setShowAuthModal(true)
-  }
-
-  if (user) {
-    return (
-      <>
-        <Link to="/calls">
-          <Button variant="ghost" size="sm">
-            My Calls
-          </Button>
-        </Link>
-        <span className="text-sm text-muted-foreground">{user.name}</span>
-        <SignOutButton size="sm" />
-        <CreateCallButton />
-        <ThemeToggle />
-        <AuthModal
-          open={showAuthModal}
-          onOpenChange={setShowAuthModal}
-          initialMode={authMode}
-        />
-      </>
-    )
   }
 
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={openLogin}>
-        Sign In
-      </Button>
-      <Button size="sm" onClick={openSignup}>
-        Sign Up
-      </Button>
+      {/* Secondary: Login (when not logged in) or Sign Out (when logged in) */}
+      {user ? (
+        <SignOutButton size="sm" />
+      ) : (
+        <Button variant="ghost" size="sm" onClick={openAuth}>
+          Login
+        </Button>
+      )}
+      
+      {/* Primary CTA: AI Call your Friend */}
       <CreateCallButton />
+      
       <ThemeToggle />
       <AuthModal
         open={showAuthModal}
         onOpenChange={setShowAuthModal}
-        initialMode={authMode}
+        initialMode="login"
       />
     </>
   )
@@ -77,8 +54,10 @@ function CreateCallButton() {
 
   const handleClick = () => {
     if (user) {
+      // Navigate to create page (calls form)
       window.location.href = "/create"
     } else {
+      // Open auth modal if not logged in
       setShowAuthModal(true)
     }
   }
@@ -87,14 +66,15 @@ function CreateCallButton() {
     <>
       <Button
         onClick={handleClick}
-        className="bg-primary text-primary-foreground relative inline-flex w-fit items-center justify-center gap-x-1.5 overflow-hidden rounded-full px-3 py-1.5 outline-none"
+        size="sm"
+        className="bg-primary text-primary-foreground relative inline-flex w-fit items-center justify-center gap-x-1.5 overflow-hidden rounded-md px-4 h-9 shadow-sm"
       >
-        Create a Prank Call
+        AI Call your Friend
       </Button>
       <AuthModal
         open={showAuthModal}
         onOpenChange={setShowAuthModal}
-        initialMode="signup"
+        initialMode="login"
       />
     </>
   )
@@ -154,7 +134,7 @@ function CallersDropdownContent({ isMobile = false }: { isMobile?: boolean }) {
   }
 
   return (
-    <div className="grid w-[500px] gap-3 p-4 md:w-[600px] md:grid-cols-3 lg:w-[800px]">
+    <div className="grid w-[500px] gap-3 p-4 md:w-[700px] md:grid-cols-4 lg:w-[900px]">
       {callers.map((caller) => (
         <NavigationMenuLink key={caller.id} asChild>
           <Link

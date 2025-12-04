@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { Header } from "~/components/header"
+import { Navbar } from "~/components/navbar"
 import { Footer } from "~/components/footer"
 import { CallsTable } from "~/components/calls-table"
 import { authQueryOptions } from "~/lib/auth/queries"
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/calls")({
 function CallsPage() {
   return (
     <div className="flex min-h-svh flex-col">
-      <Header />
+      <Navbar />
       <main className="flex-1">
         <div className="container mx-auto max-w-6xl p-6">
           <h1 className="text-3xl font-bold mb-6">My Calls</h1>
