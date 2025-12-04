@@ -48,7 +48,7 @@ function CallerDetailPage() {
             {/* Caller Image */}
             <div className="flex items-center justify-center">
               <img
-                src={caller.defaultImageUrl}
+                src={caller.imageUrl || caller.defaultImageUrl}
                 alt={caller.name}
                 className="w-full max-w-md rounded-lg object-cover"
               />

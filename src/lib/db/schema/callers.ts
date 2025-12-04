@@ -19,6 +19,9 @@ export const callers = pgTable("callers", {
   gender: text("gender").notNull(), // "male", "female", "non-binary"
   defaultImageUrl: text("default_image_url").notNull(),
   defaultImageS3Key: text("default_image_s3_key").notNull(),
+  // Web-optimized WebP version for frontend display (PNG kept for model usage)
+  webOptimizedImageUrl: text("web_optimized_image_url"),
+  webOptimizedImageS3Key: text("web_optimized_image_s3_key"),
   appearanceDescription: text("appearance_description").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   displayOrder: integer("display_order").notNull().default(0),

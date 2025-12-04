@@ -22,13 +22,20 @@ export const Route = createFileRoute("/api/callers")({
               name: callers.name,
               tagline: callers.tagline,
               defaultImageUrl: callers.defaultImageUrl,
+              webOptimizedImageUrl: callers.webOptimizedImageUrl,
               gender: callers.gender,
             })
             .from(callers)
             .where(eq(callers.isActive, true))
             .orderBy(asc(callers.displayOrder));
 
-          return Response.json(activeCallers);
+          // Use WebP URL if available, fallback to PNG
+          const callersWithOptimizedImages = activeCallers.map((caller) => ({
+            ...caller,
+            imageUrl: caller.webOptimizedImageUrl || caller.defaultImageUrl,
+          }));
+
+          return Response.json(callersWithOptimizedImages);
         } finally {
           await driver.end();
         }
