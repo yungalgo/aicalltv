@@ -104,7 +104,7 @@ function CallerDetailPage() {
                 </div>
 
                 {caller.appearanceDescription && (
-                  <div>
+                <div>
                     <h2 className="text-lg font-semibold mb-2">Appearance</h2>
                     <p className="text-muted-foreground">
                       {caller.appearanceDescription}
@@ -130,7 +130,7 @@ function CallerDetailPage() {
                 onClick={handleUseCaller}
               >
                 Use This Caller
-              </Button>
+                </Button>
             </div>
           </div>
         </div>

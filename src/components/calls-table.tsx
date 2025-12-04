@@ -213,8 +213,8 @@ export function CallsTable() {
                       }
                     }}
                   >
-                    <Download className="mr-2 h-4 w-4" />
-                    Download
+                      <Download className="mr-2 h-4 w-4" />
+                      Download
                   </Button>
                 ) : (
                   <span className="text-sm text-muted-foreground">-</span>

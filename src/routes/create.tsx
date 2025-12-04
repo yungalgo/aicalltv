@@ -32,14 +32,6 @@ function CreateCallPage() {
                 Fill in the details for your AI-powered prank call
               </p>
             </div>
-            
-            {callerSlug && (
-              <div className="mb-6 p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  Selected caller: <span className="font-semibold">{callerSlug}</span>
-                </p>
-              </div>
-            )}
 
             <Suspense fallback={<div className="py-6">Loading form...</div>}>
               <CallRequestForm />

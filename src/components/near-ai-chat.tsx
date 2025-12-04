@@ -1,7 +1,27 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { Paperclip, X, Loader2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+} from "~/components/ui/ai/conversation";
+import {
+  Message,
+  MessageContent,
+  MessageAvatar,
+} from "~/components/ui/ai/message";
+import nearLogoUrl from "~/assets/logos/near-logo.svg";
+import {
+  PromptInput,
+  PromptInputTextarea,
+  PromptInputSubmit,
+} from "~/components/ui/ai/prompt-input";
+import { toast } from "sonner";
+import { useSuspenseQuery } from "@tanstack/react-query";
+import { authQueryOptions } from "~/lib/auth/queries";
 
 interface Message {
   id: string;
@@ -15,8 +35,16 @@ interface ExtractedData {
   targetGender?: "male" | "female" | "prefer_not_to_say" | "other";
   targetGenderCustom?: string;
   targetAgeRange?: "" | "18-25" | "26-35" | "36-45" | "46-55" | "56+";
+  targetCity?: string;
+  targetHobby?: string;
+  targetProfession?: string;
+  targetPhysicalDescription?: string;
   interestingPiece?: string;
+  ragebaitTrigger?: string;
+  callerId?: string;
   videoStyle?: string;
+  uploadedImageUrl?: string;
+  uploadedImageS3Key?: string;
 }
 
 interface ValidationError {
@@ -30,18 +58,12 @@ interface NearAiChatProps {
 }
 
 export function NearAiChat({ onFormFill, onComplete }: NearAiChatProps) {
+  const { data: user } = useSuspenseQuery(authQueryOptions());
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: `Hey! 👋 I'm here to help you set up your AI call.
-
-Just describe what you want in natural language:
-• "Call my friend Mike at 555-123-4567 and prank him"
-• "Wish Sarah a happy birthday at 555-987-6543"
-• "Set up a call to surprise my coworker"
-
-What would you like to do?`,
+      content: `Hey, I'll help you set up your AI call. First, who are we calling and what's their phone number?`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -50,17 +72,81 @@ What would you like to do?`,
   const [isComplete, setIsComplete] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [isRetryingValidation, setIsRetryingValidation] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Log extracted data whenever it changes
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Update parent with extracted data whenever it changes
-  useEffect(() => {
+    console.log("[NEAR AI Chat] Extracted data updated:", extractedData);
     onFormFill(extractedData);
   }, [extractedData, onFormFill]);
+
+  // Handle image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!user) {
+      toast.error("Please log in to upload an image");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", file);
+
+      const response = await fetch("/api/upload/image", {
+        method: "POST",
+        body: formDataUpload,
+      });
+
+      if (!response.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const result = await response.json();
+      setExtractedData((prev) => ({
+        ...prev,
+        uploadedImageUrl: result.url,
+        uploadedImageS3Key: result.key,
+      }));
+      toast.success("Image uploaded! We'll use it in your video");
+      console.log("[NEAR AI Chat] Image uploaded:", result);
+    } catch (error) {
+      console.error("[NEAR AI Chat] Image upload error:", error);
+      toast.error("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  // Remove uploaded image
+  const handleRemoveImage = () => {
+    setExtractedData((prev) => {
+      const { uploadedImageUrl, uploadedImageS3Key, ...rest } = prev;
+      return rest;
+    });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -76,10 +162,11 @@ What would you like to do?`,
     setIsLoading(true);
 
     try {
-      // Build conversation history (excluding welcome message)
-      const conversationHistory = messages
-        .filter((m) => m.id !== "welcome")
-        .map((m) => ({ role: m.role, content: m.content }));
+      // Build conversation history (excluding welcome message, including the new user message)
+      const conversationHistory = [
+        ...messages.filter((m) => m.id !== "welcome").map((m) => ({ role: m.role, content: m.content })),
+        { role: userMessage.role, content: userMessage.content },
+      ];
 
       const response = await fetch("/api/near-ai/chat", {
         method: "POST",
@@ -87,6 +174,7 @@ What would you like to do?`,
         body: JSON.stringify({
           message: userMessage.content,
           conversationHistory,
+          currentData: extractedData, // Include current extracted data so AI knows what's already filled
         }),
       });
 
@@ -97,11 +185,19 @@ What would you like to do?`,
 
       const data = await response.json();
 
-      // Handle validation errors
+      // Handle validation errors - don't show them during normal conversation
+      // Only store them if form is complete (edge case), otherwise clear them
       if (data.validationErrors && data.validationErrors.length > 0) {
-        setValidationErrors(data.validationErrors);
+        // Only keep validation errors if form is marked complete (edge case)
+        // During normal conversation, clear them and let AI ask naturally
+        if (data.isComplete) {
+          setValidationErrors(data.validationErrors);
+        } else {
+          // Clear validation errors during normal conversation flow
+          setValidationErrors([]);
+        }
         
-        // Add assistant message with validation errors
+        // Add assistant message
         const assistantMessage: Message = {
           id: `assistant-${Date.now()}`,
           role: "assistant",
@@ -122,28 +218,13 @@ What would you like to do?`,
             return merged;
           });
         }
-
-        // Automatically retry by sending validation errors back to AI
-        if (!isRetryingValidation) {
-          setIsRetryingValidation(true);
-          // Wait a moment, then automatically send validation errors to AI
-          setTimeout(() => {
-            const errorSummary = data.validationErrors
-              .map((err: ValidationError) => `${err.field}: ${err.message}`)
-              .join("\n");
-            
-            // Automatically send a message asking AI to fix errors
-            const retryMessage: Message = {
-              id: `user-retry-${Date.now()}`,
-              role: "user",
-              content: `Please fix these validation errors:\n${errorSummary}`,
-            };
-            setMessages((prev) => [...prev, retryMessage]);
-            
-            // Call API again with validation errors
-            handleRetryWithErrors(data.validationErrors);
-          }, 1000);
+        
+        // Update completion status
+        if (data.isComplete) {
+          setIsComplete(true);
         }
+        
+        // Don't automatically retry - let the AI naturally ask for more info
         return;
       }
 
@@ -214,12 +295,16 @@ What would you like to do?`,
           message: "", // Empty message, just sending validation errors
           conversationHistory,
           validationErrors: errors,
+          currentData: extractedData, // Include current extracted data
         }),
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to get response");
+        // Don't show error - just stop retrying and let user continue naturally
+        setIsRetryingValidation(false);
+        setValidationErrors([]);
+        return;
       }
 
       const data = await response.json();
@@ -259,35 +344,29 @@ What would you like to do?`,
       }
     } catch (error) {
       console.error("[NearAiChat] Retry error:", error);
-      const errorMessage: Message = {
-        id: `error-retry-${Date.now()}`,
-        role: "assistant",
-        content: `Sorry, I had trouble fixing the validation errors. ${error instanceof Error ? error.message : "Please try again."}`,
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      // Don't show error message - just stop retrying and let user continue conversation
       setIsRetryingValidation(false);
+      // Clear validation errors so user can continue naturally
+      setValidationErrors([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleProceed = () => {
-    onComplete(extractedData);
-  };
+  // When form is complete, automatically fill the parent form and let Buy button handle payment
+  useEffect(() => {
+    if (isComplete && validationErrors.length === 0) {
+      console.log("[NEAR AI Chat] Form complete, calling onComplete:", extractedData);
+      onComplete(extractedData);
+    }
+  }, [isComplete, validationErrors.length, extractedData, onComplete]);
 
   const handleReset = () => {
     setMessages([
       {
         id: "welcome",
         role: "assistant",
-        content: `Hey! 👋 I'm here to help you set up your AI call.
-
-Just describe what you want in natural language:
-• "Call my friend Mike at 555-123-4567 and prank him"
-• "Wish Sarah a happy birthday at 555-987-6543"
-• "Set up a call to surprise my coworker"
-
-What would you like to do?`,
+        content: `Hey, I'm here to help you set up your AI call. Just describe what you want in natural language.`,
       },
     ]);
     setExtractedData({});
@@ -302,71 +381,171 @@ What would you like to do?`,
   return (
     <div className="flex flex-col">
       {/* Messages */}
-      <div className="overflow-y-auto space-y-3 mb-4 min-h-[180px] max-h-[280px] pr-2 scrollbar-thin scrollbar-thumb-violet-500/30 scrollbar-track-transparent">
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[85%] rounded-2xl px-4 py-3 ${
-                message.role === "user"
-                  ? "bg-gradient-to-r from-violet-600 to-cyan-600 text-white shadow-lg shadow-violet-500/20"
-                  : "bg-white/5 text-violet-100 border border-violet-500/20"
-              }`}
-            >
-              <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-white/5 border border-violet-500/20 rounded-2xl px-4 py-3">
-              <div className="flex gap-1.5 items-center">
-                <span className="w-2 h-2 rounded-full bg-violet-400 typing-dot" />
-                <span className="w-2 h-2 rounded-full bg-cyan-400 typing-dot" />
-                <span className="w-2 h-2 rounded-full bg-violet-400 typing-dot" />
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+      <Conversation className="min-h-[180px] max-h-[280px] mb-4">
+        <ConversationContent>
+          {messages.map((message) => (
+            <Message key={message.id} from={message.role}>
+              <MessageContent
+                className={
+                  message.role === "user"
+                    ? "bg-primary/10 dark:bg-primary/20 text-foreground border border-primary/20 dark:border-primary/30"
+                    : "bg-muted text-foreground border"
+                }
+              >
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                  {message.content}
+                </p>
+              </MessageContent>
+              <MessageAvatar
+                name={message.role === "user" ? "You" : "NEAR AI"}
+                src={message.role === "assistant" ? nearLogoUrl : undefined}
+                className={
+                  message.role === "user"
+                    ? undefined
+                    : "bg-white"
+                }
+              />
+            </Message>
+          ))}
+          {isLoading && (
+            <Message from="assistant">
+              <MessageContent className="bg-muted text-muted-foreground border">
+                <div className="flex gap-1.5 items-center">
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-pulse" />
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-pulse" style={{ animationDelay: "0.2s" }} />
+                  <span className="w-2 h-2 rounded-full bg-muted-foreground/60 animate-pulse" style={{ animationDelay: "0.4s" }} />
+                </div>
+              </MessageContent>
+              <MessageAvatar
+                name="NEAR AI"
+                src={nearLogoUrl}
+                className="bg-white"
+              />
+            </Message>
+          )}
+        </ConversationContent>
+        <ConversationScrollButton />
+      </Conversation>
 
-      {/* Validation Errors Display */}
-      {validationErrors.length > 0 && (
-        <div className="rounded-xl p-4 mb-4 bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/30">
+      {/* Validation Errors Display - only show when form is complete but has errors */}
+      {validationErrors.length > 0 && isComplete && (
+        <div className="rounded-xl p-4 mb-4 bg-destructive/10 border border-destructive/30">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-base">⚠️</span>
-            <p className="text-xs font-semibold text-red-300">Validation Errors</p>
+            <p className="text-xs font-semibold text-destructive">Validation Errors</p>
           </div>
-          <ul className="space-y-1 text-xs text-red-200">
+          <ul className="space-y-1 text-xs text-destructive/80">
             {validationErrors.map((error, idx) => (
               <li key={idx} className="flex items-start gap-2">
-                <span className="text-red-400">•</span>
+                <span className="text-destructive">•</span>
                 <span>
                   <span className="font-medium">{error.field}:</span> {error.message}
                 </span>
               </li>
             ))}
           </ul>
-          {isRetryingValidation && (
-            <p className="text-xs text-violet-300 mt-2 italic">
-              AI is fixing these errors...
-            </p>
-          )}
         </div>
       )}
 
-      {/* Extracted Data Preview */}
+      {/* Input Area */}
+      <div className="space-y-3">
+        <PromptInput
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendMessage();
+          }}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+            disabled={isUploadingImage}
+            className="hidden"
+            id="near-ai-image-upload"
+          />
+          <Button
+            type="button"
+            size="icon"
+            disabled={isUploadingImage}
+            className="shrink-0"
+            title={extractedData.uploadedImageUrl ? "Change photo" : "Upload photo"}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              fileInputRef.current?.click();
+            }}
+          >
+            {isUploadingImage ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Paperclip className="h-4 w-4" />
+            )}
+            <span className="sr-only">Upload photo</span>
+          </Button>
+          <PromptInputTextarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={isComplete ? "Add more details..." : "Describe your call..."}
+            disabled={isLoading}
+            className="flex-1"
+          />
+          <PromptInputSubmit
+            status={isLoading ? "loading" : "idle"}
+            disabled={!input.trim() || isLoading}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              sendMessage();
+            }}
+          />
+        </PromptInput>
+
+        {/* Image Preview */}
+        {extractedData.uploadedImageUrl && (
+          <div className="flex items-center gap-2 px-2">
+            <img 
+              src={extractedData.uploadedImageUrl} 
+              alt="Uploaded" 
+              className="h-10 w-10 rounded object-cover"
+            />
+            <span className="text-xs text-muted-foreground flex-1">
+              Photo uploaded - physical description not required
+            </span>
+            <button
+              onClick={handleRemoveImage}
+              className="p-1 hover:bg-destructive/10 rounded transition-colors"
+              type="button"
+              title="Remove photo"
+            >
+              <X className="h-4 w-4 text-destructive" />
+            </button>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {messages.length > 1 && (
+            <button
+              onClick={handleReset}
+              className="flex-1 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              ↺ Start Over
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Extracted Data Preview - Below input box */}
       {hasExtractedData && (
-        <div className="rounded-xl p-4 mb-4 bg-gradient-to-r from-violet-500/10 to-cyan-500/10 border border-violet-500/30">
+        <div className="rounded-xl p-4 mb-4 bg-muted/50 border">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-violet-300 flex items-center gap-1.5">
+            <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
               <span className="text-base">📋</span> Extracted Details
             </p>
             {isComplete && validationErrors.length === 0 && (
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 border border-green-500/30">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-500/20 text-green-600 dark:text-green-400 border border-green-500/30">
                 ✓ READY
               </span>
             )}
@@ -374,88 +553,73 @@ What would you like to do?`,
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             {extractedData.recipientName && (
               <div className="flex items-center gap-2">
-                <span className="text-violet-400/60 text-xs">👤</span>
-                <span className="text-white font-medium">{extractedData.recipientName}</span>
+                <span className="text-muted-foreground text-xs">👤</span>
+                <span className="text-foreground font-medium">{extractedData.recipientName}</span>
               </div>
             )}
             {extractedData.phoneNumber && (
               <div className="flex items-center gap-2">
-                <span className="text-violet-400/60 text-xs">📱</span>
-                <span className="text-white font-medium font-mono text-xs">{extractedData.phoneNumber}</span>
+                <span className="text-muted-foreground text-xs">📱</span>
+                <span className="text-foreground font-medium font-mono text-xs">{extractedData.phoneNumber}</span>
               </div>
             )}
             {extractedData.targetGender && (
               <div className="flex items-center gap-2">
-                <span className="text-violet-400/60 text-xs">⚧</span>
-                <span className="text-violet-200">{extractedData.targetGender}</span>
+                <span className="text-muted-foreground text-xs">⚧</span>
+                <span className="text-foreground">{extractedData.targetGender}</span>
               </div>
             )}
             {extractedData.targetAgeRange && (
               <div className="flex items-center gap-2">
-                <span className="text-violet-400/60 text-xs">🎂</span>
-                <span className="text-violet-200">{extractedData.targetAgeRange}</span>
+                <span className="text-muted-foreground text-xs">🎂</span>
+                <span className="text-foreground">{extractedData.targetAgeRange}</span>
+              </div>
+            )}
+            {extractedData.targetCity && (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">📍</span>
+                <span className="text-foreground">{extractedData.targetCity}</span>
+              </div>
+            )}
+            {extractedData.targetHobby && (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">🎨</span>
+                <span className="text-foreground">{extractedData.targetHobby}</span>
+              </div>
+            )}
+            {extractedData.targetProfession && (
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground text-xs">💼</span>
+                <span className="text-foreground">{extractedData.targetProfession}</span>
               </div>
             )}
             {extractedData.videoStyle && (
               <div className="flex items-center gap-2">
-                <span className="text-violet-400/60 text-xs">🎬</span>
-                <span className="text-violet-200">{extractedData.videoStyle}</span>
+                <span className="text-muted-foreground text-xs">🎬</span>
+                <span className="text-foreground">{extractedData.videoStyle}</span>
               </div>
             )}
           </div>
+          {extractedData.targetPhysicalDescription && (
+            <div className="mt-3 pt-3 border-t">
+              <p className="text-xs text-muted-foreground mb-1">Physical Description:</p>
+              <p className="text-sm text-foreground">{extractedData.targetPhysicalDescription}</p>
+            </div>
+          )}
           {extractedData.interestingPiece && (
-            <div className="mt-3 pt-3 border-t border-violet-500/20">
-              <p className="text-xs text-violet-400/60 mb-1">Personal Hook:</p>
-              <p className="text-sm text-violet-200 italic">"{extractedData.interestingPiece}"</p>
+            <div className="mt-3 pt-3 border-t">
+              <p className="text-xs text-muted-foreground mb-1">Personal Hook:</p>
+              <p className="text-sm text-foreground italic">"{extractedData.interestingPiece}"</p>
+            </div>
+          )}
+          {extractedData.ragebaitTrigger && (
+            <div className="mt-3 pt-3 border-t">
+              <p className="text-xs text-muted-foreground mb-1">Ragebait Trigger:</p>
+              <p className="text-sm text-foreground italic">"{extractedData.ragebaitTrigger}"</p>
             </div>
           )}
         </div>
       )}
-
-      {/* Input Area */}
-      <div className="space-y-3">
-        <div className="flex gap-2">
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={isComplete ? "Add more details..." : "Describe your call..."}
-              disabled={isLoading}
-              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-violet-500/30 text-white placeholder:text-violet-300/40 focus:outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-500/20 transition-all"
-            />
-          </div>
-          <button
-            onClick={sendMessage}
-            disabled={!input.trim() || isLoading}
-            className="px-4 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-cyan-600 text-white font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-violet-500 hover:to-cyan-500 transition-all shadow-lg shadow-violet-500/20"
-          >
-            <span className="text-lg">→</span>
-          </button>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          {messages.length > 1 && (
-            <button
-              onClick={handleReset}
-              className="flex-1 py-2 text-sm text-violet-300/60 hover:text-violet-200 transition-colors"
-            >
-              ↺ Start Over
-            </button>
-          )}
-          
-          {isComplete && (
-            <Button 
-              onClick={handleProceed} 
-              className="flex-1 h-12 text-base font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white shadow-lg shadow-green-500/30 rounded-xl"
-            >
-              ✓ Review & Proceed to Payment
-            </Button>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

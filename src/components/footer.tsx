@@ -1,6 +1,7 @@
 import { Github, Instagram, Twitter } from "lucide-react"
 import { Logo } from "~/components/logo"
 import { Button } from "~/components/ui/button"
+import { BuiltOnBadge } from "~/components/built-on-badge"
 
 // TikTok icon SVG (lucide-react doesn't have TikTok)
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -58,20 +59,56 @@ export function Footer() {
   return (
     <footer className="w-full border-t bg-muted/50 py-4 mt-auto">
       <div className="container mx-auto px-4">
-        <div className="flex flex-row flex-wrap items-center justify-between gap-4">
-          <Logo variant="full" className="h-8" />
-          <div className="flex-1 flex justify-center items-center text-sm text-muted-foreground min-w-0">
+        <div className="flex flex-col gap-4">
+          {/* Top row: Logo, badges, and social icons */}
+          <div className="flex flex-row flex-wrap items-center justify-between gap-4">
+            <Logo variant="full" className="h-8" />
+            <div className="flex-1 flex justify-center items-center gap-6 flex-wrap">
+              <BuiltOnBadge href="https://near.ai" variant="near" />
+              <BuiltOnBadge href="https://zcash.com" variant="zcash" />
+              <BuiltOnBadge href="https://starknet.io" variant="starknet" />
+              <BuiltOnBadge href="https://solana.com" variant="solana" />
+              <BuiltOnBadge href="https://base.org" variant="base" />
+              <BuiltOnBadge href="https://fhenix.io" variant="fhenix" />
+            </div>
+            <div className="flex gap-2">
+              {socialLinks.map((social) => {
+                const IconComponent = social.icon
+                return (
+                  <Button
+                    key={social.name}
+                    asChild
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10"
+                  >
+                    <a
+                    href={social.url}
+                      aria-label={social.name}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    >
+                      <IconComponent className="h-5 w-5" />
+                    </a>
+                  </Button>
+                )
+              })}
+            </div>
+          </div>
+          
+          {/* Bottom row: Credits - centered */}
+          <div className="flex items-center justify-center text-sm text-muted-foreground">
             <span className="text-center whitespace-nowrap">
-              Made by{" "}
+              by{" "}
               <a
                 href="https://x.com/yungalgorithm"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:text-foreground transition-colors underline"
               >
-                yung algorithm
+                yung algo
               </a>{" "}
-              for the{" "}
+              • for{" "}
               <a
                 href="https://zypherpunk.xyz"
                 target="_blank"
@@ -79,32 +116,8 @@ export function Footer() {
                 className="hover:text-foreground transition-colors underline"
               >
                 zypherpunk
-              </a>{" "}
-              hackathon
+              </a>
             </span>
-          </div>
-          <div className="flex gap-2">
-            {socialLinks.map((social) => {
-              const IconComponent = social.icon
-              return (
-                <Button
-                  key={social.name}
-                  asChild
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                >
-                  <a
-                  href={social.url}
-                    aria-label={social.name}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  >
-                    <IconComponent className="h-4 w-4" />
-                  </a>
-                </Button>
-              )
-            })}
           </div>
         </div>
       </div>

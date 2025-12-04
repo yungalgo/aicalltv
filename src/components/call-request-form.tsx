@@ -1,14 +1,24 @@
 import { useQueryClient, useSuspenseQuery, useQuery } from "@tanstack/react-query";
 import { Link, useSearch } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { Upload, X } from "lucide-react";
 import { AuthModal } from "~/components/auth-modal";
-import { FhenixPrivacyToggle, type PrivacyMode, useFhenixReady, useFhenixEncryption } from "~/components/fhenix-privacy-toggle";
-import { NearAiChat } from "~/components/near-ai-chat";
+import { type PrivacyMode, useFhenixReady, useFhenixEncryption, FhenixPrivacyToggle } from "~/components/fhenix-privacy-toggle";
+import { NearAiAssistant } from "~/components/near-ai-assistant";
 import { PaymentModal } from "~/components/payment-modal";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Switch } from "~/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import { toast } from "sonner";
 import { authQueryOptions } from "~/lib/auth/queries";
 import { createCall } from "~/lib/calls/functions";
@@ -17,91 +27,6 @@ import { PAYMENT_CONFIG } from "~/lib/web3/config";
 import { validateCallFormData } from "~/lib/validation/call-form";
 
 type InputMode = "form" | "ai-chat";
-
-// Flashy Tab Component
-function InputModeTab({
-  mode,
-  currentMode,
-  onClick,
-  icon,
-  label,
-  sublabel,
-  badge,
-  isAi,
-}: {
-  mode: InputMode;
-  currentMode: InputMode;
-  onClick: () => void;
-  icon: string;
-  label: string;
-  sublabel: string;
-  badge?: string;
-  isAi?: boolean;
-}) {
-  const isActive = mode === currentMode;
-  
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`
-        relative flex-1 flex flex-col items-center justify-center py-4 px-3 sm:px-6 rounded-xl
-        transition-all duration-300 overflow-hidden group min-h-[120px]
-        ${isActive 
-          ? isAi 
-            ? "bg-gradient-to-br from-violet-600 via-purple-600 to-cyan-500 text-white shadow-lg near-ai-glow" 
-            : "bg-primary text-primary-foreground shadow-md"
-          : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground"
-        }
-      `}
-    >
-      {/* Shimmer effect for AI tab when active */}
-      {isAi && isActive && (
-        <div className="absolute inset-0 near-ai-shimmer pointer-events-none" />
-      )}
-      
-      {/* Badge - positioned top right */}
-      {badge && (
-        <span className={`
-          absolute top-2 right-2 text-[10px] font-bold px-2 py-0.5 rounded-full z-10
-          ${isActive 
-            ? "bg-white/20 text-white" 
-            : "bg-gradient-to-r from-violet-500 to-cyan-500 text-white"
-          }
-        `}>
-          {badge}
-        </span>
-      )}
-      
-      {/* Icon with float animation for AI */}
-      <span className={`text-2xl mb-1 ${isAi && isActive ? "near-ai-float" : ""}`}>
-        {icon}
-      </span>
-      
-      {/* Label */}
-      <span className="font-semibold text-sm text-center">{label}</span>
-      
-      {/* Sublabel */}
-      <span className={`text-xs mt-0.5 text-center ${isActive ? "opacity-80" : "opacity-60"}`}>
-        {sublabel}
-      </span>
-      
-      {/* TEE Badge for AI tab - in flow, not absolute */}
-      {isAi && (
-        <span className={`
-          mt-2 text-[9px] font-medium px-2 py-0.5 rounded-full
-          flex items-center gap-1 whitespace-nowrap
-          ${isActive 
-            ? "bg-green-400/20 text-green-100 tee-badge" 
-            : "bg-green-500/10 text-green-600 dark:text-green-400"
-          }
-        `}>
-          🔒 TEE Secured
-        </span>
-      )}
-    </button>
-  );
-}
 
 export function CallRequestForm() {
   const { data: user } = useSuspenseQuery(authQueryOptions());
@@ -253,29 +178,37 @@ export function CallRequestForm() {
 
   // Handle data from NEAR AI chat
   const handleAiFormFill = useCallback((data: Partial<typeof formData>) => {
-    setFormData((prev) => ({
-      ...prev,
-      recipientName: data.recipientName || prev.recipientName,
-      phoneNumber: data.phoneNumber || prev.phoneNumber,
-      targetGender: data.targetGender || prev.targetGender,
-      targetGenderCustom: data.targetGenderCustom || prev.targetGenderCustom,
-      targetAgeRange: data.targetAgeRange || prev.targetAgeRange,
-      targetPhysicalDescription: data.targetPhysicalDescription || prev.targetPhysicalDescription,
-      targetCity: data.targetCity || prev.targetCity,
-      targetHobby: data.targetHobby || prev.targetHobby,
-      targetProfession: data.targetProfession || prev.targetProfession,
-      interestingPiece: data.interestingPiece || prev.interestingPiece,
-      ragebaitTrigger: data.ragebaitTrigger || prev.ragebaitTrigger,
-      videoStyle: data.videoStyle || prev.videoStyle,
-    }));
+    console.log("[CallRequestForm] AI form fill received:", data);
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        recipientName: data.recipientName || prev.recipientName,
+        phoneNumber: data.phoneNumber || prev.phoneNumber,
+        targetGender: data.targetGender || prev.targetGender,
+        targetGenderCustom: data.targetGenderCustom || prev.targetGenderCustom,
+        targetAgeRange: data.targetAgeRange || prev.targetAgeRange,
+        targetPhysicalDescription: data.targetPhysicalDescription || prev.targetPhysicalDescription,
+        targetCity: data.targetCity || prev.targetCity,
+        targetHobby: data.targetHobby || prev.targetHobby,
+        targetProfession: data.targetProfession || prev.targetProfession,
+        interestingPiece: data.interestingPiece || prev.interestingPiece,
+        ragebaitTrigger: data.ragebaitTrigger || prev.ragebaitTrigger,
+        callerId: data.callerId ?? prev.callerId,
+        videoStyle: data.videoStyle || prev.videoStyle,
+        uploadedImageUrl: data.uploadedImageUrl || prev.uploadedImageUrl,
+        uploadedImageS3Key: data.uploadedImageS3Key || prev.uploadedImageS3Key,
+      };
+      console.log("[CallRequestForm] Updated form data:", updated);
+      return updated;
+    });
   }, []);
 
-  // Handle completion from NEAR AI chat - switch to form view and trigger payment
+  // Handle completion from NEAR AI chat - just fill the form, don't switch views
   const handleAiComplete = useCallback((data: Partial<typeof formData>) => {
+    console.log("[CallRequestForm] AI completion received:", data);
     handleAiFormFill(data);
-    // Switch to form view so user can review
-    setInputMode("form");
-    toast.success("Form filled from AI! Review and click 'Buy a Call' to proceed.");
+    // Don't switch to form view - keep AI chat open, user can use Buy button below
+    toast.success("Form filled! Click 'Buy a Call' below to proceed.");
   }, [handleAiFormFill]);
 
   // Handle Stripe payment return - show toast and refresh calls
@@ -460,355 +393,313 @@ export function CallRequestForm() {
 
   return (
     <>
-      {/* Flashy Input Mode Tabs */}
-      <div className="mb-8">
-        {/* Tab Header */}
-        <div className="text-center mb-4">
-          <p className="text-sm text-muted-foreground">
-            Choose how you want to create your call
-          </p>
-        </div>
-        
-        {/* Tabs Container */}
-        <div className="flex gap-3 p-1.5 bg-muted/30 rounded-2xl border">
-          <InputModeTab
-            mode="form"
-            currentMode={inputMode}
+      {/* Input Mode Toggle - Segmented Control */}
+      <div className="mb-6 flex justify-center">
+        <div className="inline-flex rounded-lg border bg-muted p-1">
+          <button
+            type="button"
             onClick={() => setInputMode("form")}
-            icon="📝"
-            label="Manual Form"
-            sublabel="Fill in details yourself"
-          />
-          <InputModeTab
-            mode="ai-chat"
-            currentMode={inputMode}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              inputMode === "form"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            📝 Manual Form
+          </button>
+          <button
+            type="button"
             onClick={() => setInputMode("ai-chat")}
-            icon="✨"
-            label="AI Assistant"
-            sublabel="Describe in natural language"
-            badge="NEW"
-            isAi
-          />
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              inputMode === "ai-chat"
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            ✨ NEAR AI Assistant
+          </button>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
       {/* AI Chat Mode */}
       {inputMode === "ai-chat" && (
-        <div className="relative mb-8">
-          {/* Animated border wrapper */}
-          <div className="absolute -inset-[2px] rounded-2xl near-ai-border opacity-70" />
-          
-          {/* Content */}
-          <div className="relative rounded-xl bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 p-6 border border-violet-500/20">
-            {/* Header Banner */}
-            <div className="flex items-center justify-between mb-4 pb-4 border-b border-violet-500/20">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full blur-md opacity-50" />
-                  <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-cyan-500">
-                    <span className="text-lg">🤖</span>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="font-bold text-white flex items-center gap-2">
-                    <span className="near-ai-gradient-text">NEAR AI</span>
-                    <span className="text-white/60">Assistant</span>
-                  </h3>
-                  <p className="text-xs text-violet-300/70">
-                    Private inference powered by Trusted Execution Environment
-                  </p>
-                </div>
-              </div>
-              
-              {/* TEE Verified Badge */}
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30 tee-badge">
-                <span className="text-green-400 text-xs">🔐</span>
-                <span className="text-green-400 text-xs font-medium">TEE Verified</span>
-              </div>
-            </div>
-            
-            {/* Chat Component */}
-            <NearAiChat
-              onFormFill={handleAiFormFill}
-              onComplete={handleAiComplete}
-            />
-            
-            {/* Footer Info */}
-            <div className="mt-4 pt-4 border-t border-violet-500/20">
-              <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-violet-300/60">
-                <span className="flex items-center gap-1">
-                  <span>🔒</span> End-to-end private
-                </span>
-                <span className="flex items-center gap-1">
-                  <span>⚡</span> DeepSeek V3.1
-                </span>
-                <span className="flex items-center gap-1">
-                  <span>✓</span> Verifiable inference
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+        <NearAiAssistant
+          onFormFill={handleAiFormFill}
+          onComplete={handleAiComplete}
+        />
       )}
 
       {/* Form Fields - Only shown when form mode is active */}
       {inputMode === "form" && (
       <>
-        {/* Caller Selection - First field */}
-        <div className="space-y-2">
-          <Label htmlFor="callerId">Caller *</Label>
-          {callersError ? (
-            <div className="flex h-10 w-full items-center rounded-md border border-destructive bg-background px-3 py-2 text-sm text-destructive">
-              Error loading callers: {callersError.message}
-            </div>
-          ) : callersLoading ? (
-            <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-              Loading callers...
-            </div>
-          ) : callers.length === 0 ? (
-            <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
-              No callers available
-            </div>
-          ) : (
-            <select
-              id="callerId"
-              value={formData.callerId || ""}
-              onChange={(e) =>
-                setFormData({ ...formData, callerId: e.target.value || null })
-              }
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-              required
-              disabled={isSubmitting}
-            >
-              <option value="">Select a caller...</option>
-              {callers.map((caller) => (
-                <option key={caller.id} value={caller.id}>
-                  {caller.name}
-                </option>
-              ))}
-            </select>
-          )}
+      {/* Section 1: Basic Information */}
+      <div className="space-y-6 pb-6 border-b">
+        <div>
+          <h4 className="text-lg font-semibold mb-1">Basic Information</h4>
+          <p className="text-sm text-muted-foreground">Who are we calling and basic details</p>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="recipientName">Who should we call? *</Label>
-          <Input
-            id="recipientName"
-            value={formData.recipientName}
-            onChange={(e) =>
-              setFormData({ ...formData, recipientName: e.target.value })
-            }
-            placeholder="Their name"
-            required
-            disabled={isSubmitting}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="phoneNumber">Their phone number (US) *</Label>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground font-medium">+1</span>
-            <Input
-              id="phoneNumber"
-              type="tel"
-              value={(() => {
-                // Format as (xxx) xxx-xxxx for display
-                const digits = formData.phoneNumber?.replace(/^\+1/, "").replace(/\D/g, "") || "";
-                if (digits.length === 0) return "";
-                if (digits.length <= 3) return `(${digits}`;
-                if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-                return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-              })()}
-              onChange={(e) => {
-                // Strip to digits only, limit to 10
-                const value = e.target.value.replace(/[^\d]/g, "").substring(0, 10);
-                // Store with +1 prefix (raw format for backend)
-                setFormData({ ...formData, phoneNumber: value ? `+1${value}` : "" });
-              }}
-              placeholder="(555) 123-4567"
-              required
-              disabled={isSubmitting}
-              className="flex-1"
-              maxLength={14} // (555) 123-4567 = 14 chars
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            🔒 Encrypted before storage • US numbers only (10 digits)
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="targetGender">Gender *</Label>
-            <select
-              id="targetGender"
-              value={formData.targetGender}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  targetGender: e.target
-                    .value as typeof formData.targetGender,
-                  targetGenderCustom: "",
-                })
-              }
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              required
-              disabled={isSubmitting}
-            >
-              <option value="">Select...</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="prefer_not_to_say">Prefer not to say</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="targetAgeRange">Age Range *</Label>
-            <select
-              id="targetAgeRange"
-              value={formData.targetAgeRange}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  targetAgeRange: e.target
-                    .value as typeof formData.targetAgeRange,
-                })
-              }
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              required
-              disabled={isSubmitting}
-            >
-              <option value="">Select...</option>
-              <option value="18-25">18-25</option>
-              <option value="26-35">26-35</option>
-              <option value="36-45">36-45</option>
-              <option value="46-55">46-55</option>
-              <option value="56+">56+</option>
-            </select>
-          </div>
-        </div>
-
-        {formData.targetGender === "other" && (
-          <div className="space-y-2">
-            <Label htmlFor="targetGenderCustom">Specify gender *</Label>
-            <Input
-              id="targetGenderCustom"
-              value={formData.targetGenderCustom}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  targetGenderCustom: e.target.value,
-                })
-              }
-              placeholder="Please specify"
-              required
-              disabled={isSubmitting}
-            />
-          </div>
-        )}
-
-        {/* New personalization fields - all mandatory */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="targetCity">City/Area *</Label>
-            <Input
-              id="targetCity"
-              value={formData.targetCity}
-              onChange={(e) =>
-                setFormData({ ...formData, targetCity: e.target.value })
-              }
-              placeholder="e.g. Brooklyn, NYC"
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="targetHobby">Hobby *</Label>
-            <Input
-              id="targetHobby"
-              value={formData.targetHobby}
-              onChange={(e) =>
-                setFormData({ ...formData, targetHobby: e.target.value })
-              }
-              placeholder="e.g. rock climbing"
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="targetProfession">Profession *</Label>
-            <Input
-              id="targetProfession"
-              value={formData.targetProfession}
-              onChange={(e) =>
-                setFormData({ ...formData, targetProfession: e.target.value })
-              }
-              placeholder="e.g. software engineer"
-              disabled={isSubmitting}
-              required
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="videoStyle">Video Style *</Label>
-          <div className="space-y-2">
-          <select
-            id="videoStyle"
-              value={formData.videoStyle && VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number]) ? formData.videoStyle : formData.videoStyle ? "custom" : ""}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === "custom") {
-                  // Switch to custom mode - clear if it was a preset
-                  if (VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])) {
-                    setFormData({ ...formData, videoStyle: "" });
-                  }
-                  // If already custom, keep the value
-                } else if (value) {
-                  setFormData({ ...formData, videoStyle: value });
-            }
-              }}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              required={!formData.videoStyle || VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])}
-            disabled={isSubmitting}
-          >
-              <option value="">Select a style...</option>
-            {VIDEO_STYLES.map((style) => (
-              <option key={style} value={style}>
-                {style.charAt(0).toUpperCase() +
-                  style.slice(1).replace(/-/g, " ")}
-              </option>
-            ))}
-              <option value="custom">Other (custom)</option>
-          </select>
-            {(!formData.videoStyle || !VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])) && (
+        
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="recipientName">Who should we call? *</Label>
               <Input
-                id="videoStyleCustom"
-                value={formData.videoStyle && !VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number]) ? formData.videoStyle : ""}
+                id="recipientName"
+                value={formData.recipientName}
                 onChange={(e) =>
-                  setFormData({ ...formData, videoStyle: e.target.value })
+                  setFormData({ ...formData, recipientName: e.target.value })
                 }
-                placeholder="Enter custom style (e.g. pixar, noir, vaporwave)"
+                placeholder="Their name"
                 required
                 disabled={isSubmitting}
-                className="mt-2"
               />
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Choose from suggested styles or enter your own custom aesthetic.
-          </p>
-        </div>
+            </div>
 
-        {/* Image Upload - Strongly Recommended */}
-        <div className="space-y-2">
-          <Label>
-            Upload their photo{" "}
-            <span className="text-muted-foreground">(strongly recommended for best results)</span>
-          </Label>
-          <div className="flex items-center gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber">Their phone number (US) *</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground font-medium">+1</span>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  value={(() => {
+                    // Format as (xxx) xxx-xxxx for display
+                    const digits = formData.phoneNumber?.replace(/^\+1/, "").replace(/\D/g, "") || "";
+                    if (digits.length === 0) return "";
+                    if (digits.length <= 3) return `(${digits}`;
+                    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+                    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+                  })()}
+                  onChange={(e) => {
+                    // Strip to digits only, limit to 10
+                    const value = e.target.value.replace(/[^\d]/g, "").substring(0, 10);
+                    // Store with +1 prefix (raw format for backend)
+                    setFormData({ ...formData, phoneNumber: value ? `+1${value}` : "" });
+                  }}
+                  placeholder="(555) 123-4567"
+                  required
+                  disabled={isSubmitting}
+                  className="flex-1"
+                  maxLength={14} // (555) 123-4567 = 14 chars
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="targetGender">Gender *</Label>
+              <Select
+                value={formData.targetGender}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    targetGender: value as typeof formData.targetGender,
+                    targetGenderCustom: "",
+                  })
+                }
+                required
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="targetGender">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="prefer_not_to_say">Prefer not to say</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="targetAgeRange">Age Range *</Label>
+              <Select
+                value={formData.targetAgeRange}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    targetAgeRange: value as typeof formData.targetAgeRange,
+                  })
+                }
+                required
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="targetAgeRange">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="18-25">18-25</SelectItem>
+                  <SelectItem value="26-35">26-35</SelectItem>
+                  <SelectItem value="36-45">36-45</SelectItem>
+                  <SelectItem value="46-55">46-55</SelectItem>
+                  <SelectItem value="56+">56+</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {formData.targetGender === "other" && (
+            <div className="space-y-2">
+              <Label htmlFor="targetGenderCustom">Specify gender *</Label>
+              <Input
+                id="targetGenderCustom"
+                value={formData.targetGenderCustom}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    targetGenderCustom: e.target.value,
+                  })
+                }
+                placeholder="Please specify"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="targetCity">City/Area *</Label>
+              <Input
+                id="targetCity"
+                value={formData.targetCity}
+                onChange={(e) =>
+                  setFormData({ ...formData, targetCity: e.target.value })
+                }
+                placeholder="e.g. Brooklyn, NYC"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="targetHobby">Hobby *</Label>
+              <Input
+                id="targetHobby"
+                value={formData.targetHobby}
+                onChange={(e) =>
+                  setFormData({ ...formData, targetHobby: e.target.value })
+                }
+                placeholder="e.g. rock climbing"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="targetProfession">Profession *</Label>
+              <Input
+                id="targetProfession"
+                value={formData.targetProfession}
+                onChange={(e) =>
+                  setFormData({ ...formData, targetProfession: e.target.value })
+                }
+                placeholder="e.g. software engineer"
+                disabled={isSubmitting}
+                required
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Section 2: Video Configuration */}
+      <div className="space-y-6 py-6 border-b">
+        <div>
+          <h4 className="text-lg font-semibold mb-1">Video Configuration</h4>
+          <p className="text-sm text-muted-foreground">Choose caller, style, and upload photo</p>
+        </div>
+        
+        <div className="grid gap-6 lg:grid-cols-2">
+          <div className="space-y-6 flex flex-col">
+            <div className="space-y-2">
+              <Label htmlFor="callerId">Caller *</Label>
+              {callersError ? (
+                <div className="flex h-10 w-full items-center rounded-md border border-destructive bg-background px-3 py-2 text-sm text-destructive">
+                  Error loading callers: {callersError.message}
+                </div>
+              ) : callersLoading ? (
+                <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+                  Loading callers...
+                </div>
+              ) : callers.length === 0 ? (
+                <div className="flex h-10 w-full items-center rounded-md border border-input bg-background px-3 py-2 text-sm text-muted-foreground">
+                  No callers available
+                </div>
+              ) : (
+                <Select
+                  value={formData.callerId || ""}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, callerId: value || null })
+                  }
+                  required
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="callerId">
+                    <SelectValue placeholder="Select a caller..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {callers.map((caller) => (
+                      <SelectItem key={caller.id} value={caller.id}>
+                        {caller.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <div className="space-y-2 flex-1">
+              <Label htmlFor="videoStyle">Video Style *</Label>
+              <Select
+                value={formData.videoStyle && VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number]) ? formData.videoStyle : formData.videoStyle ? "custom" : ""}
+                onValueChange={(value) => {
+                  if (value === "custom") {
+                    if (VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])) {
+                      setFormData({ ...formData, videoStyle: "" });
+                    }
+                  } else if (value) {
+                    setFormData({ ...formData, videoStyle: value });
+                  }
+                }}
+                required={!formData.videoStyle || VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="videoStyle">
+                  <SelectValue placeholder="Select a style..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {VIDEO_STYLES.map((style) => (
+                    <SelectItem key={style} value={style}>
+                      {style.charAt(0).toUpperCase() +
+                        style.slice(1).replace(/-/g, " ")}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">Other (custom)</SelectItem>
+                </SelectContent>
+              </Select>
+              {(!formData.videoStyle || !VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number])) && (
+                <Input
+                  id="videoStyleCustom"
+                  value={formData.videoStyle && !VIDEO_STYLES.includes(formData.videoStyle as typeof VIDEO_STYLES[number]) ? formData.videoStyle : ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, videoStyle: e.target.value })
+                  }
+                  placeholder="Enter custom style"
+                  required
+                  disabled={isSubmitting}
+                  className="mt-2"
+                />
+              )}
+              <p className="text-xs text-muted-foreground">
+                Choose from suggested styles or enter your own custom aesthetic.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Upload their photo</Label>
             <input
               ref={fileInputRef}
               type="file"
@@ -818,141 +709,133 @@ export function CallRequestForm() {
               disabled={isSubmitting || isUploadingImage}
             />
             {formData.uploadedImageUrl ? (
-              <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+              <div className="relative border-2 border-dashed rounded-lg p-6 h-[192px] flex items-center justify-center">
                 <img
                   src={formData.uploadedImageUrl}
                   alt="Uploaded"
-                  className="w-16 h-16 object-cover rounded"
+                  className="max-w-full max-h-[160px] object-contain rounded-lg"
                 />
-                <div className="flex-1">
-                  <p className="text-sm font-medium">✓ Image uploaded - we'll use this for the video</p>
-                  <p className="text-xs text-muted-foreground">Physical description is now optional</p>
-                </div>
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   onClick={handleRemoveImage}
                   disabled={isSubmitting}
+                  className="absolute top-2 right-2"
                 >
-                  Remove
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
             ) : (
-              <Button
-                type="button"
-                variant="outline"
+              <div
+                className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary cursor-pointer transition-colors h-[192px] flex flex-col items-center justify-center"
                 onClick={() => fileInputRef.current?.click()}
-                disabled={isSubmitting || isUploadingImage}
-                className="w-full"
               >
-                {isUploadingImage ? "Uploading..." : "📷 Choose Photo"}
-              </Button>
+                <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground mb-1">
+                  Click to upload
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  PNG, JPG up to 5MB
+                </p>
+              </div>
             )}
           </div>
-          {!formData.uploadedImageUrl && (
-            <p className="text-xs text-muted-foreground">
-              💡 Tip: Upload a photo for more personalized results. Max 5MB. JPG, PNG, or WebP.
-            </p>
-          )}
         </div>
+      </div>
 
-        {/* Physical Description - Required if no image, Optional if image uploaded */}
-        {!formData.uploadedImageUrl && (
+      {/* Section 3: Additional Information */}
+      <div className="space-y-6 py-6 border-b">
+        <div>
+          <h4 className="text-lg font-semibold mb-1">Additional Information</h4>
+          <p className="text-sm text-muted-foreground">Help us personalize the call</p>
+        </div>
+        
+        <div className="space-y-6">
+          {/* Physical Description - Required if no image, Optional if image uploaded */}
+          {!formData.uploadedImageUrl && (
+            <div className="space-y-2">
+              <Label htmlFor="targetPhysicalDescription">
+                Physical Description *
+                <span className="text-muted-foreground text-xs ml-2"></span>
+              </Label>
+              <Textarea
+                id="targetPhysicalDescription"
+                value={formData.targetPhysicalDescription}
+                onChange={(e) =>
+                  setFormData({ ...formData, targetPhysicalDescription: e.target.value })
+                }
+                placeholder="e.g. short brown hair, glasses, casual t-shirt"
+                rows={2}
+                required
+                disabled={isSubmitting}
+              />
+              <p className="text-xs text-muted-foreground">
+                Required if no photo uploaded but we really suggest you upload one.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label htmlFor="targetPhysicalDescription">
-              Physical Description *
-              <span className="text-muted-foreground text-xs ml-2">(hair, clothing, appearance)</span>
+            <Label htmlFor="interestingPiece">
+              One thing virtually no one knows about them *
+              <span className="text-muted-foreground text-xs ml-2"></span>
             </Label>
             <Textarea
-              id="targetPhysicalDescription"
-              value={formData.targetPhysicalDescription}
+              id="interestingPiece"
+              value={formData.interestingPiece}
               onChange={(e) =>
-                setFormData({ ...formData, targetPhysicalDescription: e.target.value })
+                setFormData({ ...formData, interestingPiece: e.target.value })
               }
-              placeholder="e.g. short brown hair, glasses, casual t-shirt"
+              placeholder="e.g. 'they secretly still sleep with their childhood teddy bear'"
               rows={2}
               required
               disabled={isSubmitting}
             />
-            <p className="text-xs text-muted-foreground">
-              Required if no photo uploaded. This helps generate a more accurate video.
-            </p>
           </div>
-        )}
 
-        <div className="space-y-2">
-          <Label htmlFor="interestingPiece">
-            One thing virtually no one knows about them *
-            <span className="text-muted-foreground text-xs ml-2">(the hook)</span>
-          </Label>
-          <Textarea
-            id="interestingPiece"
-            value={formData.interestingPiece}
-            onChange={(e) =>
-              setFormData({ ...formData, interestingPiece: e.target.value })
-            }
-            placeholder="e.g. 'they secretly still sleep with their childhood teddy bear'"
-            rows={2}
-            required
-            disabled={isSubmitting}
-          />
+          <div className="space-y-2">
+            <Label htmlFor="ragebaitTrigger">
+              If you wanted to ragebait them, you would say... *
+              <span className="text-muted-foreground text-xs ml-2"></span>
+            </Label>
+            <Textarea
+              id="ragebaitTrigger"
+              value={formData.ragebaitTrigger}
+              onChange={(e) =>
+                setFormData({ ...formData, ragebaitTrigger: e.target.value })
+              }
+              placeholder="e.g. 'their favorite sports team is overrated'"
+              rows={2}
+              required
+              disabled={isSubmitting}
+            />
+          </div>
         </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="ragebaitTrigger">
-            If you wanted to ragebait them, you would say... *
-            <span className="text-muted-foreground text-xs ml-2">(spicy 🌶️)</span>
-          </Label>
-          <Textarea
-            id="ragebaitTrigger"
-            value={formData.ragebaitTrigger}
-            onChange={(e) =>
-              setFormData({ ...formData, ragebaitTrigger: e.target.value })
-            }
-            placeholder="e.g. 'their favorite sports team is overrated'"
-            rows={2}
-            required
-            disabled={isSubmitting}
-          />
-        </div>
-
+      </div>
       </>
       )}
 
-        {/* Fhenix Privacy Toggle - Always visible */}
+      {/* Privacy & Encryption Section - Show for both modes */}
+      <div className="space-y-6 py-6 border-b">
+        <div>
+          <h4 className="text-lg font-semibold mb-1">Privacy & Encryption</h4>
+          <p className="text-sm text-muted-foreground">Choose how your phone number is encrypted</p>
+        </div>
+        
         <FhenixPrivacyToggle
           value={privacyMode}
           onChange={setPrivacyMode}
           disabled={isSubmitting}
         />
+      </div>
 
-        {/* Terms checkbox - Always visible */}
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="agreement"
-            required
-            disabled={isSubmitting}
-            className="rounded"
-          />
-          <Label htmlFor="agreement" className="text-sm">
-            I agree to the{" "}
-            <Link to="/terms" className="underline hover:text-primary">
-              Terms of Service
-            </Link>{" "}
-            and{" "}
-            <Link to="/privacy" className="underline hover:text-primary">
-              Privacy Policy
-            </Link>
-          </Label>
-        </div>
-
-        {/* Submit button - Always visible */}
+      {/* Actions */}
+      <div className="flex justify-center pt-6">
         <Button
           type="submit"
           size="lg"
-          className={`w-full h-14 text-lg font-semibold rounded-full ${
+          className={`max-w-sm text-base ${
             privacyMode === "fhenix" 
               ? "bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700" 
               : ""
@@ -967,15 +850,24 @@ export function CallRequestForm() {
             ? `🔐 Buy with FHE Privacy $${PAYMENT_CONFIG.priceUSD}`
             : `🛡️ Buy a Call $${PAYMENT_CONFIG.priceUSD}`}
         </Button>
+      </div>
 
-        <p className="text-center text-xs text-muted-foreground">
-          Secure payment via credit card or crypto
-        </p>
+      {/* Terms notice */}
+      <p className="text-xs text-muted-foreground pt-4 text-center">
+        By clicking the button or purchasing, you agree to the{" "}
+        <Link to="/terms" className="underline hover:text-primary">
+          Terms of Service
+        </Link>{" "}
+        and{" "}
+        <Link to="/privacy" className="underline hover:text-primary">
+          Privacy Policy
+        </Link>
+      </p>
 
-        {/* NSFW Warning Footer */}
-        <p className="text-center text-xs text-muted-foreground mt-4 pt-4 border-t">
-          ⚠️ <strong>NSFW content is not supported.</strong> Calls with inappropriate content will fail and refunds are not possible. Please keep requests appropriate.
-        </p>
+      {/* NSFW Warning Footer */}
+      <p className="text-xs text-muted-foreground text-center">
+        ⚠️ <strong>NSFW content is not supported.</strong> Calls with inappropriate content will fail.
+      </p>
       </form>
       {/* Auth Modal - shown when not logged in */}
       <AuthModal

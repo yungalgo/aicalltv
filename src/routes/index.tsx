@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, useState } from "react";
 import type React from "react";
 import { Navbar } from "~/components/navbar";
 import { Footer } from "~/components/footer";
@@ -13,6 +13,7 @@ import { PAYMENT_CONFIG } from "~/lib/web3/config";
 import { EmblaOptionsType } from "embla-carousel";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
+import { AuthModal } from "~/components/auth-modal";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -97,7 +98,7 @@ function CallersCarousel() {
         />
         <div className="text-center mt-8">
           <Button asChild size="lg">
-            <a href="#callers">Browse All Callers</a>
+            <Link to="/callers">Browse All Callers</Link>
           </Button>
         </div>
       </div>
@@ -167,12 +168,47 @@ function CallsCarousel() {
           </div>
         </div>
         <div className="text-center mt-8">
-          <Button asChild size="lg">
-            <Link to="/create">Create Your Own</Link>
-              </Button>
+          <CreateYourOwnButton />
         </div>
           </div>
     </section>
+  );
+}
+
+function CreateYourOwnButton() {
+  const { data: user } = useSuspenseQuery(authQueryOptions());
+  const navigate = useNavigate();
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const handleClick = () => {
+    if (user) {
+      // Navigate to create page (calls form)
+      navigate({ to: "/create" });
+    } else {
+      // Open auth modal if not logged in
+      setShowAuthModal(true);
+    }
+  };
+
+  return (
+    <>
+        <Button
+        onClick={handleClick}
+          size="lg"
+        className="bg-primary text-primary-foreground"
+      >
+        Create Your Own
+        </Button>
+      <AuthModal
+        open={showAuthModal}
+        onOpenChange={setShowAuthModal}
+        onAuthSuccess={() => {
+          setShowAuthModal(false);
+          navigate({ to: "/create" });
+        }}
+        initialMode="signup"
+      />
+    </>
   );
 }
 
