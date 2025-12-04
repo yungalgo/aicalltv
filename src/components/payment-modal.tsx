@@ -557,7 +557,7 @@ export function PaymentModal({
                 <div className="text-left">
                   <div className="font-medium">Pay on ZCash</div>
                   <div className="text-xs text-muted-foreground">
-                    Shielded • Private
+                    {PAYMENT_CONFIG.priceZEC} ZEC (≈${PAYMENT_CONFIG.priceUSD}) • Shielded
                   </div>
                 </div>
               </Button>

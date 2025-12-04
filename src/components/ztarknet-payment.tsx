@@ -189,7 +189,7 @@ export function ZtarknetPayment({ onPaymentComplete, onBack }: ZtarknetPaymentPr
         {/* Price display */}
         <div className="rounded-lg border bg-muted/50 p-4 text-center">
           <p className="text-3xl font-bold">{ZTARKNET_CONFIG.paymentAmountDisplay} ZTF</p>
-          <p className="text-sm text-muted-foreground">Ztarknet L2 (settles to Zcash)</p>
+          <p className="text-sm text-muted-foreground">Free (Testnet) • Ztarknet L2 (settles to Zcash)</p>
         </div>
 
         {/* Info box */}
