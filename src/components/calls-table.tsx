@@ -18,6 +18,8 @@ interface CallData {
   userId: string;
   status: string;
   recipientName: string;
+  callerId: string | null;
+  callerName: string | null;
   targetGender: string;
   targetGenderCustom: string | null;
   targetAgeRange: string | null;
@@ -139,14 +141,25 @@ export function CallsTable() {
               <TableCell>{getStatusBadge(call.status, call.videoStatus)}</TableCell>
               <TableCell>
                 {call.videoUrl ? (
-                  <a 
-                    href={call.videoUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:underline"
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Opening video URL:', call.videoUrl);
+                      if (call.videoUrl) {
+                        const newWindow = window.open(call.videoUrl, '_blank', 'noopener,noreferrer');
+                        if (!newWindow) {
+                          console.error('Popup blocked or failed to open');
+                          // Fallback: try setting location
+                          window.location.href = call.videoUrl;
+                        }
+                      }
+                    }}
+                    className="text-sm text-blue-600 hover:underline cursor-pointer bg-transparent border-none p-0"
                   >
                     View Video
-                  </a>
+                  </button>
                 ) : (
                   <span className="text-sm text-muted-foreground">
                     {call.videoStatus === "generating" ? "Generating..." : 
@@ -160,11 +173,48 @@ export function CallsTable() {
               </TableCell>
               <TableCell className="text-right">
                 {call.videoUrl ? (
-                  <Button size="sm" variant="outline" asChild>
-                    <a href={call.videoUrl} download target="_blank" rel="noopener noreferrer">
-                      <Download className="mr-2 h-4 w-4" />
-                      Download
-                    </a>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    type="button"
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (call.videoUrl) {
+                        try {
+                          // Fetch the video with CORS now that it's configured
+                          const response = await fetch(call.videoUrl, {
+                            method: 'GET',
+                            mode: 'cors',
+                          });
+                          
+                          if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                          }
+                          
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          // Create filename with caller name, sanitized for filesystem
+                          const callerName = call.callerName 
+                            ? call.callerName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+                            : 'unknown';
+                          a.download = `aicalltv-video-${callerName}.mp4`;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                        } catch (error) {
+                          console.error('Download failed:', error);
+                          // Fallback: open in new tab
+                          window.open(call.videoUrl, '_blank', 'noopener,noreferrer');
+                        }
+                      }
+                    }}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
                   </Button>
                 ) : (
                   <span className="text-sm text-muted-foreground">-</span>
