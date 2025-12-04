@@ -4,6 +4,7 @@ import { Suspense, useState, useEffect, useCallback, useRef } from "react";
 import { AuthModal } from "~/components/auth-modal";
 import { CallsTable } from "~/components/calls-table";
 import { FhenixPrivacyToggle, type PrivacyMode, useFhenixReady, useFhenixEncryption } from "~/components/fhenix-privacy-toggle";
+import { Footer } from "~/components/footer";
 import { Navbar } from "~/components/navbar";
 import { NearAiChat } from "~/components/near-ai-chat";
 import { PaymentModal } from "~/components/payment-modal";
@@ -32,7 +33,7 @@ function HomePage() {
   return (
     <div className="flex min-h-svh flex-col">
       <Navbar />
-      <div className="container mx-auto max-w-4xl p-6">
+      <div className="container mx-auto max-w-4xl p-6 flex-1">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Buy an AI Call</h1>
           <p className="text-muted-foreground mt-2">
@@ -47,6 +48,7 @@ function HomePage() {
           <PageContent />
         </Suspense>
       </div>
+      <Footer />
     </div>
   );
 }
