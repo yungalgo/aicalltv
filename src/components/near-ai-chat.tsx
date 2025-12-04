@@ -601,10 +601,17 @@ export function NearAiChat({ onFormFill, onComplete }: NearAiChatProps) {
               </div>
             )}
           </div>
-          {extractedData.targetPhysicalDescription && (
+          {(extractedData.uploadedImageUrl || extractedData.targetPhysicalDescription) && (
             <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderColor: '#1A1A1A' }}>
               <p className="text-xs mb-1" style={{ color: '#1A1A1A', opacity: 0.7 }}>Physical Description:</p>
-              <p className="text-sm" style={{ color: '#1A1A1A' }}>{extractedData.targetPhysicalDescription}</p>
+              {extractedData.uploadedImageUrl ? (
+                <p className="text-sm flex items-center gap-1.5" style={{ color: '#1A1A1A' }}>
+                  <span>📷</span>
+                  <span>Image uploaded</span>
+                </p>
+              ) : (
+                <p className="text-sm" style={{ color: '#1A1A1A' }}>{extractedData.targetPhysicalDescription}</p>
+              )}
             </div>
           )}
           {extractedData.interestingPiece && (
