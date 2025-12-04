@@ -949,6 +949,7 @@ function CallRequestForm() {
         open={showAuthModal}
         onOpenChange={setShowAuthModal}
         onAuthSuccess={handleAuthSuccess}
+        initialMode="signup"
       />
 
       {/* Payment Modal - shown after auth (or immediately if logged in) */}

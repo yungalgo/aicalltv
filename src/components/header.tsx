@@ -27,6 +27,17 @@ export function Header() {
 function AuthButtons() {
   const { data: user } = useSuspenseQuery(authQueryOptions());
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+
+  const openLogin = () => {
+    setAuthMode("login");
+    setShowAuthModal(true);
+  };
+
+  const openSignup = () => {
+    setAuthMode("signup");
+    setShowAuthModal(true);
+  };
 
   return (
     <>
@@ -41,16 +52,20 @@ function AuthButtons() {
             type="button"
             size="sm"
             variant="ghost"
-            onClick={() => setShowAuthModal(true)}
+            onClick={openLogin}
           >
             Log in
           </Button>
-          <Button type="button" size="sm" onClick={() => setShowAuthModal(true)}>
+          <Button type="button" size="sm" onClick={openSignup}>
             Sign up
           </Button>
         </div>
       )}
-      <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
+      <AuthModal 
+        open={showAuthModal} 
+        onOpenChange={setShowAuthModal} 
+        initialMode={authMode}
+      />
     </>
   );
 }
