@@ -8,12 +8,9 @@
   "scripts": {
     "dev": "vite dev --port 3000",
     "dev:ws": "bun run server-ws.ts",
-    "dev:ws:relay": "bun run server-ws-relay.ts",
     "worker": "bun run src/worker.ts",
     "worker:dev": "bun --watch run src/worker.ts",
     "test:call": "bun run scripts/test-call.ts",
-    "test:call:relay": "VOICE_PROVIDER=conversation_relay bun run scripts/test-call.ts",
-    "test:call:streams": "VOICE_PROVIDER=media_streams bun run scripts/test-call.ts",
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "test:video": "bun run scripts/test-video-generation.ts",

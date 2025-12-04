@@ -109,21 +109,25 @@ export const createCall = createServerFn({ method: "POST" }).handler(
       videoStyle: data.videoStyle,
     };
 
-    // Generate OpenAI prompt - needed BEFORE call starts
+    // Generate OpenAI prompt and welcome greeting - needed BEFORE call starts
     // Time the prompt generation for debugging
     const promptStartTime = Date.now();
-    console.log(`[Create Call] 🕐 Starting OpenAI prompt generation...`);
+    console.log(`[Create Call] 🕐 Starting prompt generation...`);
     
     let openaiPrompt: string;
+    let welcomeGreeting: string;
     try {
-      const { generateOpenAIPrompt } = await import("~/lib/prompts/groq-generator");
-      openaiPrompt = await generateOpenAIPrompt(promptInput);
+      const { generateCallPrompts } = await import("~/lib/prompts/groq-generator");
+      const prompts = await generateCallPrompts(promptInput);
+      openaiPrompt = prompts.systemPrompt;
+      welcomeGreeting = prompts.welcomeGreeting;
       const promptDuration = Date.now() - promptStartTime;
-      console.log(`[Create Call] ✅ Generated OpenAI prompt in ${promptDuration}ms`);
+      console.log(`[Create Call] ✅ Generated prompts in ${promptDuration}ms`);
+      console.log(`[Create Call]    Welcome: "${welcomeGreeting.substring(0, 50)}..."`);
     } catch (error) {
       const promptDuration = Date.now() - promptStartTime;
-      console.error(`[Create Call] ❌ Failed to generate OpenAI prompt after ${promptDuration}ms:`, error);
-      throw new Error(`Failed to generate OpenAI prompt: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`[Create Call] ❌ Failed to generate prompts after ${promptDuration}ms:`, error);
+      throw new Error(`Failed to generate prompts: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     // Note: Image prompt will be generated later in video-generator worker after call completes
@@ -151,6 +155,7 @@ export const createCall = createServerFn({ method: "POST" }).handler(
         uploadedImageUrl: data.uploadedImageUrl || null,
         uploadedImageS3Key: data.uploadedImageS3Key || null,
         openaiPrompt,
+        welcomeGreeting,
         imagePrompt: null, // Will be generated later in video-generator worker
         encryptedHandle,
         // Fhenix FHE encryption fields

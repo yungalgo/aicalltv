@@ -2,27 +2,32 @@ import { getTwilioClient, isTwilioConfigured } from "./client";
 import { env } from "~/env/server";
 import type { calls } from "~/lib/db/schema/calls";
 import { extractPhoneNumber, isFhenixEncrypted } from "~/lib/fhenix/backend-decrypt";
-import { getVoiceProvider, getTwiMLEndpoint, getProviderInfo, getWebSocketPort } from "./providers";
 
 type CallRecord = typeof calls.$inferSelect;
+
+interface CacheData {
+  callSid: string;
+  openaiPrompt: string;
+  welcomeGreeting?: string;
+}
 
 /**
  * Cache call data to the WebSocket server for faster session initialization
  */
-async function cacheCallDataToWebSocket(callSid: string, openaiPrompt: string): Promise<void> {
-  const provider = getVoiceProvider();
-  const port = getWebSocketPort();
+async function cacheCallDataToWebSocket(data: CacheData): Promise<void> {
+  // WebSocket server runs on port 3001 in production, configurable via WS_PORT
+  const port = process.env.WS_PORT || "3001";
   const cacheUrl = `http://localhost:${port}/cache/call`;
   
   try {
     const response = await fetch(cacheUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ callSid, openaiPrompt }),
+      body: JSON.stringify(data),
     });
     
     if (response.ok) {
-      console.log(`[Twilio Call] ✅ Cached call data to ${provider} server`);
+      console.log(`[Twilio Call] ✅ Cached call data to WebSocket server`);
     } else {
       console.warn(`[Twilio Call] ⚠️ Failed to cache call data: ${response.status}`);
     }
@@ -33,7 +38,7 @@ async function cacheCallDataToWebSocket(callSid: string, openaiPrompt: string): 
 }
 
 /**
- * Initiate a Twilio call
+ * Initiate a Twilio call using ConversationRelay
  * @param call - Call record from database
  * @returns Call SID and recording SID
  */
@@ -65,9 +70,8 @@ export async function initiateTwilioCall(
     throw new Error("Phone number not found in call record");
   }
 
-  // Get provider configuration
-  const providerInfo = getProviderInfo();
-  const twimlUrl = getTwiMLEndpoint(env.VITE_BASE_URL);
+  // TwiML URL with call ID for fetching call-specific data (welcome greeting, etc.)
+  const twimlUrl = `${env.VITE_BASE_URL}/api/twilio/voice?callId=${call.id}`;
 
   // Webhook URLs for call status updates
   const statusCallbackUrl = `${env.VITE_BASE_URL}/api/webhooks/twilio/call-status`;
@@ -75,33 +79,33 @@ export async function initiateTwilioCall(
 
   console.log("=".repeat(80));
   console.log("[Twilio Call] 📞 Initiating call to:", phoneNumber);
-  console.log("[Twilio Call] 🎯 Provider:", providerInfo.provider);
-  console.log("[Twilio Call]    TTS:", providerInfo.tts);
-  console.log("[Twilio Call]    STT:", providerInfo.stt);
+  console.log("[Twilio Call] 🎙️  Using ConversationRelay (ElevenLabs TTS + Deepgram STT)");
   console.log("[Twilio Call] TwiML URL:", twimlUrl);
   console.log("[Twilio Call] Status callback:", statusCallbackUrl);
   console.log("[Twilio Call] Recording callback:", recordingStatusCallbackUrl);
   console.log("=".repeat(80));
 
   // Make the call with recording enabled
-  // The TwiML response determines whether to use Media Streams or ConversationRelay
   const twilioCall = await client.calls.create({
     to: phoneNumber,
     from: env.TWILIO_PHONE_NUMBER,
-    url: twimlUrl, // TwiML endpoint (voice or voice-relay based on provider)
+    url: twimlUrl,
     statusCallback: statusCallbackUrl,
     statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
     statusCallbackMethod: "POST",
-    record: true, // Enable recording
+    record: true,
     recordingChannels: "dual", // Dual-channel: left=caller/AI, right=target/person (stereo)
     recordingStatusCallback: recordingStatusCallbackUrl,
     recordingStatusCallbackMethod: "POST",
   });
 
   // Cache call data to WebSocket server for faster session initialization
-  // This avoids a DB query when the WebSocket connection is established
   if (call.openaiPrompt) {
-    await cacheCallDataToWebSocket(twilioCall.sid, call.openaiPrompt);
+    await cacheCallDataToWebSocket({
+      callSid: twilioCall.sid,
+      openaiPrompt: call.openaiPrompt,
+      welcomeGreeting: call.welcomeGreeting || undefined,
+    });
   }
 
   return {
@@ -116,4 +120,3 @@ export async function initiateTwilioCall(
 export function canMakeTwilioCall(): boolean {
   return isTwilioConfigured();
 }
-

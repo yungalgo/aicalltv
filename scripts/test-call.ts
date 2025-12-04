@@ -4,9 +4,6 @@
  * Direct test script to initiate a Twilio call
  * Usage: bun scripts/test-call.ts <phone-number> <recipient-name>
  * Example: bun scripts/test-call.ts "+15005550006" "Test User"
- * 
- * Environment:
- *   VOICE_PROVIDER=conversation_relay (default) | media_streams
  */
 
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -17,22 +14,15 @@ import { calls } from "../src/lib/db/schema/calls";
 import { user } from "../src/lib/db/schema/auth.schema";
 import * as schema from "../src/lib/db/schema";
 import { initiateTwilioCall } from "../src/lib/twilio/call";
-import { getProviderInfo } from "../src/lib/twilio/providers";
 
 async function main() {
   const phoneNumber = process.argv[2] || "+19083363673"; // Google Voice number
   const recipientName = process.argv[3] || "Test User";
 
-  // Show provider info
-  const providerInfo = getProviderInfo();
-  
   console.log("=".repeat(60));
   console.log("📞 Making test call...");
   console.log("");
-  console.log(`🎯 Provider: ${providerInfo.provider.toUpperCase()}`);
-  console.log(`   ${providerInfo.description}`);
-  console.log(`   TTS: ${providerInfo.tts}`);
-  console.log(`   STT: ${providerInfo.stt}`);
+  console.log("🎙️  Using ConversationRelay (ElevenLabs TTS + Deepgram STT)");
   console.log("");
   console.log(`Phone Number: ${phoneNumber}`);
   console.log(`Recipient Name: ${recipientName}`);
@@ -86,6 +76,9 @@ Your personality:
 - Keep responses SHORT (1-2 sentences max - this is a phone call!)
 
 Start by asking if they're aware their cheese license expired last Tuesday. Be persistent but friendly!`;
+
+    // Welcome greeting for ElevenLabs TTS
+    const welcomeGreeting = `Good afternoon! This is Barry from the International Cheese Council calling about an urgent matter regarding your cheese license.`;
     
     const [newCall] = await db
       .insert(calls)
@@ -95,6 +88,7 @@ Start by asking if they're aware their cheese license expired last Tuesday. Be p
         targetGender: "prefer_not_to_say",
         videoStyle: "anime",
         openaiPrompt: aiPrompt,
+        welcomeGreeting,
         encryptedHandle,
         paymentMethod: "free",
         isFree: true,
@@ -103,6 +97,7 @@ Start by asking if they're aware their cheese license expired last Tuesday. Be p
       .returning();
     
     console.log(`✓ AI Prompt: "${aiPrompt.substring(0, 50)}..."`)
+    console.log(`✓ Welcome Greeting: "${welcomeGreeting.substring(0, 50)}..."`)
 
     console.log(`✓ Created call record: ${newCall.id}`);
 

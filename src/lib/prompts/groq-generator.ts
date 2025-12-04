@@ -28,12 +28,27 @@ export interface PromptGenerationInput {
   videoStyle: string; // Aesthetic style: "anime", "claymation", "puppets", etc.
 }
 
+export interface GeneratedPrompts {
+  systemPrompt: string;
+  welcomeGreeting: string;
+}
+
 /**
- * Generate OpenAI call prompt using Groq
+ * Generate OpenAI call prompt and welcome greeting using Groq
  */
 export async function generateOpenAIPrompt(
   input: PromptGenerationInput,
 ): Promise<string> {
+  const result = await generateCallPrompts(input);
+  return result.systemPrompt;
+}
+
+/**
+ * Generate both system prompt and welcome greeting using Groq
+ */
+export async function generateCallPrompts(
+  input: PromptGenerationInput,
+): Promise<GeneratedPrompts> {
   if (!env.GROQ_API_KEY) {
     throw new Error(
       "Groq API key not configured. Please set GROQ_API_KEY environment variable",
@@ -42,22 +57,33 @@ export async function generateOpenAIPrompt(
 
   const systemPrompt = `You are an expert at creating ENTERTAINING PRANK CALL scenarios.
 
-Your task is to generate instructions for a PRANK CALL - the PRIMARY GOAL is ENTERTAINMENT. The instructions must:
+Your task is to generate instructions for a PRANK CALL - the PRIMARY GOAL is ENTERTAINMENT.
+
+You must return a JSON object with EXACTLY this structure:
+{
+  "systemPrompt": "The full instructions for the AI on how to conduct the call...",
+  "welcomeGreeting": "The exact opening line the AI should say when the call connects (1-2 sentences max)"
+}
+
+The systemPrompt must:
 - NEVER mention "AI", "AI-powered", "artificial intelligence", "prank call", or break the fourth wall
 - Create a believable, AMUSING scenario designed to get funny, awkward, or hilarious reactions
 - Use the interesting piece/hook creatively to set up a clever, entertaining premise
 - Incorporate specific details about the target person to make it more effective and personal
 - Guide the AI to play a character/situation that will create amusing moments
-- The conversation should be ENTERTAINING - aim for funny reactions, confusion, awkward situations, or hilarious misunderstandings
-- Make it catchy and clever - use the hook to create an amusing scenario that catches them off guard
-- The AI should stay in character and create interactions that viewers will find funny
-- Guide the AI on how to open, what character to play, and how to escalate for maximum entertainment value
-- Examples: mistaken identity scenarios, absurd situations, clever wordplay, awkward misunderstandings, ridiculous premises
-- The goal is to make viewers LAUGH - create situations that will result in entertaining reactions
+- Keep responses SHORT (1-3 sentences) - this is a phone call!
+- The goal is ENTERTAINMENT - make viewers LAUGH
 
-Return ONLY the prompt text as a string - do not wrap it in JSON or add any formatting.`;
+The welcomeGreeting must:
+- Be the EXACT first thing said when they answer (no "Hello?" - jump right into character)
+- Set up the scenario immediately
+- Be intriguing/confusing enough that they'll respond
+- Be 1-2 sentences max
+- Stay in character from the very first word
 
-  const userPrompt = `Generate instructions for an ENTERTAINING PRANK CALL scenario:
+Return ONLY valid JSON, no markdown, no explanation.`;
+
+  const userPrompt = `Generate a prank call scenario JSON for:
 
 **Target Person:**
 - Name: ${input.targetPerson.name}
@@ -70,19 +96,7 @@ ${input.targetPerson.physicalDescription ? `- Physical Description: ${input.targ
 ${input.targetPerson.interestingPiece ? `- Secret/Thing only they know: ${input.targetPerson.interestingPiece}` : ""}
 ${input.targetPerson.ragebaitTrigger ? `- To ragebait them, say: ${input.targetPerson.ragebaitTrigger}` : ""}
 
-**CRITICAL REQUIREMENTS:**
-- Create an AMUSING, ENTERTAINING scenario that will result in funny, awkward, or hilarious reactions
-- Use ALL the personal details creatively - city, hobby, profession, secrets, ragebait triggers
-- The goal is ENTERTAINMENT - make viewers laugh at ${input.targetPerson.name}'s reactions
-- Create a believable character/situation that will catch them off guard
-- If a ragebait trigger is provided, work it naturally into the conversation for maximum effect
-- Guide the AI on what character to play, how to open, and how to create amusing moments
-- Examples: mistaken identity, absurd situations, clever misunderstandings, awkward scenarios
-- NEVER mention AI, prank calls, or break character
-- The conversation should be entertaining and result in funny reactions
-- Make it catchy, clever, and designed to create amusing interactions
-
-Generate the prompt now. Return ONLY the prompt text.`;
+Create an ENTERTAINING scenario. Use the details creatively. Return ONLY the JSON object.`;
 
   const response = await fetch(`${GROQ_API_BASE}/chat/completions`, {
     method: "POST",
@@ -96,7 +110,7 @@ Generate the prompt now. Return ONLY the prompt text.`;
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      temperature: 0.8, // Slightly higher for more creative/entertaining prompts
+      temperature: 0.8,
     }),
   });
 
@@ -114,7 +128,21 @@ Generate the prompt now. Return ONLY the prompt text.`;
     throw new Error("Groq API returned no content");
   }
 
-  return content.trim();
+  try {
+    // Parse the JSON response
+    const parsed = JSON.parse(content.trim());
+    return {
+      systemPrompt: parsed.systemPrompt || content.trim(),
+      welcomeGreeting: parsed.welcomeGreeting || "Hello, is this the person I'm looking for?",
+    };
+  } catch {
+    // Fallback if JSON parsing fails - use the content as system prompt
+    console.warn("[Groq] Failed to parse JSON, using content as system prompt");
+    return {
+      systemPrompt: content.trim(),
+      welcomeGreeting: "Hello, is this the person I'm looking for?",
+    };
+  }
 }
 
 /**

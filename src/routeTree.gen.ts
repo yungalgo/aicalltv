@@ -18,9 +18,7 @@ import { Route as authPagesSignupRouteImport } from './routes/(auth-pages)/signu
 import { Route as authPagesLoginRouteImport } from './routes/(auth-pages)/login'
 import { Route as ApiZcashPaymentRouteImport } from './routes/api/zcash/payment'
 import { Route as ApiUploadImageRouteImport } from './routes/api/upload/image'
-import { Route as ApiTwilioVoiceRelayRouteImport } from './routes/api/twilio/voice-relay'
 import { Route as ApiTwilioVoiceRouteImport } from './routes/api/twilio/voice'
-import { Route as ApiTwilioStreamRouteImport } from './routes/api/twilio/stream'
 import { Route as ApiTestCallSimpleRouteImport } from './routes/api/test/call-simple'
 import { Route as ApiTestCallRouteImport } from './routes/api/test/call'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
@@ -75,19 +73,9 @@ const ApiUploadImageRoute = ApiUploadImageRouteImport.update({
   path: '/api/upload/image',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiTwilioVoiceRelayRoute = ApiTwilioVoiceRelayRouteImport.update({
-  id: '/api/twilio/voice-relay',
-  path: '/api/twilio/voice-relay',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiTwilioVoiceRoute = ApiTwilioVoiceRouteImport.update({
   id: '/api/twilio/voice',
   path: '/api/twilio/voice',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiTwilioStreamRoute = ApiTwilioStreamRouteImport.update({
-  id: '/api/twilio/stream',
-  path: '/api/twilio/stream',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTestCallSimpleRoute = ApiTestCallSimpleRouteImport.update({
@@ -157,9 +145,7 @@ export interface FileRoutesByFullPath {
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/test/call': typeof ApiTestCallRoute
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
-  '/api/twilio/stream': typeof ApiTwilioStreamRoute
   '/api/twilio/voice': typeof ApiTwilioVoiceRoute
-  '/api/twilio/voice-relay': typeof ApiTwilioVoiceRelayRoute
   '/api/upload/image': typeof ApiUploadImageRoute
   '/api/zcash/payment': typeof ApiZcashPaymentRoute
   '/api/webhooks/twilio/call-status': typeof ApiWebhooksTwilioCallStatusRoute
@@ -179,9 +165,7 @@ export interface FileRoutesByTo {
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/test/call': typeof ApiTestCallRoute
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
-  '/api/twilio/stream': typeof ApiTwilioStreamRoute
   '/api/twilio/voice': typeof ApiTwilioVoiceRoute
-  '/api/twilio/voice-relay': typeof ApiTwilioVoiceRelayRoute
   '/api/upload/image': typeof ApiUploadImageRoute
   '/api/zcash/payment': typeof ApiZcashPaymentRoute
   '/api/webhooks/twilio/call-status': typeof ApiWebhooksTwilioCallStatusRoute
@@ -204,9 +188,7 @@ export interface FileRoutesById {
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/test/call': typeof ApiTestCallRoute
   '/api/test/call-simple': typeof ApiTestCallSimpleRoute
-  '/api/twilio/stream': typeof ApiTwilioStreamRoute
   '/api/twilio/voice': typeof ApiTwilioVoiceRoute
-  '/api/twilio/voice-relay': typeof ApiTwilioVoiceRelayRoute
   '/api/upload/image': typeof ApiUploadImageRoute
   '/api/zcash/payment': typeof ApiZcashPaymentRoute
   '/api/webhooks/twilio/call-status': typeof ApiWebhooksTwilioCallStatusRoute
@@ -228,9 +210,7 @@ export interface FileRouteTypes {
     | '/api/stripe/webhook'
     | '/api/test/call'
     | '/api/test/call-simple'
-    | '/api/twilio/stream'
     | '/api/twilio/voice'
-    | '/api/twilio/voice-relay'
     | '/api/upload/image'
     | '/api/zcash/payment'
     | '/api/webhooks/twilio/call-status'
@@ -250,9 +230,7 @@ export interface FileRouteTypes {
     | '/api/stripe/webhook'
     | '/api/test/call'
     | '/api/test/call-simple'
-    | '/api/twilio/stream'
     | '/api/twilio/voice'
-    | '/api/twilio/voice-relay'
     | '/api/upload/image'
     | '/api/zcash/payment'
     | '/api/webhooks/twilio/call-status'
@@ -274,9 +252,7 @@ export interface FileRouteTypes {
     | '/api/stripe/webhook'
     | '/api/test/call'
     | '/api/test/call-simple'
-    | '/api/twilio/stream'
     | '/api/twilio/voice'
-    | '/api/twilio/voice-relay'
     | '/api/upload/image'
     | '/api/zcash/payment'
     | '/api/webhooks/twilio/call-status'
@@ -297,9 +273,7 @@ export interface RootRouteChildren {
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiTestCallRoute: typeof ApiTestCallRoute
   ApiTestCallSimpleRoute: typeof ApiTestCallSimpleRoute
-  ApiTwilioStreamRoute: typeof ApiTwilioStreamRoute
   ApiTwilioVoiceRoute: typeof ApiTwilioVoiceRoute
-  ApiTwilioVoiceRelayRoute: typeof ApiTwilioVoiceRelayRoute
   ApiUploadImageRoute: typeof ApiUploadImageRoute
   ApiZcashPaymentRoute: typeof ApiZcashPaymentRoute
   ApiWebhooksTwilioCallStatusRoute: typeof ApiWebhooksTwilioCallStatusRoute
@@ -372,25 +346,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUploadImageRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/twilio/voice-relay': {
-      id: '/api/twilio/voice-relay'
-      path: '/api/twilio/voice-relay'
-      fullPath: '/api/twilio/voice-relay'
-      preLoaderRoute: typeof ApiTwilioVoiceRelayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/twilio/voice': {
       id: '/api/twilio/voice'
       path: '/api/twilio/voice'
       fullPath: '/api/twilio/voice'
       preLoaderRoute: typeof ApiTwilioVoiceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/twilio/stream': {
-      id: '/api/twilio/stream'
-      path: '/api/twilio/stream'
-      fullPath: '/api/twilio/stream'
-      preLoaderRoute: typeof ApiTwilioStreamRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/test/call-simple': {
@@ -493,9 +453,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiTestCallRoute: ApiTestCallRoute,
   ApiTestCallSimpleRoute: ApiTestCallSimpleRoute,
-  ApiTwilioStreamRoute: ApiTwilioStreamRoute,
   ApiTwilioVoiceRoute: ApiTwilioVoiceRoute,
-  ApiTwilioVoiceRelayRoute: ApiTwilioVoiceRelayRoute,
   ApiUploadImageRoute: ApiUploadImageRoute,
   ApiZcashPaymentRoute: ApiZcashPaymentRoute,
   ApiWebhooksTwilioCallStatusRoute: ApiWebhooksTwilioCallStatusRoute,
