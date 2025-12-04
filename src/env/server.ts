@@ -39,6 +39,10 @@ export const env = createEnv({
     // TESTING_MODE: Set to "true" on Railway to bypass calling hour restrictions
     // Useful for testing production without time-of-day limitations
     TESTING_MODE: z.string().optional(),
+    
+    // BYPASS_CALLING_HOURS: Set to "true" to allow calls at any time
+    // Separate from payment test mode - allows testing real payments while bypassing time restrictions
+    BYPASS_CALLING_HOURS: z.string().optional(),
 
     // WebSocket server URL (for Twilio Media Streams)
     // Use ngrok URL for WebSocket server: wss://your-ws-ngrok.ngrok-free.app/twilio/stream
