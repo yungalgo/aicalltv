@@ -14,7 +14,7 @@ export function NearAiAssistant({ onFormFill, onComplete }: NearAiAssistantProps
         {/* Header Banner */}
         <div className="flex items-center justify-between mb-4 pb-4" style={{ borderBottomWidth: '1px', borderColor: '#1A1A1A' }}>
           <div className="flex items-center gap-3">
-            <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white">
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-full bg-white border-2" style={{ borderColor: '#1A1A1A' }}>
               <img src={nearLogoUrl} alt="NEAR" className="h-full w-full rounded-full object-contain p-0.5" />
             </div>
             <div>
