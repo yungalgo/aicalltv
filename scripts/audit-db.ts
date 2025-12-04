@@ -149,14 +149,15 @@ async function auditDatabase() {
     `);
 
     if (staleUnusedCredits.length > 0) {
-      const totalUnused = staleUnusedCredits.reduce((sum: number, row: { count: number }) => sum + Number(row.count), 0);
+      const credits = staleUnusedCredits as unknown as Array<{ count: string | number; payment_method: string; oldest_credit: Date }>;
+      const totalUnused = credits.reduce((sum: number, row) => sum + Number(row.count), 0);
       if (totalUnused > 0) {
         results.push({
           category: "Unused Credits",
           severity: "info",
           message: `Found ${totalUnused} unused credits (this is normal if users haven't created calls yet)`,
           count: totalUnused,
-          details: staleUnusedCredits as Array<Record<string, unknown>>,
+          details: credits as Array<Record<string, unknown>>,
         });
       }
     }
@@ -253,7 +254,7 @@ async function auditDatabase() {
         video_status,
         created_at
       FROM calls
-      WHERE status NOT IN ('call_created', 'prompt_ready', 'calling', 'completed', 'failed', 'cancelled')
+      WHERE status NOT IN ('call_created', 'prompt_ready', 'call_attempted', 'call_complete', 'call_failed')
         OR (video_status IS NOT NULL AND video_status NOT IN ('pending', 'generating', 'completed', 'failed'))
       ORDER BY created_at DESC
       LIMIT 50;
@@ -296,7 +297,7 @@ async function auditDatabase() {
       });
     }
 
-    // 11. Check for calls stuck in calling status
+    // 11. Check for calls stuck in call_attempted status
     console.log("⏰ Checking for stuck calls...");
     const stuckCalls = await driver.unsafe(`
       SELECT 
@@ -309,7 +310,7 @@ async function auditDatabase() {
         created_at,
         EXTRACT(EPOCH FROM (NOW() - COALESCE(last_attempt_at, first_attempt_at, created_at))) / 3600 as hours_stuck
       FROM calls
-      WHERE status = 'calling'
+      WHERE status = 'call_attempted'
         AND (
           last_attempt_at IS NULL 
           OR last_attempt_at < NOW() - INTERVAL '2 hours'
@@ -322,7 +323,7 @@ async function auditDatabase() {
       results.push({
         category: "Stuck Calls",
         severity: "warning",
-        message: `Found ${stuckCalls.length} calls stuck in 'calling' status for >2 hours`,
+        message: `Found ${stuckCalls.length} calls stuck in 'call_attempted' status for >2 hours`,
         count: stuckCalls.length,
         details: stuckCalls as Array<Record<string, unknown>>,
       });
@@ -337,7 +338,7 @@ async function auditDatabase() {
         c.status,
         c.created_at
       FROM calls c
-      LEFT JOIN users u ON u.id = c.user_id
+      LEFT JOIN "user" u ON u.id = c.user_id
       WHERE u.id IS NULL
       ORDER BY c.created_at DESC
       LIMIT 50;
@@ -364,7 +365,7 @@ async function auditDatabase() {
         payment_method,
         created_at
       FROM call_credits
-      WHERE state NOT IN ('unused', 'consumed')
+      WHERE state NOT IN ('unused', 'consumed', 'expired')
       ORDER BY created_at DESC
       LIMIT 50;
     `);
@@ -390,7 +391,7 @@ async function auditDatabase() {
         created_at
       FROM calls
       WHERE caller_id IS NULL
-        AND status IN ('prompt_ready', 'calling', 'completed')
+        AND status IN ('prompt_ready', 'call_attempted', 'call_complete')
         AND created_at > NOW() - INTERVAL '7 days'
       ORDER BY created_at DESC
       LIMIT 50;
@@ -416,8 +417,8 @@ async function auditDatabase() {
         (SELECT COUNT(*) FROM call_credits WHERE state = 'consumed') as consumed_credits,
         (SELECT COUNT(*) FROM calls WHERE is_free = true) as free_calls,
         (SELECT COUNT(*) FROM calls WHERE is_free = false) as paid_calls,
-        (SELECT COUNT(*) FROM calls WHERE status = 'completed') as completed_calls,
-        (SELECT COUNT(*) FROM calls WHERE status = 'failed') as failed_calls,
+        (SELECT COUNT(*) FROM calls WHERE status = 'call_complete') as completed_calls,
+        (SELECT COUNT(*) FROM calls WHERE status = 'call_failed') as failed_calls,
         (SELECT COUNT(*) FROM calls WHERE video_status = 'completed') as videos_completed;
     `);
 
