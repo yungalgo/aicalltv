@@ -288,7 +288,7 @@ async function submitImageEditJob(
 
   const payload = {
     prompt: editPrompt,
-    input_image: sourceImageUrl,
+    images: [sourceImageUrl], // Array of image URLs
     resolution: "4k",
     aspect_ratio: "9:16", // Vertical portrait - TOP=caller, BOTTOM=target
     output_format: "png",
