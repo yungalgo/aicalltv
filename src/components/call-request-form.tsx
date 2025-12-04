@@ -23,11 +23,45 @@ import { createCall } from "~/lib/calls/functions";
 import { VIDEO_STYLES } from "~/lib/constants/video-styles";
 import { PAYMENT_CONFIG } from "~/lib/web3/config";
 import { validateCallFormData } from "~/lib/validation/call-form";
+import { useTheme } from "~/components/theme-provider";
 
 type InputMode = "form" | "ai-chat";
 
 export function CallRequestForm() {
   const { data: user } = useSuspenseQuery(authQueryOptions());
+  const { theme } = useTheme();
+  
+  // Debug theme and CSS variables in production
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    
+    const debugInfo = {
+      theme,
+      htmlClasses: document.documentElement.className,
+      hasDarkClass: document.documentElement.classList.contains("dark"),
+      hasLightClass: document.documentElement.classList.contains("light"),
+      localStorageTheme: localStorage.getItem("theme"),
+      systemPrefersDark: window.matchMedia("(prefers-color-scheme: dark)").matches,
+      computedStyles: {
+        foreground: getComputedStyle(document.documentElement).getPropertyValue("--foreground"),
+        background: getComputedStyle(document.documentElement).getPropertyValue("--background"),
+        mutedForeground: getComputedStyle(document.documentElement).getPropertyValue("--muted-foreground"),
+      },
+    };
+    
+    console.log("🔍 [CallRequestForm] Theme Debug Info:", debugInfo);
+    
+    // Also log form element styles
+    const formElement = document.querySelector('[class*="Create AI Call"]') || 
+                        document.querySelector('form');
+    if (formElement) {
+      const formStyles = {
+        color: getComputedStyle(formElement).color,
+        backgroundColor: getComputedStyle(formElement).backgroundColor,
+      };
+      console.log("🔍 [CallRequestForm] Form Element Styles:", formStyles);
+    }
+  }, [theme]);
   const queryClient = useQueryClient();
   const search = useSearch({ from: "/create" });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -461,6 +495,25 @@ export function CallRequestForm() {
 
   return (
     <>
+      {/* DEBUG PANEL - Remove after debugging */}
+      {typeof window !== "undefined" && (
+        <div className="mb-4 p-3 rounded border-2 text-xs font-mono" style={{ 
+          backgroundColor: '#fffcf2', 
+          borderColor: '#1A1A1A',
+          color: '#1A1A1A'
+        }}>
+          <div><strong>Theme Debug:</strong></div>
+          <div>Theme: {theme}</div>
+          <div>HTML Classes: {document.documentElement.className}</div>
+          <div>Has Dark: {document.documentElement.classList.contains("dark") ? "YES" : "NO"}</div>
+          <div>Has Light: {document.documentElement.classList.contains("light") ? "YES" : "NO"}</div>
+          <div>LocalStorage: {localStorage.getItem("theme") || "null"}</div>
+          <div>System Prefers Dark: {window.matchMedia("(prefers-color-scheme: dark)").matches ? "YES" : "NO"}</div>
+          <div>--foreground: {getComputedStyle(document.documentElement).getPropertyValue("--foreground")}</div>
+          <div>--muted-foreground: {getComputedStyle(document.documentElement).getPropertyValue("--muted-foreground")}</div>
+        </div>
+      )}
+      
       {/* Input Mode Toggle - Segmented Control */}
       <div className="mb-6 flex justify-center">
         <div className="inline-flex rounded-lg border-2 p-1" style={{ backgroundColor: '#fffcf2', borderColor: '#1A1A1A' }}>
