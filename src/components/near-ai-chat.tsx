@@ -540,9 +540,9 @@ export function NearAiChat({ onFormFill, onComplete }: NearAiChatProps) {
 
       {/* Extracted Data Preview - Below input box */}
       {hasExtractedData && (
-        <div className="rounded-xl p-4 mb-4 bg-muted/50 border">
+        <div className="rounded-xl p-4 mb-4 border" style={{ backgroundColor: '#f5f5f5', borderColor: '#1A1A1A' }}>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <p className="text-xs font-semibold flex items-center gap-1.5" style={{ color: '#1A1A1A' }}>
               <span className="text-base">📋</span> Extracted Details
             </p>
             {isComplete && validationErrors.length === 0 && (
@@ -554,69 +554,69 @@ export function NearAiChat({ onFormFill, onComplete }: NearAiChatProps) {
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             {extractedData.recipientName && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-xs">👤</span>
-                <span className="text-foreground font-medium">{extractedData.recipientName}</span>
+                <span className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>👤</span>
+                <span className="font-medium" style={{ color: '#1A1A1A' }}>{extractedData.recipientName}</span>
               </div>
             )}
             {extractedData.phoneNumber && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-xs">📱</span>
-                <span className="text-foreground font-medium font-mono text-xs">{extractedData.phoneNumber}</span>
+                <span className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>📱</span>
+                <span className="font-medium font-mono text-xs" style={{ color: '#1A1A1A' }}>{extractedData.phoneNumber}</span>
               </div>
             )}
             {extractedData.targetGender && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-xs">⚧</span>
-                <span className="text-foreground">{extractedData.targetGender}</span>
+                <span className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>⚧</span>
+                <span style={{ color: '#1A1A1A' }}>{extractedData.targetGender}</span>
               </div>
             )}
             {extractedData.targetAgeRange && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-xs">🎂</span>
-                <span className="text-foreground">{extractedData.targetAgeRange}</span>
+                <span className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>🎂</span>
+                <span style={{ color: '#1A1A1A' }}>{extractedData.targetAgeRange}</span>
               </div>
             )}
             {extractedData.targetCity && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-xs">📍</span>
-                <span className="text-foreground">{extractedData.targetCity}</span>
+                <span className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>📍</span>
+                <span style={{ color: '#1A1A1A' }}>{extractedData.targetCity}</span>
               </div>
             )}
             {extractedData.targetHobby && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-xs">🎨</span>
-                <span className="text-foreground">{extractedData.targetHobby}</span>
+                <span className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>🎨</span>
+                <span style={{ color: '#1A1A1A' }}>{extractedData.targetHobby}</span>
               </div>
             )}
             {extractedData.targetProfession && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-xs">💼</span>
-                <span className="text-foreground">{extractedData.targetProfession}</span>
+                <span className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>💼</span>
+                <span style={{ color: '#1A1A1A' }}>{extractedData.targetProfession}</span>
               </div>
             )}
             {extractedData.videoStyle && (
               <div className="flex items-center gap-2">
-                <span className="text-muted-foreground text-xs">🎬</span>
-                <span className="text-foreground">{extractedData.videoStyle}</span>
+                <span className="text-xs" style={{ color: '#1A1A1A', opacity: 0.7 }}>🎬</span>
+                <span style={{ color: '#1A1A1A' }}>{extractedData.videoStyle}</span>
               </div>
             )}
           </div>
           {extractedData.targetPhysicalDescription && (
-            <div className="mt-3 pt-3 border-t">
-              <p className="text-xs text-muted-foreground mb-1">Physical Description:</p>
-              <p className="text-sm text-foreground">{extractedData.targetPhysicalDescription}</p>
+            <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderColor: '#1A1A1A' }}>
+              <p className="text-xs mb-1" style={{ color: '#1A1A1A', opacity: 0.7 }}>Physical Description:</p>
+              <p className="text-sm" style={{ color: '#1A1A1A' }}>{extractedData.targetPhysicalDescription}</p>
             </div>
           )}
           {extractedData.interestingPiece && (
-            <div className="mt-3 pt-3 border-t">
-              <p className="text-xs text-muted-foreground mb-1">Personal Hook:</p>
-              <p className="text-sm text-foreground italic">"{extractedData.interestingPiece}"</p>
+            <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderColor: '#1A1A1A' }}>
+              <p className="text-xs mb-1" style={{ color: '#1A1A1A', opacity: 0.7 }}>Personal Hook:</p>
+              <p className="text-sm italic" style={{ color: '#1A1A1A' }}>"{extractedData.interestingPiece}"</p>
             </div>
           )}
           {extractedData.ragebaitTrigger && (
-            <div className="mt-3 pt-3 border-t">
-              <p className="text-xs text-muted-foreground mb-1">Ragebait Trigger:</p>
-              <p className="text-sm text-foreground italic">"{extractedData.ragebaitTrigger}"</p>
+            <div className="mt-3 pt-3" style={{ borderTopWidth: '1px', borderColor: '#1A1A1A' }}>
+              <p className="text-xs mb-1" style={{ color: '#1A1A1A', opacity: 0.7 }}>Ragebait Trigger:</p>
+              <p className="text-sm italic" style={{ color: '#1A1A1A' }}>"{extractedData.ragebaitTrigger}"</p>
             </div>
           )}
         </div>
