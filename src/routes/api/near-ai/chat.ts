@@ -415,13 +415,17 @@ export const Route = createFileRoute("/api/near-ai/chat")({
             );
           }
 
-          // Re-check completeness based on validation result
-          const actuallyComplete = validationResult.isValid;
+          // Check completeness - must pass validation AND have all required fields including callerId
+          const missingRequired = getMissingRequired(finalMergedData);
+          const actuallyComplete = validationResult.isValid && missingRequired.length === 0;
 
           // Use the final merged data (already includes all fields from dataToValidate + normalized data)
           const responseData = finalMergedData;
           
           console.log("[NEAR AI] Final response data keys:", Object.keys(responseData));
+          console.log("[NEAR AI] Missing required:", missingRequired);
+          console.log("[NEAR AI] Validation passed:", validationResult.isValid);
+          console.log("[NEAR AI] Actually complete:", actuallyComplete);
 
           // If complete, ensure message includes Buy button instruction
           let finalMessage = parsedResponse.message;
@@ -434,7 +438,7 @@ export const Route = createFileRoute("/api/near-ai/chat")({
               message: finalMessage,
               extractedData: responseData,
               isComplete: actuallyComplete,
-              missingRequired: validationResult.errors.map(e => e.field),
+              missingRequired: missingRequired,
               validationErrors: [],
               // Include TEE attestation info for bounty demonstration
               teeInfo: {

@@ -39,6 +39,20 @@ export const Route = createFileRoute("/api/stripe/checkout")({
           const body = await request.json().catch(() => ({}));
           const callData = body.callData || {};
 
+          // Validate required fields
+          if (!callData.callerId) {
+            return new Response(
+              JSON.stringify({ error: "Caller selection is required" }),
+              { status: 400, headers: { "Content-Type": "application/json" } }
+            );
+          }
+          if (!callData.recipientName || !callData.phoneNumber) {
+            return new Response(
+              JSON.stringify({ error: "Recipient name and phone number are required" }),
+              { status: 400, headers: { "Content-Type": "application/json" } }
+            );
+          }
+
           const stripe = new Stripe(env.STRIPE_SECRET_KEY);
 
           // Get base URL for redirects
@@ -68,6 +82,7 @@ export const Route = createFileRoute("/api/stripe/checkout")({
               // Call data (truncated to fit Stripe's 500 char limit per field)
               recipientName: String(callData.recipientName || "").slice(0, 500),
               phoneNumber: String(callData.phoneNumber || "").slice(0, 500),
+              callerId: String(callData.callerId || "").slice(0, 500), // Selected caller
               targetGender: String(callData.targetGender || "male").slice(0, 500),
               targetGenderCustom: String(callData.targetGenderCustom || "").slice(0, 500),
               targetAgeRange: String(callData.targetAgeRange || "").slice(0, 500),

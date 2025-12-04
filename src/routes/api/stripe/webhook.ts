@@ -86,6 +86,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
             // Extract call data from metadata
             const recipientName = metadata.recipientName || "";
             const phoneNumber = metadata.phoneNumber || "";
+            const callerId = metadata.callerId || null; // Selected caller
             const targetGender = (metadata.targetGender || "male") as "male" | "female" | "prefer_not_to_say" | "other";
             const targetGenderCustom = metadata.targetGenderCustom || null;
             const targetAgeRange = metadata.targetAgeRange || null;
@@ -154,6 +155,7 @@ export const Route = createFileRoute("/api/stripe/webhook")({
               .insert(calls)
               .values({
                 userId,
+                callerId: callerId || null, // Selected caller
                 recipientName,
                 targetGender,
                 targetGenderCustom,

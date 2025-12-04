@@ -41,6 +41,7 @@ import {
 import { createCredit } from "~/lib/credits/functions";
 import { ZtarknetProvider } from "./ztarknet-provider";
 import { ZtarknetPayment } from "./ztarknet-payment";
+import { toast } from "sonner";
 
 // ERC20 transfer ABI (minimal)
 const erc20Abi = [
@@ -950,6 +951,16 @@ export function PaymentModal({
                   {/* Pay Button */}
                   <Button
                     onClick={async () => {
+                      // Validate required fields before payment
+                      if (!callDetails.callerId) {
+                        toast.error("Please select a caller before proceeding");
+                        return;
+                      }
+                      if (!callDetails.recipientName || !callDetails.phoneNumber) {
+                        toast.error("Please fill in all required fields");
+                        return;
+                      }
+                      
                       setPaymentStatus("processing");
                       try {
                         // Send call data to Stripe checkout so webhook can create the call
