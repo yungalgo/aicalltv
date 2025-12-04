@@ -248,7 +248,9 @@ export async function generateImage(
 /**
  * Default prompt for split-screen call scenes (9:16 vertical)
  * TOP = AI caller, BOTTOM = target person
- * This is only used when NO image is uploaded
+ * 
+ * NOTE: This is ONLY used in test scripts (scripts/test-video-generation.ts)
+ * Production uses Groq-generated prompts from groq-generator.ts
  */
 export function getDefaultCallImagePrompt(): string {
   return (
@@ -283,13 +285,14 @@ async function submitImageEditJob(
     );
   }
 
-  // Edit prompt: transform the uploaded image into a vertical split-screen phone call scene
-  // The uploaded image becomes the BOTTOM half (target person) rendered in the specified style
-  // TOP half is the AI caller character in the same style
-  const editPrompt = `Create a vertical split-screen phone call image (9:16 portrait). 
-TOP HALF: An AI caller character ACTIVELY TALKING on the phone, mouth open mid-sentence, phone pressed to ear, in this style: ${prompt}. 
-BOTTOM HALF: Transform the person in this photo into the same art style (${prompt}), phone held to ear, mouth open responding, engaged in conversation. Preserve their likeness and features but render in the specified style.
-CRITICAL: Both characters must be ACTIVELY SPEAKING into phones with mouths open, not just holding phones passively.`;
+  // Edit prompt: use the Groq-generated prompt but add instructions to preserve the uploaded person's likeness
+  // The prompt already contains: caller description, target description, style, and layout
+  // We just need to add the instruction to use the uploaded photo for the BOTTOM half
+  const editPrompt = `${prompt}
+
+IMPORTANT EDIT INSTRUCTION: Use the uploaded photo as reference for the BOTTOM half character. 
+Preserve their face, likeness, and identity while rendering them in the specified art style.
+Both characters must be ACTIVELY SPEAKING on phones with mouths open.`;
 
   const payload = {
     prompt: editPrompt,
