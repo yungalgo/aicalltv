@@ -1,8 +1,19 @@
 # AI Call TV
 
-AI-powered phone calling system using Twilio + OpenAI Realtime API.
+AI-powered phone calling system using Twilio + OpenAI.
 
 Built for the zypherpunk hackathon.
+
+## Voice Providers
+
+Two voice providers are available:
+
+| Provider | TTS | STT | Description |
+|----------|-----|-----|-------------|
+| **ConversationRelay** (default) | ElevenLabs | Deepgram | Simpler, better interruption handling |
+| **Media Streams** | OpenAI Realtime | OpenAI Whisper | Lower latency, audio-native |
+
+Set via `VOICE_PROVIDER` env var: `conversation_relay` or `media_streams`
 
 ## Setup
 
@@ -15,7 +26,14 @@ Built for the zypherpunk hackathon.
    ```bash
    # URL Configuration (update after getting ngrok URLs - see step 4)
    VITE_BASE_URL="https://your-ngrok-url.ngrok-free.app"
-   WEBSOCKET_URL="wss://your-ws-ngrok-url.ngrok-free.app/twilio/stream"
+   
+   # Voice Provider: conversation_relay (default) or media_streams
+   VOICE_PROVIDER=conversation_relay
+   
+   # WebSocket URL (path depends on provider)
+   # ConversationRelay: wss://xxx.ngrok-free.app/conversation-relay
+   # Media Streams:     wss://xxx.ngrok-free.app/twilio/stream
+   WEBSOCKET_URL="wss://your-ws-ngrok-url.ngrok-free.app/conversation-relay"
    
    # Database
    DATABASE_URL="postgresql://user:pass@your-db.neon.tech/dbname"
@@ -45,15 +63,16 @@ Built for the zypherpunk hackathon.
    
    # Resend (for email notifications)
    RESEND_API_KEY="xxxxx"
-   
-   # Development mode
-   TESTING_MODE=true
    ```
 
 3. **Push database schema:**
    ```bash
    bun run db:push
    ```
+
+4. **Twilio Console Setup (one-time for ConversationRelay):**
+   - Go to [Twilio Console](https://console.twilio.com/) → Voice → Settings → General
+   - Enable **"Predictive and Generative AI/ML Features Addendum"**
 
 ## Running the App
 
@@ -66,17 +85,24 @@ ngrok start --all --config ngrok.yml
 
 This will show you **2 forwarding URLs**:
 ```
-Forwarding  https://abc123.ngrok-free.app -> http://localhost:3000
-Forwarding  https://xyz789.ngrok-free.app -> http://localhost:3001
+Forwarding  https://abc123.ngrok-free.app -> http://localhost:3000  (app)
+Forwarding  https://xyz789.ngrok-free.app -> http://localhost:3002  (relay)
 ```
 
 ### Update .env with ngrok URLs
 
 Copy the URLs and update your `.env`:
 ```bash
-VITE_BASE_URL="https://abc123.ngrok-free.app"         # port 3000 URL
-WEBSOCKET_URL="wss://xyz789.ngrok-free.app/twilio/stream"  # port 3001 URL (change https to wss!)
+VITE_BASE_URL="https://abc123.ngrok-free.app"  # port 3000 URL
+
+# For ConversationRelay (default):
+WEBSOCKET_URL="wss://xyz789.ngrok-free.app/conversation-relay"
+
+# For Media Streams (if using VOICE_PROVIDER=media_streams):
+# WEBSOCKET_URL="wss://xyz789.ngrok-free.app/twilio/stream"
 ```
+
+**Note:** Change `https://` to `wss://` and add the path!
 
 ### Terminal 2: Main App
 ```bash
@@ -84,6 +110,13 @@ bun run dev
 ```
 
 ### Terminal 3: WebSocket Server
+
+**For ConversationRelay (default):**
+```bash
+bun run dev:ws:relay
+```
+
+**For Media Streams:**
 ```bash
 bun run dev:ws
 ```
@@ -100,15 +133,20 @@ This avoids CORS issues since the auth client is configured to use the ngrok URL
 
 ## Testing a Call
 
-In a **new terminal** (or reuse one of the above):
-
 ```bash
-bun scripts/test-call.ts
+# Uses current VOICE_PROVIDER setting
+bun run test:call
+
+# Explicitly use ConversationRelay
+bun run test:call:relay
+
+# Explicitly use Media Streams
+bun run test:call:streams
 ```
 
 Or with a custom number:
 ```bash
-bun scripts/test-call.ts "+1234567890" "John Doe" "This is a test call"
+bun scripts/test-call.ts "+1234567890" "John Doe"
 ```
 
 Watch the logs in Terminal 3 (WebSocket server) to see the call progress.
@@ -159,7 +197,9 @@ This script:
 
 1. **ngrok** - Creates 2 public URLs so Twilio can reach your local servers
 2. **Main App (port 3000)** - Your web app UI and API (TanStack Start)
-3. **WebSocket Server (port 3001)** - Handles Twilio call audio + OpenAI Realtime API
+3. **WebSocket Server** - Handles Twilio voice calls:
+   - **ConversationRelay (port 3002)**: `bun run dev:ws:relay` - Text-based, ElevenLabs TTS + Deepgram STT
+   - **Media Streams (port 3001)**: `bun run dev:ws` - Audio-based, OpenAI Realtime API
 
 ## Why ngrok?
 

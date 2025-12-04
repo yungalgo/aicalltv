@@ -4,6 +4,9 @@
  * Direct test script to initiate a Twilio call
  * Usage: bun scripts/test-call.ts <phone-number> <recipient-name>
  * Example: bun scripts/test-call.ts "+15005550006" "Test User"
+ * 
+ * Environment:
+ *   VOICE_PROVIDER=conversation_relay (default) | media_streams
  */
 
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -14,14 +17,26 @@ import { calls } from "../src/lib/db/schema/calls";
 import { user } from "../src/lib/db/schema/auth.schema";
 import * as schema from "../src/lib/db/schema";
 import { initiateTwilioCall } from "../src/lib/twilio/call";
+import { getProviderInfo } from "../src/lib/twilio/providers";
 
 async function main() {
   const phoneNumber = process.argv[2] || "+19083363673"; // Google Voice number
   const recipientName = process.argv[3] || "Test User";
 
+  // Show provider info
+  const providerInfo = getProviderInfo();
+  
+  console.log("=".repeat(60));
   console.log("📞 Making test call...");
+  console.log("");
+  console.log(`🎯 Provider: ${providerInfo.provider.toUpperCase()}`);
+  console.log(`   ${providerInfo.description}`);
+  console.log(`   TTS: ${providerInfo.tts}`);
+  console.log(`   STT: ${providerInfo.stt}`);
+  console.log("");
   console.log(`Phone Number: ${phoneNumber}`);
   console.log(`Recipient Name: ${recipientName}`);
+  console.log("=".repeat(60));
   console.log("");
 
   try {
@@ -57,6 +72,21 @@ async function main() {
 
     // Create call record with required fields
     const encryptedHandle = `encrypted_${phoneNumber}`;
+    
+    // AI personality/prompt - prank call style for testing!
+    const aiPrompt = `You are "Barry from the International Cheese Council" making an urgent call to ${recipientName}.
+
+Your mission: Convince them their cheese license has expired and they need to renew it immediately.
+
+Your personality:
+- Sound very official and serious about cheese regulations
+- Use made-up cheese terminology ("cheddar compliance", "brie certification", "gouda violations")
+- Ask absurd questions with a straight face ("When was your last cheese inspection?")
+- If they question you, double down with more ridiculous cheese bureaucracy
+- Keep responses SHORT (1-2 sentences max - this is a phone call!)
+
+Start by asking if they're aware their cheese license expired last Tuesday. Be persistent but friendly!`;
+    
     const [newCall] = await db
       .insert(calls)
       .values({
@@ -64,13 +94,15 @@ async function main() {
         recipientName,
         targetGender: "prefer_not_to_say",
         videoStyle: "anime",
-        openaiPrompt: `You are making a test call to ${recipientName}. This is a test call to verify dual-channel recording works.`,
+        openaiPrompt: aiPrompt,
         encryptedHandle,
         paymentMethod: "free",
         isFree: true,
         status: "call_created",
       })
       .returning();
+    
+    console.log(`✓ AI Prompt: "${aiPrompt.substring(0, 50)}..."`)
 
     console.log(`✓ Created call record: ${newCall.id}`);
 

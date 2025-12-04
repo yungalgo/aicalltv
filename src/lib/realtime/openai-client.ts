@@ -25,8 +25,10 @@ export class OpenAIRealtimeClient {
   private onAudioCallback?: (audio: string) => void;
   private onTranscriptCallback?: (text: string) => void;
   private onErrorCallback?: (error: Error) => void;
+  private onInterruptCallback?: () => void;
   private firstAudioSentTime?: number;
   private firstAudioReceivedLogged = false;
+  private lastResponseItemId?: string;
 
   constructor(config: OpenAIRealtimeConfig) {
     this.config = {
